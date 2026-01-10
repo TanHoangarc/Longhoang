@@ -4,7 +4,8 @@ import {
   Upload, FileText, ChevronRight, Download, ArrowLeft, Package, 
   Ship, Truck, LayoutDashboard, FolderPlus, Folder, File, MoreVertical, 
   ShieldAlert, TrendingUp, UserPlus, UserMinus, MessageSquare, 
-  AlertTriangle, HelpCircle, Save, Edit, Printer, Mail, Phone, MapPin
+  AlertTriangle, HelpCircle, Save, Edit, Printer, Mail, Phone, MapPin,
+  Pin, PinOff, Calendar, AlertCircle, Info, CheckCircle, Search
 } from 'lucide-react';
 
 interface CompanyPageProps {
@@ -47,46 +48,291 @@ interface QuotationData {
   salerEmail: string;
 }
 
+interface SystemNotification {
+  id: number;
+  date: string;
+  title: string;
+  content: string;
+  attachment?: string;
+  expiryDate: string;
+  isPinned: boolean;
+  image: string;
+}
+
+interface Shipment {
+  id: number;
+  code: string;
+  commodity: string;
+  pickupAddress: string;
+  volume: string;
+  currentStep: number; // 0: Lấy hàng, 1: Hải quan, 2: Load tàu, 3: Về kho
+  customsFlow: 'green' | 'yellow' | 'red';
+  customsStatus: string;
+  vesselName: string;
+  etd: string;
+  eta: string;
+  truckingCo: string;
+  contCount: string;
+  warehouseAddr: string;
+  type: 'import' | 'export';
+}
+
 const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [quoteType, setQuoteType] = useState<'import' | 'export'>('import');
 
+  // --- SHIPMENTS STATE ---
+  const [shipments, setShipments] = useState<Shipment[]>([
+    {
+      id: 1,
+      code: 'LH-SHPT-2024001',
+      commodity: 'Linh kiện điện tử',
+      pickupAddress: 'KCN Amata, Biên Hòa, Đồng Nai',
+      volume: '15 CBM / 2500 KGS',
+      currentStep: 2,
+      customsFlow: 'green',
+      customsStatus: 'Đã thông quan',
+      vesselName: 'ONE FREEDOM / V.2405',
+      etd: '20/05/2024',
+      eta: '25/05/2024',
+      truckingCo: 'Vận tải Long Hoàng',
+      contCount: '1x40HC',
+      warehouseAddr: 'Kho Cát Lái, Quận 2, HCM',
+      type: 'export'
+    },
+    {
+      id: 2,
+      code: 'LH-SHPT-2024002',
+      commodity: 'Vải dệt may',
+      pickupAddress: 'Cảng Shanghai, Trung Quốc',
+      volume: '10 CBM / 1200 KGS',
+      currentStep: 1,
+      customsFlow: 'yellow',
+      customsStatus: 'Đang đợi kiểm hóa',
+      vesselName: 'EVER GLIVEN / V.099',
+      etd: '18/05/2024',
+      eta: '24/05/2024',
+      truckingCo: 'Logistics Team A',
+      contCount: '2x20GP',
+      warehouseAddr: 'Kho ICD Sóng Thần, Bình Dương',
+      type: 'import'
+    }
+  ]);
+
+  const [editingShipmentId, setEditingShipmentId] = useState<number | null>(null);
+
+  const handleUpdateShipment = (id: number, field: keyof Shipment, value: any) => {
+    setShipments(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+  };
+
+  const addShipment = () => {
+    const newShip: Shipment = {
+      id: Date.now(),
+      code: `LH-SHPT-${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`,
+      commodity: '',
+      pickupAddress: '',
+      volume: '',
+      currentStep: 0,
+      customsFlow: 'green',
+      customsStatus: '',
+      vesselName: '',
+      etd: '',
+      eta: '',
+      truckingCo: '',
+      contCount: '',
+      warehouseAddr: '',
+      type: quoteType
+    };
+    setShipments([newShip, ...shipments]);
+    setEditingShipmentId(newShip.id);
+  };
+
+  const deleteShipment = (id: number) => {
+    if (confirm('Bạn có chắc chắn muốn xóa lô hàng này khỏi danh sách theo dõi?')) {
+      setShipments(prev => prev.filter(s => s.id !== id));
+    }
+  };
+
+  // --- NOTIFICATIONS STATE ---
+  const [notifications, setNotifications] = useState<SystemNotification[]>([
+    {
+      id: 1,
+      date: '20/05/2024',
+      title: 'Cập nhật phụ phí nhiên liệu tháng 06/2024',
+      content: 'Thông báo về việc điều chỉnh phụ phí nhiên liệu (BAF) cho các tuyến vận tải biển quốc tế áp dụng từ ngày 01/06.',
+      attachment: 'BAF_Update_June.pdf',
+      expiryDate: '2025-06-30',
+      isPinned: true,
+      image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+    },
+    {
+      id: 2,
+      date: '15/05/2024',
+      title: 'Lịch nghỉ lễ Quốc khánh 2/9',
+      content: 'Thông báo lịch trực và vận hành kho bãi trong kỳ nghỉ lễ sắp tới để quý đối tác chủ động kế hoạch.',
+      attachment: 'Holiday_Schedule.pdf',
+      expiryDate: '2024-09-05',
+      isPinned: false,
+      image: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+    },
+    {
+      id: 3,
+      date: '10/01/2024',
+      title: 'Thông báo hết hạn chương trình khuyến mãi Tết',
+      content: 'Chương trình tri ân khách hàng nhân dịp Tết Giáp Thìn đã chính thức khép lại. Cảm ơn quý khách đã đồng hành.',
+      expiryDate: '2024-02-15',
+      isPinned: false,
+      image: 'https://images.unsplash.com/photo-1526772662000-3f88f10405ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+    }
+  ]);
+
+  const togglePin = (id: number) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isPinned: !n.isPinned } : n));
+  };
+
+  const deleteNotification = (id: number) => {
+    if (confirm('Bạn có chắc chắn muốn xóa thông báo này?')) {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }
+  };
+
+  const editNotification = (id: number) => {
+    const n = notifications.find(notif => notif.id === id);
+    const newTitle = prompt('Nhập tiêu đề mới:', n?.title);
+    if (newTitle) {
+      setNotifications(prev => prev.map(notif => notif.id === id ? { ...notif, title: newTitle } : notif));
+    }
+  };
+
+  const addNotification = () => {
+    const title = prompt('Nhập tiêu đề thông báo:');
+    if (title) {
+      const newNotif: SystemNotification = {
+        id: Date.now(),
+        date: new Date().toLocaleDateString('vi-VN'),
+        title: title,
+        content: 'Nội dung thông báo mới vừa được tạo.',
+        expiryDate: '2024-12-31',
+        isPinned: false,
+        image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+      };
+      setNotifications([newNotif, ...notifications]);
+    }
+  };
+
   // --- SUB-COMPONENTS FOR DIFFERENT VIEWS ---
 
-  const NotificationView = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold text-gray-800">Thông báo hệ thống</h3>
-        <button className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center">
-          <Plus size={16} className="mr-2" /> Tạo thông báo mới
-        </button>
+  const NotificationView = () => {
+    const sortedNotifications = [...notifications].sort((a, b) => {
+      if (a.isPinned === b.isPinned) return 0;
+      return a.isPinned ? -1 : 1;
+    });
+
+    return (
+      <div className="space-y-8 pb-20">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-2xl font-black text-gray-800 uppercase tracking-tight">Thông báo hệ thống</h3>
+            <p className="text-sm text-gray-500 font-medium">Cập nhật tin tức nội bộ và thông tin vận hành quan trọng</p>
+          </div>
+          <button 
+            onClick={addNotification}
+            className="bg-primary hover:bg-primaryDark text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center shadow-lg shadow-orange-100 transition-all transform active:scale-95"
+          >
+            <Plus size={18} className="mr-2" /> Tạo thông báo mới
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {sortedNotifications.map((notif) => {
+            const isExpired = new Date(notif.expiryDate) < new Date();
+            
+            return (
+              <div 
+                key={notif.id}
+                className={`relative bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${isExpired ? 'filter grayscale opacity-75' : ''}`}
+              >
+                {/* Header Image */}
+                <div className="h-48 overflow-hidden relative">
+                  <img src={notif.image} alt={notif.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                  
+                  {/* Status Badges */}
+                  <div className="absolute top-4 left-4 flex gap-2">
+                    {notif.isPinned && (
+                      <div className="bg-primary text-white p-2 rounded-lg shadow-lg">
+                        <Pin size={14} fill="white" />
+                      </div>
+                    )}
+                    {isExpired && (
+                      <div className="bg-gray-800 text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center">
+                        <AlertCircle size={10} className="mr-1" /> Hết hiệu lực
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Date Overlay */}
+                  <div className="absolute bottom-4 left-4 text-white">
+                    <div className="flex items-center text-[10px] font-bold uppercase tracking-widest opacity-80">
+                      <Calendar size={12} className="mr-1" /> {notif.date}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content Area */}
+                <div className="p-6 space-y-4">
+                  <div>
+                    <h4 className="text-lg font-bold text-gray-800 group-hover:text-primary transition-colors line-clamp-2">
+                      {notif.title}
+                    </h4>
+                    <p className="text-sm text-gray-500 mt-2 line-clamp-3 leading-relaxed">
+                      {notif.content}
+                    </p>
+                  </div>
+
+                  {notif.attachment && (
+                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-orange-50 hover:border-orange-100 transition-all group/file">
+                      <FileText size={16} className="text-gray-400 group-hover/file:text-primary" />
+                      <span className="text-xs font-bold text-gray-600 group-hover/file:text-primary transition-colors">{notif.attachment}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center pt-2 text-[10px] font-bold text-gray-400 uppercase">
+                    <span>Hiệu lực đến: {new Date(notif.expiryDate).toLocaleDateString('vi-VN')}</span>
+                  </div>
+                </div>
+
+                {/* Hover Actions */}
+                <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => togglePin(notif.id)}
+                    className="p-2 bg-white/90 backdrop-blur-md rounded-lg shadow-sm text-gray-600 hover:text-primary transition-colors"
+                    title={notif.isPinned ? "Bỏ ghim" : "Ghim thông báo"}
+                  >
+                    {notif.isPinned ? <PinOff size={16} /> : <Pin size={16} />}
+                  </button>
+                  <button 
+                    onClick={() => editNotification(notif.id)}
+                    className="p-2 bg-white/90 backdrop-blur-md rounded-lg shadow-sm text-gray-600 hover:text-blue-500 transition-colors"
+                    title="Chỉnh sửa"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button 
+                    onClick={() => deleteNotification(notif.id)}
+                    className="p-2 bg-white/90 backdrop-blur-md rounded-lg shadow-sm text-gray-600 hover:text-red-500 transition-colors"
+                    title="Xóa"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase">
-            <tr>
-              <th className="px-6 py-4 text-left">Ngày tháng</th>
-              <th className="px-6 py-4 text-left">Nội dung thông báo</th>
-              <th className="px-6 py-4 text-left">Đính kèm</th>
-              <th className="px-6 py-4 text-left">Hiệu lực đến</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50 text-sm">
-            {[1, 2, 3].map(i => (
-              <tr key={i} className="hover:bg-gray-50/50">
-                <td className="px-6 py-4 text-gray-500">20/05/2024</td>
-                <td className="px-6 py-4 font-medium text-gray-800">Cập nhật chính sách phụ phí nhiên liệu tháng 06/2024</td>
-                <td className="px-6 py-4 text-primary flex items-center cursor-pointer hover:underline">
-                  <FileText size={14} className="mr-1" /> policy_update.pdf
-                </td>
-                <td className="px-6 py-4 text-red-500 font-bold">30/06/2024</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const QuotationView = () => {
     const [rows, setRows] = useState<QuoteRow[]>([{ id: 1, cost: '', unit: 'Lô', qty: 1, price: 0, vat: 10, currency: 'USD' }]);
@@ -143,153 +389,157 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
     };
 
     const PDFPreview = () => (
-      <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 overflow-y-auto">
-        <div className="bg-white w-full max-w-4xl min-h-[1123px] shadow-2xl rounded-lg p-12 relative flex flex-col print:shadow-none print:rounded-none animate-in fade-in zoom-in duration-300">
-          
-          {/* Action Buttons */}
-          <div className="absolute top-6 right-6 flex space-x-3 print:hidden">
+      <div 
+        className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-start justify-center p-4 sm:p-12 overflow-y-auto cursor-pointer"
+        onClick={() => setShowPDF(false)}
+      >
+        <div 
+          className="bg-white w-full max-w-[840px] shadow-[0_0_50px_rgba(0,0,0,0.3)] relative flex flex-col print:shadow-none animate-in fade-in zoom-in duration-300 cursor-default"
+          onClick={(e) => e.stopPropagation()}
+          style={{ fontFamily: '"Times New Roman", Times, serif' }}
+        >
+          {/* Close & Print Buttons Overlay */}
+          <div className="absolute top-0 -right-16 flex flex-col space-y-4 print:hidden">
             <button 
               onClick={() => window.print()}
-              className="bg-primary text-white px-5 py-2.5 rounded-full font-bold text-sm flex items-center shadow-lg hover:bg-primaryDark transition"
+              className="bg-primary text-white p-4 rounded-full shadow-2xl hover:scale-110 transition active:scale-95"
             >
-              <Printer size={18} className="mr-2" /> In / Lưu PDF
+              <Printer size={24} />
             </button>
             <button 
               onClick={() => setShowPDF(false)}
-              className="bg-gray-100 text-gray-600 px-5 py-2.5 rounded-full font-bold text-sm flex items-center hover:bg-gray-200 transition"
+              className="bg-white text-gray-400 p-4 rounded-full shadow-2xl hover:text-red-500 transition active:scale-95"
             >
-              <X size={18} className="mr-2" /> Đóng
+              <X size={24} />
             </button>
           </div>
 
-          {/* PDF Content */}
-          <div className="flex-1 font-serif text-gray-800">
-            {/* Header */}
-            <div className="flex justify-between items-start border-b-2 border-primary pb-8 mb-10">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center text-white text-2xl font-black">LH</div>
-                <div>
-                  <h1 className="text-2xl font-black tracking-tighter text-gray-900 uppercase">Long Hoang Logistics</h1>
-                  <p className="text-xs text-gray-500 uppercase font-bold tracking-widest mt-1">Professional Supply Chain Solutions</p>
-                </div>
-              </div>
-              <div className="text-right text-xs space-y-1">
-                <p className="flex items-center justify-end"><MapPin size={12} className="mr-1 text-primary" /> 132-134 Nguyễn Gia Trí, P.25, Bình Thạnh, HCM</p>
-                <p className="flex items-center justify-end"><Phone size={12} className="mr-1 text-primary" /> 028 7303 2677</p>
-                <p className="flex items-center justify-end"><Mail size={12} className="mr-1 text-primary" /> info@longhoanglogistics.com</p>
-              </div>
-            </div>
+          {/* Letterhead Header Image - Frame with margin */}
+          <div className="w-full px-12 pt-12 mb-4">
+            <img 
+              src="https://i.ibb.co/Kx32Z01D/LH-VIETNAMESE.jpg" 
+              alt="Long Hoang Logistics Letterhead" 
+              className="w-full h-auto block"
+            />
+          </div>
 
-            {/* Document Title */}
+          {/* PDF Main Content Area */}
+          <div className="px-16 pb-16 flex-1 text-gray-800 text-[14px]">
+            {/* Title */}
             <div className="text-center mb-10">
-              <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Bảng báo giá dịch vụ Logistics</h2>
-              <p className="text-sm text-gray-500 mt-2">Mã báo giá: LH-QT-{new Date().getFullYear()}{Math.floor(1000 + Math.random() * 9000)} | Ngày: {new Date().toLocaleDateString('vi-VN')}</p>
+              <h2 className="text-[32px] font-black text-gray-900 uppercase tracking-[0.05em]">BẢNG BÁO GIÁ DỊCH VỤ LOGISTICS</h2>
+              <p className="text-[12px] text-gray-400 mt-2 font-bold font-sans">Mã báo giá: LH-QT-20267375 | Ngày: 10/1/2026</p>
             </div>
 
-            {/* Info Grid */}
-            <div className="grid grid-cols-2 gap-x-12 gap-y-6 mb-10 bg-gray-50 p-6 rounded-xl">
+            {/* Reorganized Info Grid */}
+            <div className="grid grid-cols-2 gap-x-12 mb-12 items-start">
+              {/* Left Column: Pickup & Term */}
               <div className="space-y-3">
-                <div className="flex justify-between border-b border-gray-200 pb-1">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Pickup (Nơi nhận):</span>
-                  <span className="text-sm font-bold">{quoteData.pickup || '—'}</span>
+                <div className="flex justify-between items-end border-b border-gray-100 pb-1">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase">PICKUP (NƠI NHẬN):</span>
+                  <span className="text-[14px] font-bold text-gray-900 ml-4">{quoteData.pickup || '—'}</span>
                 </div>
-                <div className="flex justify-between border-b border-gray-200 pb-1">
-                  <span className="text-xs font-bold text-gray-400 uppercase">AOD (Cảng đích):</span>
-                  <span className="text-sm font-bold">{quoteData.aod || '—'}</span>
+                <div className="flex justify-between items-end border-b border-gray-100 pb-1">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase">SHIPPING TERM:</span>
+                  <span className="text-[14px] font-bold text-gray-900 ml-4">{quoteData.term || '—'}</span>
                 </div>
-                <div className="flex justify-between border-b border-gray-200 pb-1">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Shipping Term:</span>
-                  <span className="text-sm font-bold">{quoteData.term}</span>
+                <div className="flex justify-between items-end border-b border-gray-100 pb-1">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase">AOD (CẢNG ĐÍCH):</span>
+                  <span className="text-[14px] font-bold text-gray-900 ml-4">{quoteData.aod || '—'}</span>
                 </div>
-                <div className="flex justify-between border-b border-gray-200 pb-1">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Commodity:</span>
-                  <span className="text-sm font-bold">{quoteData.commodity || '—'}</span>
+                <div className="flex justify-between items-end border-b border-gray-100 pb-1">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase">COMMODITY:</span>
+                  <span className="text-[14px] font-bold text-gray-900 ml-4">{quoteData.commodity || '—'}</span>
                 </div>
               </div>
+
+              {/* Right Column: Other Details */}
               <div className="space-y-3">
-                <div className="flex justify-between border-b border-gray-200 pb-1">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Trọng lượng (Kgs):</span>
-                  <span className="text-sm font-bold">{quoteData.weight || '—'}</span>
+                <div className="flex justify-between items-end border-b border-gray-100 pb-1">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase">TRỌNG LƯỢNG (KGS):</span>
+                  <span className="text-[14px] font-bold text-gray-900 ml-4">{quoteData.weight || '—'}</span>
                 </div>
-                <div className="flex justify-between border-b border-gray-200 pb-1">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Thể tích (CBM):</span>
-                  <span className="text-sm font-bold">{quoteData.volume || '—'}</span>
+                <div className="flex justify-between items-end border-b border-gray-100 pb-1">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase">THỂ TÍCH (CBM):</span>
+                  <span className="text-[14px] font-bold text-gray-900 ml-4">{quoteData.volume || '—'}</span>
                 </div>
-                <div className="flex justify-between border-b border-gray-200 pb-1">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Đơn vị vận chuyển:</span>
-                  <span className="text-sm font-bold">{quoteData.unit}</span>
+                <div className="flex justify-between items-end border-b border-gray-100 pb-1">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase">ĐƠN VỊ VẬN CHUYỂN:</span>
+                  <span className="text-[14px] font-bold text-gray-900 ml-4">{quoteData.unit || '—'}</span>
                 </div>
-                <div className="flex justify-between border-b border-gray-200 pb-1">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Nhân viên phụ trách:</span>
-                  <span className="text-sm font-bold">{quoteData.salerName || '—'}</span>
+                <div className="flex justify-between items-end border-b border-gray-100 pb-1">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase">NHÂN VIÊN PHỤ TRÁCH:</span>
+                  <span className="text-[14px] font-bold text-gray-900 ml-4">{quoteData.salerName || '—'}</span>
                 </div>
               </div>
             </div>
 
-            {/* Costs Table */}
+            {/* Costs Table - Colored Orange */}
             <table className="w-full mb-10 border-collapse">
               <thead>
-                <tr className="bg-gray-900 text-white text-[10px] font-bold uppercase tracking-wider">
-                  <th className="p-3 text-center w-12 border border-gray-800">STT</th>
-                  <th className="p-3 text-left border border-gray-800">Chi tiết dịch vụ</th>
-                  <th className="p-3 text-center w-20 border border-gray-800">ĐVT</th>
-                  <th className="p-3 text-center w-16 border border-gray-800">SL</th>
-                  <th className="p-3 text-right w-28 border border-gray-800">Đơn giá</th>
-                  <th className="p-3 text-center w-16 border border-gray-800">VAT</th>
-                  <th className="p-3 text-right w-32 border border-gray-800">Thành tiền</th>
+                <tr className="bg-primary text-white text-[11px] font-bold uppercase tracking-wider">
+                  <th className="p-3 text-center w-12 border border-primary">STT</th>
+                  <th className="p-3 text-left border border-primary">CHI TIẾT DỊCH VỤ</th>
+                  <th className="p-3 text-center w-20 border border-primary">ĐVT</th>
+                  <th className="p-3 text-center w-16 border border-primary">SL</th>
+                  <th className="p-3 text-right w-32 border border-primary">ĐƠN GIÁ</th>
+                  <th className="p-3 text-center w-16 border border-primary">VAT</th>
+                  <th className="p-3 text-right w-40 border border-primary">THÀNH TIỀN</th>
                 </tr>
               </thead>
-              <tbody className="text-sm">
+              <tbody className="text-[15px]">
                 {rows.map((row, idx) => (
-                  <tr key={row.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="p-3 text-center border border-gray-200">{idx + 1}</td>
-                    <td className="p-3 font-bold border border-gray-200">{row.cost || 'Hạng mục chi phí'}</td>
-                    <td className="p-3 text-center border border-gray-200">{row.unit}</td>
-                    <td className="p-3 text-center border border-gray-200">{row.qty}</td>
-                    <td className="p-3 text-right border border-gray-200">{row.price.toLocaleString()}</td>
-                    <td className="p-3 text-center border border-gray-200">{row.vat}%</td>
-                    <td className="p-3 text-right font-black border border-gray-200">
-                      {calculateRowTotal(row)} <span className="text-[10px] ml-1">{row.currency}</span>
+                  <tr key={row.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-orange-50/10'}>
+                    <td className="p-3 text-center border border-gray-100 text-gray-400">{idx + 1}</td>
+                    <td className="p-3 font-bold border border-gray-100">{row.cost || 'Hạng mục chi phí'}</td>
+                    <td className="p-3 text-center border border-gray-100 uppercase">{row.unit}</td>
+                    <td className="p-3 text-center border border-gray-100">{row.qty}</td>
+                    <td className="p-3 text-right border border-gray-100">{row.price.toLocaleString()}</td>
+                    <td className="p-3 text-center border border-gray-100">{row.vat}%</td>
+                    <td className="p-3 text-right font-black border border-gray-100">
+                      {calculateRowTotal(row)} <span className="text-[11px] ml-1 text-gray-400">{row.currency}</span>
                     </td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot>
+              <tfoot className="border-t-2 border-primary">
                 <tr>
-                  <td colSpan={6} className="p-4 text-right font-bold uppercase text-gray-500 text-xs">Tổng cộng dự kiến:</td>
-                  <td className="p-4 text-right font-black text-xl text-primary border-t-2 border-primary">
+                  <td colSpan={6} className="p-5 text-right font-bold uppercase text-gray-400 text-[11px] tracking-[0.15em]">TỔNG CỘNG DỰ KIẾN:</td>
+                  <td className="p-5 text-right font-black text-[22px] text-primary">
                     {rows.reduce((acc, row) => acc + getRowTotalRaw(row), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    <span className="text-xs ml-2">{rows[0]?.currency}</span>
+                    <span className="text-[13px] ml-2 text-primary/70">{rows[0]?.currency}</span>
                   </td>
                 </tr>
               </tfoot>
             </table>
 
-            {/* Notes */}
+            {/* Note & Terms - Note is now ABOVE Terms */}
             <div className="mb-12">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-3 border-l-4 border-primary pl-3">Điều khoản & Ghi chú:</h4>
-              <div className="bg-gray-50 p-4 rounded-lg text-xs leading-relaxed text-gray-600 whitespace-pre-wrap">
-                {quoteData.note || 'Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày phát hành. Chưa bao gồm thuế VAT (nếu không được chỉ định). Vui lòng xác nhận trước khi booking.'}
+              <div className="mb-6">
+                <h4 className="text-[13px] font-black uppercase tracking-widest text-gray-900 mb-2 border-l-4 border-primary pl-4">GHI CHÚ:</h4>
+                <div className="bg-gray-50/50 p-4 rounded text-[13px] leading-relaxed text-gray-600 italic border border-gray-100">
+                  {quoteData.note || 'Không có ghi chú thêm.'}
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="text-[13px] font-black uppercase tracking-widest text-gray-900 mb-2 border-l-4 border-primary pl-4">ĐIỀU KHOẢN:</h4>
+                <div className="bg-gray-50/50 p-4 rounded text-[13px] leading-relaxed text-gray-600 border border-gray-100">
+                  Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày phát hành. Chưa bao gồm thuế VAT (nếu không được chỉ định). Vui lòng xác nhận trước khi booking.
+                </div>
               </div>
             </div>
 
-            {/* Signature Area */}
-            <div className="grid grid-cols-2 text-center mt-auto pt-10">
-              <div className="space-y-20">
-                <p className="font-bold uppercase text-xs tracking-widest">Đại diện Khách hàng</p>
-                <div className="h-0.5 w-40 bg-gray-200 mx-auto"></div>
-                <p className="text-[10px] text-gray-400 uppercase font-bold">(Ký & Ghi rõ họ tên)</p>
-              </div>
-              <div className="space-y-20">
-                <div className="flex flex-col items-center">
-                  <p className="font-bold uppercase text-xs tracking-widest">Người lập báo giá</p>
-                  <p className="text-[10px] text-gray-400 font-medium mt-1 italic">(Long Hoang Logistics Team)</p>
+            {/* Signature Area Simplified - Pushed to right */}
+            <div className="flex justify-end pt-10">
+              <div className="w-1/2 text-right space-y-2">
+                <p className="font-black uppercase text-[12px] tracking-[0.2em] mb-4 text-gray-900">NGƯỜI LẬP BÁO GIÁ</p>
+                <div className="space-y-1 text-gray-700 font-bold">
+                   <p className="text-[17px] text-gray-900">{quoteData.salerName || 'Administrator'}</p>
+                   {quoteData.salerPhone && <p className="text-[14px] flex items-center justify-end font-sans"><Phone size={13} className="mr-2 text-primary" /> {quoteData.salerPhone}</p>}
+                   {quoteData.salerEmail && <p className="text-[14px] flex items-center justify-end font-sans lowercase"><Mail size={13} className="mr-2 text-primary" /> {quoteData.salerEmail}</p>}
                 </div>
-                <div className="relative">
-                   <div className="h-0.5 w-40 bg-gray-200 mx-auto"></div>
-                   <p className="mt-4 font-bold text-gray-900">{quoteData.salerName || 'Administrator'}</p>
-                </div>
-                <p className="text-[10px] text-gray-400 uppercase font-bold">(Ký & Đóng dấu)</p>
+                <div className="pt-4 opacity-40 italic text-[11px] text-gray-400">(Long Hoang Logistics Team)</div>
               </div>
             </div>
           </div>
@@ -575,70 +825,264 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
     );
   };
 
-  const TrackingView = () => (
-    <div className="space-y-8">
-      <div className="flex bg-gray-100 p-1 rounded-lg w-fit">
-        <button 
-          onClick={() => setQuoteType('import')}
-          className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${quoteType === 'import' ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}
-        >
-          Hàng Nhập
-        </button>
-        <button 
-          onClick={() => setQuoteType('export')}
-          className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${quoteType === 'export' ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}
-        >
-          Hàng Xuất
-        </button>
-      </div>
+  const TrackingView = () => {
+    const filteredShipments = shipments.filter(s => s.type === quoteType);
 
-      <div className="space-y-6">
-        {[1, 2].map(shipment => (
-          <div key={shipment} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gray-50 p-4 border-b border-gray-100 flex justify-between items-center">
-              <div>
-                <span className="text-xs font-bold text-gray-400 uppercase mr-3">Mã lô hàng:</span>
-                <span className="font-bold text-gray-800">LH-SHPT-202400{shipment}</span>
-              </div>
-              <div className="flex items-center space-x-4 text-xs font-medium text-gray-500">
-                <span className="flex items-center"><Ship size={14} className="mr-1" /> ONE FREEDOM / V.2405</span>
-                <span className="flex items-center"><Truck size={14} className="mr-1" /> HCM - Hải Phòng</span>
-              </div>
-            </div>
-            
-            <div className="p-8">
-              <div className="relative">
-                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2 z-0"></div>
-                <div className={`absolute top-1/2 left-0 h-0.5 bg-primary -translate-y-1/2 z-0 transition-all duration-1000 ${shipment === 1 ? 'w-3/4' : 'w-1/4'}`}></div>
+    return (
+      <div className="space-y-8">
+        <div className="flex justify-between items-center">
+          <div className="flex bg-gray-100 p-1 rounded-lg w-fit">
+            <button 
+              onClick={() => setQuoteType('import')}
+              className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${quoteType === 'import' ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}
+            >
+              Hàng Nhập
+            </button>
+            <button 
+              onClick={() => setQuoteType('export')}
+              className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${quoteType === 'export' ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}
+            >
+              Hàng Xuất
+            </button>
+          </div>
+          <button 
+            onClick={addShipment}
+            className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center shadow-lg shadow-orange-100 hover:bg-primaryDark transition active:scale-95"
+          >
+            <Plus size={18} className="mr-2" /> Thêm lô hàng theo dõi
+          </button>
+        </div>
 
-                <div className="flex justify-between relative z-10">
-                  {[
-                    { label: 'Lấy hàng', icon: Package, date: '15/05' },
-                    { label: 'Hải quan cảng', icon: ShieldAlert, date: '17/05' },
-                    { label: 'Load tàu', icon: Ship, date: '19/05' },
-                    { label: 'Về kho', icon: Truck, date: 'Dự kiến 25/05' }
-                  ].map((step, idx) => {
-                    const isActive = (shipment === 1 && idx <= 2) || (shipment === 2 && idx === 0);
-                    return (
-                      <div key={idx} className="flex flex-col items-center">
-                        <div className={`w-12 h-12 rounded-full border-4 flex items-center justify-center transition-colors duration-500 ${isActive ? 'bg-primary border-orange-200 text-white' : 'bg-white border-gray-100 text-gray-300'}`}>
-                          <step.icon size={20} />
-                        </div>
-                        <div className="mt-4 text-center">
-                          <p className={`text-xs font-bold uppercase ${isActive ? 'text-primary' : 'text-gray-400'}`}>{step.label}</p>
-                          <p className="text-[10px] text-gray-400 mt-1">{step.date}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
+        <div className="space-y-12">
+          {filteredShipments.map(shipment => (
+            <div key={shipment.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {/* Header Bar */}
+              <div className="bg-gray-50/80 p-5 border-b border-gray-100 flex flex-wrap justify-between items-center gap-4">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-primary/10 text-primary rounded-lg">
+                    <Package size={20} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-widest leading-none mb-1">Mã vận đơn</span>
+                    {editingShipmentId === shipment.id ? (
+                      <input 
+                        className="font-bold text-gray-800 border-b border-primary/50 outline-none bg-transparent"
+                        value={shipment.code}
+                        onChange={(e) => handleUpdateShipment(shipment.id, 'code', e.target.value)}
+                      />
+                    ) : (
+                      <span className="font-black text-gray-800 tracking-tight">{shipment.code}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6">
+                  <div className="hidden sm:block text-right">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase block tracking-widest leading-none mb-1">Mô tả hàng hóa</span>
+                    <span className="text-xs font-bold text-gray-600 italic">"{shipment.commodity || 'Chưa cập nhật'}"</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {editingShipmentId === shipment.id ? (
+                      <button onClick={() => setEditingShipmentId(null)} className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 shadow-md transition"><Save size={16} /></button>
+                    ) : (
+                      <button onClick={() => setEditingShipmentId(shipment.id)} className="p-2 bg-white border border-gray-200 text-gray-400 hover:text-primary hover:border-primary/30 rounded-lg shadow-sm transition"><Edit size={16} /></button>
+                    )}
+                    <button onClick={() => deleteShipment(shipment.id)} className="p-2 bg-white border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-100 rounded-lg shadow-sm transition"><Trash2 size={16} /></button>
+                  </div>
                 </div>
               </div>
+
+              {/* Editable Fields Grid (Visible only in edit mode) */}
+              {editingShipmentId === shipment.id && (
+                <div className="p-6 bg-gray-50 border-b border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-in slide-in-from-top-2 duration-300">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Hàng hóa & Thể tích</label>
+                    <input 
+                      type="text" 
+                      placeholder="Tên hàng, số kiện, CBM..." 
+                      className="w-full text-sm p-2 rounded-lg border border-gray-200 focus:border-primary outline-none bg-white"
+                      value={shipment.commodity}
+                      onChange={(e) => handleUpdateShipment(shipment.id, 'commodity', e.target.value)}
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Volume / Gross Weight" 
+                      className="w-full text-sm p-2 rounded-lg border border-gray-200 focus:border-primary outline-none bg-white mt-1"
+                      value={shipment.volume}
+                      onChange={(e) => handleUpdateShipment(shipment.id, 'volume', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Pickup & Warehouse</label>
+                    <input 
+                      type="text" 
+                      placeholder="Địa chỉ lấy hàng" 
+                      className="w-full text-sm p-2 rounded-lg border border-gray-200 focus:border-primary outline-none bg-white"
+                      value={shipment.pickupAddress}
+                      onChange={(e) => handleUpdateShipment(shipment.id, 'pickupAddress', e.target.value)}
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="Địa chỉ kho đích" 
+                      className="w-full text-sm p-2 rounded-lg border border-gray-200 focus:border-primary outline-none bg-white mt-1"
+                      value={shipment.warehouseAddr}
+                      onChange={(e) => handleUpdateShipment(shipment.id, 'warehouseAddr', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Tàu / Chuyến / Xe</label>
+                    <input 
+                      type="text" 
+                      placeholder="Tên tàu / Vận chuyển" 
+                      className="w-full text-sm p-2 rounded-lg border border-gray-200 focus:border-primary outline-none bg-white"
+                      value={shipment.vesselName}
+                      onChange={(e) => handleUpdateShipment(shipment.id, 'vesselName', e.target.value)}
+                    />
+                    <div className="flex gap-2 mt-1">
+                      <input type="text" placeholder="ETD" className="w-1/2 text-xs p-2 rounded-lg border border-gray-200" value={shipment.etd} onChange={(e) => handleUpdateShipment(shipment.id, 'etd', e.target.value)} />
+                      <input type="text" placeholder="ETA" className="w-1/2 text-xs p-2 rounded-lg border border-gray-100" value={shipment.eta} onChange={(e) => handleUpdateShipment(shipment.id, 'eta', e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Luồng Hải Quan & Tiến độ</label>
+                    <select 
+                      className={`w-full text-sm p-2 rounded-lg border font-bold ${shipment.customsFlow === 'green' ? 'bg-green-50 border-green-200 text-green-700' : shipment.customsFlow === 'yellow' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' : 'bg-red-50 border-red-200 text-red-700'}`}
+                      value={shipment.customsFlow}
+                      onChange={(e) => handleUpdateShipment(shipment.id, 'customsFlow', e.target.value as any)}
+                    >
+                      <option value="green">Luồng Xanh (Green)</option>
+                      <option value="yellow">Luồng Vàng (Yellow)</option>
+                      <option value="red">Luồng Đỏ (Red)</option>
+                    </select>
+                    <select 
+                      className="w-full text-sm p-2 rounded-lg border border-gray-200 mt-1 font-bold"
+                      value={shipment.currentStep}
+                      onChange={(e) => handleUpdateShipment(shipment.id, 'currentStep', parseInt(e.target.value))}
+                    >
+                      <option value={0}>Bước 1: Lấy hàng</option>
+                      <option value={1}>Bước 2: Hải quan</option>
+                      <option value={2}>Bước 3: Load tàu/chuyến</option>
+                      <option value={3}>Bước 4: Về kho/Giao hàng</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Progress Visualization */}
+              <div className="p-8 lg:p-12">
+                <div className="relative mb-12">
+                  <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-100 -translate-y-1/2 z-0"></div>
+                  <div 
+                    className="absolute top-1/2 left-0 h-1 bg-primary -translate-y-1/2 z-0 transition-all duration-1000 ease-out"
+                    style={{ width: `${(shipment.currentStep / 3) * 100}%` }}
+                  ></div>
+
+                  <div className="flex justify-between relative z-10">
+                    {[
+                      { label: 'Lấy hàng', icon: Package, key: 'pickup' },
+                      { label: 'Hải quan', icon: ShieldAlert, key: 'customs' },
+                      { label: 'Load tàu', icon: Ship, key: 'loading' },
+                      { label: 'Về kho', icon: Truck, key: 'warehouse' }
+                    ].map((step, idx) => {
+                      const isActive = idx <= shipment.currentStep;
+                      const isCurrent = idx === shipment.currentStep;
+                      
+                      return (
+                        <div key={idx} className="flex flex-col items-center">
+                          <div className={`w-14 h-14 rounded-full border-4 flex items-center justify-center transition-all duration-500 shadow-sm ${isActive ? 'bg-primary border-orange-200 text-white scale-110' : 'bg-white border-gray-100 text-gray-300'}`}>
+                            {isActive && isCurrent ? <div className="animate-ping absolute w-10 h-10 bg-primary/30 rounded-full"></div> : null}
+                            <step.icon size={22} className="relative z-10" />
+                          </div>
+                          <div className="mt-6 text-center max-w-[120px]">
+                            <p className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-primary' : 'text-gray-400'}`}>{step.label}</p>
+                            
+                            {/* Step specific info bubbles */}
+                            {isActive && (
+                              <div className="mt-2 animate-in fade-in zoom-in duration-300">
+                                {step.key === 'pickup' && (
+                                  <p className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100 line-clamp-2">{shipment.pickupAddress || 'Chưa rõ địa chỉ'}</p>
+                                )}
+                                {step.key === 'customs' && (
+                                  <div className={`flex items-center justify-center space-x-1 px-2 py-1 rounded border text-[9px] font-black uppercase ${shipment.customsFlow === 'green' ? 'bg-green-50 border-green-200 text-green-600' : shipment.customsFlow === 'yellow' ? 'bg-yellow-50 border-yellow-200 text-yellow-600' : 'bg-red-50 border-red-200 text-red-600'}`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${shipment.customsFlow === 'green' ? 'bg-green-500' : shipment.customsFlow === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+                                    <span>{shipment.customsFlow === 'green' ? 'Thông quan' : shipment.customsFlow === 'yellow' ? 'Chuyển kiểm' : 'Luồng đỏ'}</span>
+                                  </div>
+                                )}
+                                {step.key === 'loading' && (
+                                  <div className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100 leading-tight">
+                                    <span className="block text-primaryDark">{shipment.vesselName || 'Tàu/Xe'}</span>
+                                    <span>{shipment.etd ? `ETD: ${shipment.etd}` : 'Chờ ngày đi'}</span>
+                                  </div>
+                                )}
+                                {step.key === 'warehouse' && (
+                                  <p className="text-[9px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-100">Đã nhận kho</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Footer Status Details (Non-edit mode details) */}
+                {editingShipmentId !== shipment.id && (
+                  <div className="bg-gray-50/50 rounded-xl p-6 border border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        <MapPin size={12} className="text-primary" />
+                        <span>Hành trình lô hàng</span>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-gray-700">Điểm lấy: <span className="font-medium text-gray-500">{shipment.pickupAddress || '—'}</span></p>
+                        <p className="text-xs font-bold text-gray-700">Điểm giao: <span className="font-medium text-gray-500">{shipment.warehouseAddr || '—'}</span></p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        <Search size={12} className="text-primary" />
+                        <span>Trạng thái Hải quan</span>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <div className={`w-2.5 h-2.5 rounded-full mt-1 ${shipment.customsFlow === 'green' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : shipment.customsFlow === 'yellow' ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]'}`}></div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-700 uppercase">{shipment.customsFlow === 'green' ? 'Luồng Xanh' : shipment.customsFlow === 'yellow' ? 'Luồng Vàng' : 'Luồng Đỏ'}</p>
+                          <p className="text-[11px] text-gray-500 italic mt-0.5">"{shipment.customsStatus || 'Đang xử lý hồ sơ'}"</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        <Clock size={12} className="text-primary" />
+                        <span>Dự kiến giao hàng</span>
+                      </div>
+                      <div className="flex items-baseline space-x-2">
+                         <span className="text-xl font-black text-gray-800 tracking-tight">{shipment.eta || '--/--'}</span>
+                         <span className="text-[10px] font-bold text-gray-400 uppercase">Ngày cập nhật</span>
+                      </div>
+                      <p className="text-[10px] font-medium text-gray-400">Vận tải: {shipment.truckingCo || 'Chưa chỉ định nhà xe'}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+
+          {filteredShipments.length === 0 && (
+            <div className="bg-white py-20 rounded-2xl border-2 border-dashed border-gray-200 text-center flex flex-col items-center">
+               <div className="p-4 bg-gray-50 rounded-full text-gray-300 mb-4">
+                  <Search size={48} />
+               </div>
+               <h4 className="text-lg font-bold text-gray-400 uppercase tracking-widest">Không có lô hàng nào</h4>
+               <p className="text-sm text-gray-400 mt-1">Vui lòng thêm mã lô hàng để bắt đầu theo dõi tiến trình.</p>
+               <button onClick={addShipment} className="mt-6 text-primary font-bold text-sm uppercase hover:underline">Thêm lô hàng ngay</button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const ReportsView = () => {
     const [customers, setCustomers] = useState<Customer[]>([
@@ -941,7 +1385,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
         </div>
       </div>
       <div className="bg-white border-t border-gray-100 py-6 text-center text-xs text-gray-400 font-medium print:hidden">
-        Hệ thống Quản lý Nội bộ Long Hoang Logistics v3.2.0 • 2024
+        Hệ thống Quản lý Nội bộ Long Hoang Logistics v3.2.0 • {new Date().getFullYear()}
       </div>
     </div>
   );
