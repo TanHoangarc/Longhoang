@@ -4,7 +4,7 @@ import {
   Upload, FileText, ChevronRight, Download, ArrowLeft, Package, 
   Ship, Truck, LayoutDashboard, FolderPlus, Folder, File, MoreVertical, 
   ShieldAlert, TrendingUp, UserPlus, UserMinus, MessageSquare, 
-  AlertTriangle, HelpCircle, Save, Edit
+  AlertTriangle, HelpCircle, Save, Edit, Printer, Mail, Phone, MapPin
 } from 'lucide-react';
 
 interface CompanyPageProps {
@@ -30,6 +30,21 @@ interface QuoteRow {
   price: number;
   vat: number;
   currency: string;
+}
+
+interface QuotationData {
+  pickup: string;
+  aod: string;
+  term: string;
+  weight: string;
+  volume: string;
+  unit: string;
+  commodity: string;
+  saler: string;
+  note: string;
+  salerName: string;
+  salerPhone: string;
+  salerEmail: string;
 }
 
 const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
@@ -77,6 +92,23 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
     const [rows, setRows] = useState<QuoteRow[]>([{ id: 1, cost: '', unit: 'Lô', qty: 1, price: 0, vat: 10, currency: 'USD' }]);
     const [units, setUnits] = useState(['Lô', 'Bill', 'Bộ', 'Cont', 'CBM', 'Kgs', 'Chuyến']);
     const [currencies, setCurrencies] = useState(['USD', 'VND', 'EUR']);
+    const [showPDF, setShowPDF] = useState(false);
+    
+    const [quoteData, setQuoteData] = useState<QuotationData>({
+      pickup: '',
+      aod: '',
+      term: 'FOB',
+      weight: '',
+      volume: '',
+      unit: 'CBM',
+      commodity: '',
+      saler: '',
+      note: '',
+      salerName: '',
+      salerPhone: '',
+      salerEmail: ''
+    });
+
     const vats = [0, 5, 8, 10];
     
     const addRow = () => setRows([...rows, { id: Date.now(), cost: '', unit: units[0], qty: 1, price: 0, vat: 10, currency: currencies[0] }]);
@@ -100,14 +132,175 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
       }
     };
 
-    const calculateRowTotal = (row: QuoteRow) => {
+    const getRowTotalRaw = (row: QuoteRow) => {
       const amount = row.qty * row.price;
       const vatAmount = amount * (row.vat / 100);
-      return (amount + vatAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return amount + vatAmount;
     };
+
+    const calculateRowTotal = (row: QuoteRow) => {
+      return getRowTotalRaw(row).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    const PDFPreview = () => (
+      <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 overflow-y-auto">
+        <div className="bg-white w-full max-w-4xl min-h-[1123px] shadow-2xl rounded-lg p-12 relative flex flex-col print:shadow-none print:rounded-none animate-in fade-in zoom-in duration-300">
+          
+          {/* Action Buttons */}
+          <div className="absolute top-6 right-6 flex space-x-3 print:hidden">
+            <button 
+              onClick={() => window.print()}
+              className="bg-primary text-white px-5 py-2.5 rounded-full font-bold text-sm flex items-center shadow-lg hover:bg-primaryDark transition"
+            >
+              <Printer size={18} className="mr-2" /> In / Lưu PDF
+            </button>
+            <button 
+              onClick={() => setShowPDF(false)}
+              className="bg-gray-100 text-gray-600 px-5 py-2.5 rounded-full font-bold text-sm flex items-center hover:bg-gray-200 transition"
+            >
+              <X size={18} className="mr-2" /> Đóng
+            </button>
+          </div>
+
+          {/* PDF Content */}
+          <div className="flex-1 font-serif text-gray-800">
+            {/* Header */}
+            <div className="flex justify-between items-start border-b-2 border-primary pb-8 mb-10">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center text-white text-2xl font-black">LH</div>
+                <div>
+                  <h1 className="text-2xl font-black tracking-tighter text-gray-900 uppercase">Long Hoang Logistics</h1>
+                  <p className="text-xs text-gray-500 uppercase font-bold tracking-widest mt-1">Professional Supply Chain Solutions</p>
+                </div>
+              </div>
+              <div className="text-right text-xs space-y-1">
+                <p className="flex items-center justify-end"><MapPin size={12} className="mr-1 text-primary" /> 132-134 Nguyễn Gia Trí, P.25, Bình Thạnh, HCM</p>
+                <p className="flex items-center justify-end"><Phone size={12} className="mr-1 text-primary" /> 028 7303 2677</p>
+                <p className="flex items-center justify-end"><Mail size={12} className="mr-1 text-primary" /> info@longhoanglogistics.com</p>
+              </div>
+            </div>
+
+            {/* Document Title */}
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Bảng báo giá dịch vụ Logistics</h2>
+              <p className="text-sm text-gray-500 mt-2">Mã báo giá: LH-QT-{new Date().getFullYear()}{Math.floor(1000 + Math.random() * 9000)} | Ngày: {new Date().toLocaleDateString('vi-VN')}</p>
+            </div>
+
+            {/* Info Grid */}
+            <div className="grid grid-cols-2 gap-x-12 gap-y-6 mb-10 bg-gray-50 p-6 rounded-xl">
+              <div className="space-y-3">
+                <div className="flex justify-between border-b border-gray-200 pb-1">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Pickup (Nơi nhận):</span>
+                  <span className="text-sm font-bold">{quoteData.pickup || '—'}</span>
+                </div>
+                <div className="flex justify-between border-b border-gray-200 pb-1">
+                  <span className="text-xs font-bold text-gray-400 uppercase">AOD (Cảng đích):</span>
+                  <span className="text-sm font-bold">{quoteData.aod || '—'}</span>
+                </div>
+                <div className="flex justify-between border-b border-gray-200 pb-1">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Shipping Term:</span>
+                  <span className="text-sm font-bold">{quoteData.term}</span>
+                </div>
+                <div className="flex justify-between border-b border-gray-200 pb-1">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Commodity:</span>
+                  <span className="text-sm font-bold">{quoteData.commodity || '—'}</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between border-b border-gray-200 pb-1">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Trọng lượng (Kgs):</span>
+                  <span className="text-sm font-bold">{quoteData.weight || '—'}</span>
+                </div>
+                <div className="flex justify-between border-b border-gray-200 pb-1">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Thể tích (CBM):</span>
+                  <span className="text-sm font-bold">{quoteData.volume || '—'}</span>
+                </div>
+                <div className="flex justify-between border-b border-gray-200 pb-1">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Đơn vị vận chuyển:</span>
+                  <span className="text-sm font-bold">{quoteData.unit}</span>
+                </div>
+                <div className="flex justify-between border-b border-gray-200 pb-1">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Nhân viên phụ trách:</span>
+                  <span className="text-sm font-bold">{quoteData.salerName || '—'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Costs Table */}
+            <table className="w-full mb-10 border-collapse">
+              <thead>
+                <tr className="bg-gray-900 text-white text-[10px] font-bold uppercase tracking-wider">
+                  <th className="p-3 text-center w-12 border border-gray-800">STT</th>
+                  <th className="p-3 text-left border border-gray-800">Chi tiết dịch vụ</th>
+                  <th className="p-3 text-center w-20 border border-gray-800">ĐVT</th>
+                  <th className="p-3 text-center w-16 border border-gray-800">SL</th>
+                  <th className="p-3 text-right w-28 border border-gray-800">Đơn giá</th>
+                  <th className="p-3 text-center w-16 border border-gray-800">VAT</th>
+                  <th className="p-3 text-right w-32 border border-gray-800">Thành tiền</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {rows.map((row, idx) => (
+                  <tr key={row.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="p-3 text-center border border-gray-200">{idx + 1}</td>
+                    <td className="p-3 font-bold border border-gray-200">{row.cost || 'Hạng mục chi phí'}</td>
+                    <td className="p-3 text-center border border-gray-200">{row.unit}</td>
+                    <td className="p-3 text-center border border-gray-200">{row.qty}</td>
+                    <td className="p-3 text-right border border-gray-200">{row.price.toLocaleString()}</td>
+                    <td className="p-3 text-center border border-gray-200">{row.vat}%</td>
+                    <td className="p-3 text-right font-black border border-gray-200">
+                      {calculateRowTotal(row)} <span className="text-[10px] ml-1">{row.currency}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={6} className="p-4 text-right font-bold uppercase text-gray-500 text-xs">Tổng cộng dự kiến:</td>
+                  <td className="p-4 text-right font-black text-xl text-primary border-t-2 border-primary">
+                    {rows.reduce((acc, row) => acc + getRowTotalRaw(row), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <span className="text-xs ml-2">{rows[0]?.currency}</span>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+
+            {/* Notes */}
+            <div className="mb-12">
+              <h4 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-3 border-l-4 border-primary pl-3">Điều khoản & Ghi chú:</h4>
+              <div className="bg-gray-50 p-4 rounded-lg text-xs leading-relaxed text-gray-600 whitespace-pre-wrap">
+                {quoteData.note || 'Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày phát hành. Chưa bao gồm thuế VAT (nếu không được chỉ định). Vui lòng xác nhận trước khi booking.'}
+              </div>
+            </div>
+
+            {/* Signature Area */}
+            <div className="grid grid-cols-2 text-center mt-auto pt-10">
+              <div className="space-y-20">
+                <p className="font-bold uppercase text-xs tracking-widest">Đại diện Khách hàng</p>
+                <div className="h-0.5 w-40 bg-gray-200 mx-auto"></div>
+                <p className="text-[10px] text-gray-400 uppercase font-bold">(Ký & Ghi rõ họ tên)</p>
+              </div>
+              <div className="space-y-20">
+                <div className="flex flex-col items-center">
+                  <p className="font-bold uppercase text-xs tracking-widest">Người lập báo giá</p>
+                  <p className="text-[10px] text-gray-400 font-medium mt-1 italic">(Long Hoang Logistics Team)</p>
+                </div>
+                <div className="relative">
+                   <div className="h-0.5 w-40 bg-gray-200 mx-auto"></div>
+                   <p className="mt-4 font-bold text-gray-900">{quoteData.salerName || 'Administrator'}</p>
+                </div>
+                <p className="text-[10px] text-gray-400 uppercase font-bold">(Ký & Đóng dấu)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
 
     return (
       <div className="space-y-8">
+        {showPDF && <PDFPreview />}
+        
         <div className="flex justify-between items-center">
           <div className="flex bg-gray-100 p-1 rounded-lg">
             <button 
@@ -123,7 +316,10 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
               Hàng Xuất
             </button>
           </div>
-          <button className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center hover:bg-green-700 transition">
+          <button 
+            onClick={() => setShowPDF(true)}
+            className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center hover:bg-green-700 transition"
+          >
             <Download size={16} className="mr-2" /> Xuất File PDF
           </button>
         </div>
@@ -132,49 +328,91 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase">Pickup</label>
-              <input type="text" className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" placeholder="Địa điểm đóng hàng" />
+              <input 
+                type="text" 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" 
+                placeholder="Địa điểm đóng hàng" 
+                value={quoteData.pickup}
+                onChange={(e) => setQuoteData({...quoteData, pickup: e.target.value})}
+              />
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase">AOD (Cảng đích)</label>
-              <input type="text" className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" placeholder="Airport of Destination" />
+              <input 
+                type="text" 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" 
+                placeholder="Airport of Destination" 
+                value={quoteData.aod}
+                onChange={(e) => setQuoteData({...quoteData, aod: e.target.value})}
+              />
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase">Term</label>
-              <select className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition">
+              <select 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition"
+                value={quoteData.term}
+                onChange={(e) => setQuoteData({...quoteData, term: e.target.value})}
+              >
                 <option>EXW</option><option>FOB</option><option>CIF</option><option>DDU</option><option>DDP</option>
               </select>
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase">Gross Weight (KGS)</label>
-              <input type="number" className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" placeholder="0.00" />
+              <input 
+                type="number" 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" 
+                placeholder="0.00" 
+                value={quoteData.weight}
+                onChange={(e) => setQuoteData({...quoteData, weight: e.target.value})}
+              />
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase">Volume</label>
-              <input type="number" className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" placeholder="0.00" />
+              <input 
+                type="number" 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" 
+                placeholder="0.00" 
+                value={quoteData.volume}
+                onChange={(e) => setQuoteData({...quoteData, volume: e.target.value})}
+              />
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase">Đơn vị</label>
-              <div className="flex items-center">
-                <select className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition">
-                  <option>CBM</option>
-                  <option>KGS</option>
-                  <option>Cont 20GP</option>
-                  <option>Cont 40GP</option>
-                  <option>Cont 40HQ</option>
-                  <option>Cont 45DC</option>
-                  <option>Pallet</option>
-                  <option>Carton</option>
-                  <option>Package</option>
-                </select>
-              </div>
+              <select 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition"
+                value={quoteData.unit}
+                onChange={(e) => setQuoteData({...quoteData, unit: e.target.value})}
+              >
+                <option>CBM</option>
+                <option>KGS</option>
+                <option>Cont 20GP</option>
+                <option>Cont 40GP</option>
+                <option>Cont 40HQ</option>
+                <option>Cont 45DC</option>
+                <option>Pallet</option>
+                <option>Carton</option>
+                <option>Package</option>
+              </select>
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase">Commodity</label>
-              <input type="text" className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" placeholder="Tên hàng hóa" />
+              <input 
+                type="text" 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" 
+                placeholder="Tên hàng hóa" 
+                value={quoteData.commodity}
+                onChange={(e) => setQuoteData({...quoteData, commodity: e.target.value})}
+              />
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase">Saler</label>
-              <input type="text" className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" placeholder="Nhân viên phụ trách" />
+              <input 
+                type="text" 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" 
+                placeholder="Nhân viên phụ trách" 
+                value={quoteData.salerName}
+                onChange={(e) => setQuoteData({...quoteData, salerName: e.target.value})}
+              />
             </div>
           </div>
 
@@ -297,15 +535,38 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
             <div className="space-y-4">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-400 uppercase">Note (Ghi chú)</label>
-                <textarea className="w-full border border-gray-200 rounded p-3 text-sm focus:border-primary outline-none h-24" placeholder="Điều kiện báo giá, thời gian hiệu lực..."></textarea>
+                <textarea 
+                  className="w-full border border-gray-200 rounded p-3 text-sm focus:border-primary outline-none h-24" 
+                  placeholder="Điều kiện báo giá, thời gian hiệu lực..."
+                  value={quoteData.note}
+                  onChange={(e) => setQuoteData({...quoteData, note: e.target.value})}
+                ></textarea>
               </div>
             </div>
             <div className="bg-gray-50 p-6 rounded-lg space-y-4">
               <h5 className="font-bold text-sm text-gray-600 uppercase mb-2">Thông tin liên hệ Sale</h5>
               <div className="grid grid-cols-2 gap-4">
-                <input type="text" className="bg-white border border-gray-200 rounded p-2 text-sm outline-none" placeholder="Tên Saler" />
-                <input type="text" className="bg-white border border-gray-200 rounded p-2 text-sm outline-none" placeholder="Số điện thoại" />
-                <input type="email" className="bg-white border border-gray-200 rounded p-2 text-sm outline-none col-span-2" placeholder="Email liên hệ" />
+                <input 
+                  type="text" 
+                  className="bg-white border border-gray-200 rounded p-2 text-sm outline-none" 
+                  placeholder="Tên Saler" 
+                  value={quoteData.salerName}
+                  onChange={(e) => setQuoteData({...quoteData, salerName: e.target.value})}
+                />
+                <input 
+                  type="text" 
+                  className="bg-white border border-gray-200 rounded p-2 text-sm outline-none" 
+                  placeholder="Số điện thoại" 
+                  value={quoteData.salerPhone}
+                  onChange={(e) => setQuoteData({...quoteData, salerPhone: e.target.value})}
+                />
+                <input 
+                  type="email" 
+                  className="bg-white border border-gray-200 rounded p-2 text-sm outline-none col-span-2" 
+                  placeholder="Email liên hệ" 
+                  value={quoteData.salerEmail}
+                  onChange={(e) => setQuoteData({...quoteData, salerEmail: e.target.value})}
+                />
               </div>
             </div>
           </div>
@@ -635,7 +896,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-[#1e2a3b] text-white py-4 px-8 sticky top-0 z-40 shadow-lg border-b border-white/5">
+      <div className="bg-[#1e2a3b] text-white py-4 px-8 sticky top-0 z-40 shadow-lg border-b border-white/5 print:hidden">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveView('dashboard')}>
@@ -665,11 +926,11 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
           </button>
         </div>
       </div>
-      <div className="flex-1 container mx-auto px-4 py-12 max-w-7xl">
+      <div className="flex-1 container mx-auto px-4 py-12 max-w-7xl print:py-0 print:px-0 print:max-w-none">
         {activeView !== 'dashboard' && (
           <button 
             onClick={() => setActiveView('dashboard')}
-            className="mb-8 flex items-center text-gray-400 hover:text-primary transition font-bold text-xs uppercase tracking-widest group"
+            className="mb-8 flex items-center text-gray-400 hover:text-primary transition font-bold text-xs uppercase tracking-widest group print:hidden"
           >
             <ArrowLeft size={16} className="mr-2 group-hover:-translate-x-1 transition-transform" /> 
             Quay lại Bàn làm việc
@@ -679,7 +940,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
           {renderContent()}
         </div>
       </div>
-      <div className="bg-white border-t border-gray-100 py-6 text-center text-xs text-gray-400 font-medium">
+      <div className="bg-white border-t border-gray-100 py-6 text-center text-xs text-gray-400 font-medium print:hidden">
         Hệ thống Quản lý Nội bộ Long Hoang Logistics v3.2.0 • 2024
       </div>
     </div>
