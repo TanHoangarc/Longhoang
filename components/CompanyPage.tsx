@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, Bell, FileSpreadsheet, BarChart3, Library, Clock, Plus, Trash2, 
   Upload, FileText, ChevronRight, Download, ArrowLeft, Package, 
   Ship, Truck, LayoutDashboard, FolderPlus, Folder, File, MoreVertical, 
   ShieldAlert, TrendingUp, UserPlus, UserMinus, MessageSquare, 
   AlertTriangle, HelpCircle, Save, Edit, Printer, Mail, Phone, MapPin,
-  Pin, PinOff, Calendar, AlertCircle, Info, CheckCircle, Search, Filter
+  Pin, PinOff, Calendar, AlertCircle, Info, CheckCircle, Search, Filter,
+  Briefcase, DollarSign, Send
 } from 'lucide-react';
 
 interface CompanyPageProps {
@@ -21,6 +23,20 @@ interface Customer {
   contact: string;
   status: string;
   classification: 'Check giá' | 'Tiềm năng';
+  week: number; // 1, 2, 3, 4
+  month: number;
+  year: number;
+}
+
+interface ExistingCustomer {
+  id: number;
+  week: number; // 1, 2, 3, 4
+  month: number;
+  year: number;
+  companyName: string;
+  profit: number;
+  com: number;
+  status: 'Đang lấy Booking' | 'Đang vận chuyển' | 'Hoàn thành';
 }
 
 interface QuoteRow {
@@ -1116,12 +1132,43 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
   };
 
   const ReportsView = () => {
+    // Current Date Context
+    const today = new Date();
+    
+    // Filter State
+    const [reportFilter, setReportFilter] = useState({
+        month: today.getMonth() + 1,
+        year: today.getFullYear(),
+        week: 'All' as 'All' | number
+    });
+
+    // --- NEW CUSTOMERS STATE ---
     const [customers, setCustomers] = useState<Customer[]>([
-      { id: 1, companyName: 'Công ty ABC Việt Nam', shipmentInfo: '3x20GP HCM-BKK', contact: 'Mr. Long - 090xxx', status: 'Đang báo giá', classification: 'Check giá' },
-      { id: 2, companyName: 'Logistics Global Ltd', shipmentInfo: '1.2 tons AIR SGN-FRA', contact: 'Ms. Hoa - hoa@global.com', status: 'Đã chốt', classification: 'Tiềm năng' },
+      { id: 1, companyName: 'Công ty ABC Việt Nam', shipmentInfo: '3x20GP HCM-BKK', contact: 'Mr. Long - 090xxx', status: 'Đang báo giá', classification: 'Check giá', week: 2, month: 5, year: 2024 },
+      { id: 2, companyName: 'Logistics Global Ltd', shipmentInfo: '1.2 tons AIR SGN-FRA', contact: 'Ms. Hoa - hoa@global.com', status: 'Đã chốt', classification: 'Tiềm năng', week: 3, month: 5, year: 2024 },
+      { id: 3, companyName: 'Minh Long Corp', shipmentInfo: 'LCL 2 CBM to US', contact: 'Mr. Binh', status: 'Follow', classification: 'Check giá', week: 4, month: 4, year: 2024 },
     ]);
     
+    // --- EXISTING/CURRENT CUSTOMERS STATE ---
+    const [existingCustomers, setExistingCustomers] = useState<ExistingCustomer[]>([
+        { id: 1, week: 1, month: 5, year: 2024, companyName: 'KH Thân thiết A', profit: 500, com: 50, status: 'Hoàn thành' },
+        { id: 2, week: 2, month: 5, year: 2024, companyName: 'Đối tác B', profit: 1200, com: 100, status: 'Đang vận chuyển' },
+        { id: 3, week: 2, month: 5, year: 2024, companyName: 'Công ty C', profit: 800, com: 0, status: 'Đang lấy Booking' },
+    ]);
+
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingExistingId, setEditingExistingId] = useState<number | null>(null);
+    const [showReportPreview, setShowReportPreview] = useState(false);
+    const [reportInputs, setReportInputs] = useState({
+        difficulties: '',
+        lostCustomers: '',
+        feedback: '',
+        suggestions: ''
+    });
+
+    // Helper functions
+    const formatCurrency = (val: number) => val.toLocaleString('en-US');
+    const parseCurrency = (val: string) => parseFloat(val.replace(/,/g, '')) || 0;
 
     const addCustomer = () => {
       const newCust: Customer = {
@@ -1130,28 +1177,239 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
         shipmentInfo: '',
         contact: '',
         status: 'Mới',
-        classification: 'Check giá'
+        classification: 'Check giá',
+        week: reportFilter.week !== 'All' ? Number(reportFilter.week) : 1,
+        month: reportFilter.month,
+        year: reportFilter.year
       };
       setCustomers([...customers, newCust]);
       setEditingId(newCust.id);
+    };
+
+    const addExistingCustomer = () => {
+        const newCust: ExistingCustomer = {
+            id: Date.now(),
+            week: reportFilter.week !== 'All' ? Number(reportFilter.week) : 1,
+            month: reportFilter.month,
+            year: reportFilter.year,
+            companyName: '',
+            profit: 0,
+            com: 0,
+            status: 'Đang lấy Booking'
+        };
+        setExistingCustomers([...existingCustomers, newCust]);
+        setEditingExistingId(newCust.id);
     };
 
     const updateCustomer = (id: number, field: keyof Customer, value: any) => {
       setCustomers(customers.map(c => c.id === id ? { ...c, [field]: value } : c));
     };
 
-    const deleteCustomer = (id: number) => {
-      setCustomers(customers.filter(c => c.id !== id));
+    const updateExistingCustomer = (id: number, field: keyof ExistingCustomer, value: any) => {
+      setExistingCustomers(existingCustomers.map(c => c.id === id ? { ...c, [field]: value } : c));
     };
+
+    const deleteCustomer = (id: number) => setCustomers(customers.filter(c => c.id !== id));
+    const deleteExistingCustomer = (id: number) => setExistingCustomers(existingCustomers.filter(c => c.id !== id));
+
+    // Filter Logic
+    const filterData = <T extends { week: number; month: number; year: number }>(data: T[]) => {
+        return data.filter(item => {
+            const matchYear = item.year === reportFilter.year;
+            const matchMonth = item.month === reportFilter.month;
+            const matchWeek = reportFilter.week === 'All' || item.week === Number(reportFilter.week);
+            return matchYear && matchMonth && matchWeek;
+        });
+    };
+
+    const filteredCustomers = filterData(customers);
+    const filteredExistingCustomers = filterData(existingCustomers);
+
+    // Stats Calculation
+    const stats = useMemo(() => {
+        // Booking in week (count of current customers matching filter)
+        const bookingCount = filteredExistingCustomers.length;
+        
+        // Profit in week (sum of profit matching filter)
+        const profitSum = filteredExistingCustomers.reduce((sum, c) => sum + c.profit, 0);
+        
+        // Shipments in progress (count of status 'Đang vận chuyển' in the selected month, ignoring week filter usually, but let's follow filter for consistency or all active)
+        // Let's count "In Transit" for the whole month for better context
+        const shippingCount = existingCustomers.filter(c => 
+            c.month === reportFilter.month && 
+            c.year === reportFilter.year && 
+            c.status === 'Đang vận chuyển'
+        ).length;
+
+        // Monthly Revenue (Sum of Profit for the WHOLE month, ignoring week filter)
+        const monthlyRevenue = existingCustomers
+            .filter(c => c.month === reportFilter.month && c.year === reportFilter.year)
+            .reduce((sum, c) => sum + c.profit, 0);
+
+        return { bookingCount, profitSum, shippingCount, monthlyRevenue };
+    }, [existingCustomers, filteredExistingCustomers, reportFilter]);
+
+    const handleSendReport = () => {
+        alert("Báo cáo tuần đã được gửi thành công và lưu vào hồ sơ nhân viên: Nguyễn Văn Long");
+        setShowReportPreview(false);
+    };
+
+    const WeeklyReportPreview = () => (
+      <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-start justify-center p-4 sm:p-8 overflow-y-auto cursor-pointer" onClick={() => setShowReportPreview(false)}>
+         <div 
+            className="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-2xl relative flex flex-col print:shadow-none animate-in fade-in zoom-in duration-300 cursor-default p-12 text-gray-900"
+            onClick={(e) => e.stopPropagation()}
+            style={{ fontFamily: '"Times New Roman", Times, serif' }}
+         >
+            {/* Report Header */}
+            <div className="flex justify-between items-center mb-8 border-b-2 border-gray-900 pb-4">
+                <div>
+                    <h1 className="text-2xl font-black uppercase tracking-wider">BÁO CÁO CÔNG VIỆC</h1>
+                    <p className="text-sm font-bold mt-1 uppercase">Tháng {reportFilter.month}/{reportFilter.year} {reportFilter.week !== 'All' ? `- Tuần ${reportFilter.week}` : ''}</p>
+                </div>
+                <div className="text-right">
+                    <p className="text-sm font-bold">Người báo cáo: Nguyễn Văn Long</p>
+                    <p className="text-sm">Ngày báo cáo: {new Date().toLocaleDateString('vi-VN')}</p>
+                </div>
+            </div>
+
+            {/* Existing Customers Table */}
+            <div className="mb-8">
+                <h3 className="text-lg font-bold uppercase mb-4 border-l-4 border-black pl-3">1. Khách hàng hiện tại</h3>
+                <table className="w-full border-collapse border border-gray-300 text-sm">
+                    <thead>
+                        <tr className="bg-gray-100">
+                            <th className="border border-gray-300 p-2 w-10 text-center">STT</th>
+                            <th className="border border-gray-300 p-2 w-28 text-center">Tuần</th>
+                            <th className="border border-gray-300 p-2">Khách hàng</th>
+                            <th className="border border-gray-300 p-2 text-right">Profit ($)</th>
+                            <th className="border border-gray-300 p-2 text-right">COM ($)</th>
+                            <th className="border border-gray-300 p-2 text-center">Tình trạng</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredExistingCustomers.length > 0 ? filteredExistingCustomers.map((c, i) => (
+                            <tr key={i}>
+                                <td className="border border-gray-300 p-2 text-center">{i + 1}</td>
+                                <td className="border border-gray-300 p-2 text-center">W{c.week}/T{c.month}/{c.year.toString().slice(-2)}</td>
+                                <td className="border border-gray-300 p-2 font-bold">{c.companyName}</td>
+                                <td className="border border-gray-300 p-2 text-right">{formatCurrency(c.profit)}</td>
+                                <td className="border border-gray-300 p-2 text-right">{formatCurrency(c.com)}</td>
+                                <td className="border border-gray-300 p-2 text-center">{c.status}</td>
+                            </tr>
+                        )) : (
+                            <tr><td colSpan={6} className="border border-gray-300 p-2 text-center italic">Không có dữ liệu</td></tr>
+                        )}
+                        {/* Summary Row */}
+                        {filteredExistingCustomers.length > 0 && (
+                            <tr className="bg-gray-50 font-bold">
+                                <td colSpan={3} className="border border-gray-300 p-2 text-right uppercase">Tổng cộng:</td>
+                                <td className="border border-gray-300 p-2 text-right">{formatCurrency(filteredExistingCustomers.reduce((s,c) => s+c.profit, 0))}</td>
+                                <td className="border border-gray-300 p-2 text-right">{formatCurrency(filteredExistingCustomers.reduce((s,c) => s+c.com, 0))}</td>
+                                <td className="border border-gray-300 p-2"></td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* New Customers Table */}
+            <div className="mb-8">
+                <h3 className="text-lg font-bold uppercase mb-4 border-l-4 border-black pl-3">2. Khách hàng mới phát triển</h3>
+                <table className="w-full border-collapse border border-gray-300 text-sm">
+                    <thead>
+                        <tr className="bg-gray-100">
+                            <th className="border border-gray-300 p-2 w-10 text-center">STT</th>
+                            <th className="border border-gray-300 p-2 w-28 text-center">Tuần</th>
+                            <th className="border border-gray-300 p-2">Tên công ty</th>
+                            <th className="border border-gray-300 p-2">Thông tin lô hàng</th>
+                            <th className="border border-gray-300 p-2">Liên hệ</th>
+                            <th className="border border-gray-300 p-2">Tình trạng</th>
+                            <th className="border border-gray-300 p-2">Phân loại</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredCustomers.length > 0 ? filteredCustomers.map((c, i) => (
+                            <tr key={i}>
+                                <td className="border border-gray-300 p-2 text-center">{i + 1}</td>
+                                <td className="border border-gray-300 p-2 text-center">W{c.week}/T{c.month}/{c.year.toString().slice(-2)}</td>
+                                <td className="border border-gray-300 p-2 font-bold">{c.companyName}</td>
+                                <td className="border border-gray-300 p-2 whitespace-pre-wrap">{c.shipmentInfo}</td>
+                                <td className="border border-gray-300 p-2">{c.contact}</td>
+                                <td className="border border-gray-300 p-2">{c.status}</td>
+                                <td className="border border-gray-300 p-2 text-center">{c.classification}</td>
+                            </tr>
+                        )) : (
+                            <tr><td colSpan={7} className="border border-gray-300 p-2 text-center italic">Không có dữ liệu trong tuần này</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Sections */}
+            <div className="space-y-6">
+                <div>
+                    <h3 className="text-lg font-bold uppercase mb-2 border-l-4 border-black pl-3">3. Khó khăn & Các bộ phận liên quan</h3>
+                    <div className="border border-gray-300 p-4 min-h-[80px] text-sm whitespace-pre-wrap">{reportInputs.difficulties || 'Không có.'}</div>
+                </div>
+                <div>
+                    <h3 className="text-lg font-bold uppercase mb-2 border-l-4 border-black pl-3">4. Khách hàng bị mất</h3>
+                    <div className="border border-gray-300 p-4 min-h-[80px] text-sm whitespace-pre-wrap">{reportInputs.lostCustomers || 'Không có.'}</div>
+                </div>
+                <div>
+                    <h3 className="text-lg font-bold uppercase mb-2 border-l-4 border-black pl-3">5. Phản ánh</h3>
+                    <div className="border border-gray-300 p-4 min-h-[80px] text-sm whitespace-pre-wrap">{reportInputs.feedback || 'Không có.'}</div>
+                </div>
+                <div>
+                    <h3 className="text-lg font-bold uppercase mb-2 border-l-4 border-black pl-3">6. Đề xuất</h3>
+                    <div className="border border-gray-300 p-4 min-h-[80px] text-sm whitespace-pre-wrap">{reportInputs.suggestions || 'Không có.'}</div>
+                </div>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-12 text-right">
+                <p className="font-bold uppercase">Người lập báo cáo</p>
+                <div className="h-20"></div>
+                <p>Nguyễn Văn Long</p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="absolute top-4 right-4 print:hidden flex flex-col gap-2">
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => window.print()} 
+                        className="bg-black text-white px-4 py-2 rounded-lg hover:scale-105 transition flex items-center text-xs font-bold"
+                    >
+                        <Printer size={16} className="mr-2" /> In
+                    </button>
+                    <button 
+                        onClick={() => setShowReportPreview(false)} 
+                        className="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-300 transition flex items-center text-xs font-bold"
+                    >
+                        <X size={16} className="mr-2" /> Đóng
+                    </button>
+                </div>
+                <button 
+                    onClick={handleSendReport}
+                    className="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition flex items-center justify-center text-sm font-bold shadow-lg mt-2"
+                >
+                    <Send size={16} className="mr-2" /> Gửi báo cáo ngay
+                </button>
+            </div>
+         </div>
+      </div>
+    );
 
     return (
       <div className="space-y-10 pb-20">
+        {showReportPreview && <WeeklyReportPreview />}
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {[
-            { label: 'Booking trong tuần', value: '18', color: 'text-primary', icon: Package, trend: '+4 so với tuần trước' },
-            { label: 'Profit trong tuần', value: '$8,450', color: 'text-green-600', icon: TrendingUp, trend: '+12.5%' },
-            { label: 'Lô hàng đang chạy', value: '34', color: 'text-blue-600', icon: Ship, trend: '8 lô hàng sắp về' },
-            { label: 'Doanh thu tháng', value: '$92,000', color: 'text-indigo-600', icon: BarChart3, trend: 'Đạt 85% kế hoạch' }
+            { label: 'Booking trong tuần', value: stats.bookingCount, color: 'text-primary', icon: Package, trend: 'Theo bộ lọc' },
+            { label: 'Profit trong tuần', value: `$${formatCurrency(stats.profitSum)}`, color: 'text-green-600', icon: TrendingUp, trend: 'Theo bộ lọc' },
+            { label: 'Lô hàng đang chạy', value: stats.shippingCount, color: 'text-blue-600', icon: Ship, trend: `Trong tháng ${reportFilter.month}` },
+            { label: 'Doanh thu tháng', value: `$${formatCurrency(stats.monthlyRevenue)}`, color: 'text-indigo-600', icon: BarChart3, trend: `Tổng tháng ${reportFilter.month}` }
           ].map((stat, i) => (
             <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition">
               <div className="flex justify-between items-start mb-4">
@@ -1164,17 +1422,169 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
           ))}
         </div>
 
+        {/* Filter Controls */}
+        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-wrap items-center gap-4">
+            <div className="flex items-center space-x-2">
+                <span className="text-sm font-bold text-gray-500 uppercase"><Filter size={16} className="inline mr-1" /> Bộ lọc:</span>
+            </div>
+            <div className="flex gap-2">
+                <select 
+                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-primary"
+                    value={reportFilter.month}
+                    onChange={(e) => setReportFilter({...reportFilter, month: Number(e.target.value)})}
+                >
+                    {Array.from({length: 12}, (_, i) => i + 1).map(m => <option key={m} value={m}>Tháng {m}</option>)}
+                </select>
+                <select 
+                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-primary"
+                    value={reportFilter.year}
+                    onChange={(e) => setReportFilter({...reportFilter, year: Number(e.target.value)})}
+                >
+                    <option value={2023}>2023</option>
+                    <option value={2024}>2024</option>
+                    <option value={2025}>2025</option>
+                </select>
+                <select 
+                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-primary"
+                    value={reportFilter.week}
+                    onChange={(e) => setReportFilter({...reportFilter, week: e.target.value === 'All' ? 'All' : Number(e.target.value)})}
+                >
+                    <option value="All">Tất cả các tuần</option>
+                    <option value={1}>Tuần 1</option>
+                    <option value={2}>Tuần 2</option>
+                    <option value={3}>Tuần 3</option>
+                    <option value={4}>Tuần 4</option>
+                </select>
+            </div>
+        </div>
+
+        {/* --- EXISTING CUSTOMERS TABLE --- */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+          <div className="p-6 border-b border-gray-100 flex flex-wrap justify-between items-center bg-gray-50/50 gap-4">
+            <div className="flex items-center space-x-3">
+               <div className="p-2 bg-green-100 text-green-600 rounded-lg"><Briefcase size={20} /></div>
+               <h3 className="font-bold text-gray-800 text-lg">Khách hàng hiện tại</h3>
+            </div>
+            <button 
+                onClick={addExistingCustomer}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center shadow-lg shadow-green-100"
+            >
+                <Plus size={14} className="mr-1" /> Thêm khách hàng
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="text-[10px] font-bold text-gray-400 uppercase bg-gray-50/50 border-b border-gray-100">
+                <tr>
+                  <th className="px-6 py-4 w-16">STT</th>
+                  <th className="px-6 py-4 w-28">Tuần</th>
+                  <th className="px-6 py-4">Khách hàng</th>
+                  <th className="px-6 py-4 text-right">Profit ($)</th>
+                  <th className="px-6 py-4 text-right">COM ($)</th>
+                  <th className="px-6 py-4 text-center">Tình trạng</th>
+                  <th className="px-6 py-4 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredExistingCustomers.map((cust, idx) => (
+                  <tr key={cust.id} className="hover:bg-gray-50/50 transition group">
+                    <td className="px-6 py-4 text-xs font-bold text-gray-400">{idx + 1}</td>
+                    <td className="px-6 py-4">
+                        {editingExistingId === cust.id ? (
+                            <select 
+                                className="bg-white border rounded px-1 py-1 text-xs outline-none"
+                                value={cust.week} 
+                                onChange={(e) => updateExistingCustomer(cust.id, 'week', Number(e.target.value))}
+                            >
+                                {[1,2,3,4].map(w => <option key={w} value={w}>W{w}</option>)}
+                            </select>
+                        ) : (
+                            <span className="text-xs font-bold bg-gray-100 px-2 py-1 rounded text-gray-600">
+                                W{cust.week}/T{cust.month}/{cust.year.toString().slice(-2)}
+                            </span>
+                        )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {editingExistingId === cust.id ? (
+                        <input className="w-full text-sm border-b border-primary/30 p-1 outline-none" value={cust.companyName} onChange={(e) => updateExistingCustomer(cust.id, 'companyName', e.target.value)} placeholder="Nhập tên..." />
+                      ) : (
+                        <div className="text-sm font-bold text-gray-800">{cust.companyName || '—'}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {editingExistingId === cust.id ? (
+                        <input 
+                            type="text"
+                            className="w-full text-sm border-b border-primary/30 p-1 outline-none text-right" 
+                            value={formatCurrency(cust.profit)} 
+                            onChange={(e) => updateExistingCustomer(cust.id, 'profit', parseCurrency(e.target.value))} 
+                        />
+                      ) : (
+                        <div className="text-sm font-bold text-green-600">{formatCurrency(cust.profit)}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {editingExistingId === cust.id ? (
+                        <input 
+                            type="text"
+                            className="w-full text-sm border-b border-primary/30 p-1 outline-none text-right" 
+                            value={formatCurrency(cust.com)} 
+                            onChange={(e) => updateExistingCustomer(cust.id, 'com', parseCurrency(e.target.value))} 
+                        />
+                      ) : (
+                        <div className="text-sm font-bold text-gray-500">{formatCurrency(cust.com)}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {editingExistingId === cust.id ? (
+                          <select 
+                            className="text-xs border rounded p-1 outline-none w-full"
+                            value={cust.status}
+                            onChange={(e) => updateExistingCustomer(cust.id, 'status', e.target.value as any)}
+                          >
+                              <option value="Đang lấy Booking">Đang lấy Booking</option>
+                              <option value="Đang vận chuyển">Đang vận chuyển</option>
+                              <option value="Hoàn thành">Hoàn thành</option>
+                          </select>
+                      ) : (
+                        <span className={`text-[10px] font-bold uppercase px-3 py-1.5 rounded-full ${
+                            cust.status === 'Hoàn thành' ? 'bg-green-100 text-green-700' :
+                            cust.status === 'Đang vận chuyển' ? 'bg-blue-100 text-blue-700' :
+                            'bg-yellow-100 text-yellow-700'
+                        }`}>
+                            {cust.status}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {editingExistingId === cust.id ? (
+                          <button onClick={() => setEditingExistingId(null)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg"><Save size={16} /></button>
+                        ) : (
+                          <button onClick={() => setEditingExistingId(cust.id)} className="p-2 text-gray-400 hover:text-primary rounded-lg"><Edit size={16} /></button>
+                        )}
+                        <button onClick={() => deleteExistingCustomer(cust.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg"><Trash2 size={16} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* --- NEW CUSTOMERS TABLE --- */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-100 flex flex-wrap justify-between items-center bg-gray-50/50 gap-4">
             <div className="flex items-center space-x-3">
                <div className="p-2 bg-primary/10 text-primary rounded-lg"><UserPlus size={20} /></div>
                <h3 className="font-bold text-gray-800 text-lg">Khách hàng mới phát triển</h3>
             </div>
             <button 
-              onClick={addCustomer}
-              className="bg-primary hover:bg-primaryDark text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center shadow-lg shadow-orange-100"
+                onClick={addCustomer}
+                className="bg-primary hover:bg-primaryDark text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center shadow-lg shadow-orange-100"
             >
-              <Plus size={14} className="mr-1" /> Thêm khách hàng
+                <Plus size={14} className="mr-1" /> Thêm khách hàng
             </button>
           </div>
           <div className="overflow-x-auto">
@@ -1190,20 +1600,32 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {customers.map((cust) => (
-                  <tr key={cust.id} className="hover:bg-gray-50/50 transition group">
+                {filteredCustomers.map((cust) => (
+                  <tr key={cust.id} className="hover:bg-gray-50/50 transition group align-top">
                     <td className="px-6 py-4">
                       {editingId === cust.id ? (
-                        <input className="w-full text-sm border-b border-primary/30 p-1 outline-none" value={cust.companyName} onChange={(e) => updateCustomer(cust.id, 'companyName', e.target.value)} placeholder="Nhập tên..." />
+                        <>
+                            <input className="w-full text-sm border-b border-primary/30 p-1 outline-none mb-1" value={cust.companyName} onChange={(e) => updateCustomer(cust.id, 'companyName', e.target.value)} placeholder="Nhập tên..." />
+                            <select className="text-xs border rounded p-1" value={cust.week} onChange={(e) => updateCustomer(cust.id, 'week', Number(e.target.value))}>{[1,2,3,4].map(w => <option key={w} value={w}>Tuần {w}</option>)}</select>
+                        </>
                       ) : (
-                        <div className="text-sm font-bold text-gray-800">{cust.companyName || '—'}</div>
+                        <div>
+                            <div className="text-sm font-bold text-gray-800">{cust.companyName || '—'}</div>
+                            <div className="text-[10px] text-gray-400 font-bold bg-gray-100 px-1.5 py-0.5 rounded inline-block mt-1">W{cust.week}/T{cust.month}/{cust.year.toString().slice(-2)}</div>
+                        </div>
                       )}
                     </td>
                     <td className="px-6 py-4">
                       {editingId === cust.id ? (
-                        <input className="w-full text-sm border-b border-primary/30 p-1 outline-none" value={cust.shipmentInfo} onChange={(e) => updateCustomer(cust.id, 'shipmentInfo', e.target.value)} placeholder="Nhập lô hàng..." />
+                        <textarea 
+                            rows={3}
+                            className="w-full text-sm border border-gray-200 rounded p-2 outline-none focus:border-primary transition" 
+                            value={cust.shipmentInfo} 
+                            onChange={(e) => updateCustomer(cust.id, 'shipmentInfo', e.target.value)} 
+                            placeholder="Nhập lô hàng (Enter xuống dòng)..." 
+                        />
                       ) : (
-                        <div className="text-xs text-gray-500">{cust.shipmentInfo || '—'}</div>
+                        <div className="text-xs text-gray-500 whitespace-pre-wrap leading-relaxed">{cust.shipmentInfo || '—'}</div>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -1214,10 +1636,20 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                        <span className="text-xs font-medium text-gray-600">{cust.status}</span>
-                      </div>
+                      {editingId === cust.id ? (
+                          <input 
+                            type="text" 
+                            className="w-full text-sm border-b border-primary/30 p-1 outline-none"
+                            value={cust.status}
+                            onChange={(e) => updateCustomer(cust.id, 'status', e.target.value)}
+                            placeholder="Nhập tình trạng..."
+                          />
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></div>
+                            <span className="text-xs font-medium text-gray-600">{cust.status}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <select 
@@ -1252,34 +1684,57 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
                 <div className="p-2 bg-red-50 text-red-500 rounded-lg"><AlertTriangle size={20} /></div>
                 <h4 className="font-bold text-gray-800">Khó khăn & Các bộ phận liên quan</h4>
              </div>
-             <textarea className="w-full h-32 p-4 bg-gray-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-100 transition" placeholder="Mô tả khó khăn..."></textarea>
+             <textarea 
+                className="w-full h-32 p-4 bg-gray-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-100 transition" 
+                placeholder="Mô tả khó khăn..."
+                value={reportInputs.difficulties}
+                onChange={(e) => setReportInputs({...reportInputs, difficulties: e.target.value})}
+             ></textarea>
           </div>
           <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm space-y-4">
              <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-gray-100 text-gray-500 rounded-lg"><UserMinus size={20} /></div>
                 <h4 className="font-bold text-gray-800">Khách hàng bị mất (nếu có)</h4>
              </div>
-             <textarea className="w-full h-32 p-4 bg-gray-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-gray-200 transition" placeholder="Lý do..."></textarea>
+             <textarea 
+                className="w-full h-32 p-4 bg-gray-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-gray-200 transition" 
+                placeholder="Lý do..."
+                value={reportInputs.lostCustomers}
+                onChange={(e) => setReportInputs({...reportInputs, lostCustomers: e.target.value})}
+             ></textarea>
           </div>
           <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm space-y-4">
              <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-blue-50 text-blue-500 rounded-lg"><MessageSquare size={20} /></div>
                 <h4 className="font-bold text-gray-800">Phản ánh nội bộ / Khách hàng</h4>
              </div>
-             <textarea className="w-full h-32 p-4 bg-gray-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 transition" placeholder="Phản ánh..."></textarea>
+             <textarea 
+                className="w-full h-32 p-4 bg-gray-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 transition" 
+                placeholder="Phản ánh..."
+                value={reportInputs.feedback}
+                onChange={(e) => setReportInputs({...reportInputs, feedback: e.target.value})}
+             ></textarea>
           </div>
           <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm space-y-4">
              <div className="flex items-center space-x-3 mb-2">
                 <div className="p-2 bg-green-50 text-green-500 rounded-lg"><HelpCircle size={20} /></div>
                 <h4 className="font-bold text-gray-800">Yêu cầu & Đề xuất</h4>
              </div>
-             <textarea className="w-full h-32 p-4 bg-gray-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-100 transition" placeholder="Đề xuất..."></textarea>
+             <textarea 
+                className="w-full h-32 p-4 bg-gray-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-100 transition" 
+                placeholder="Đề xuất..."
+                value={reportInputs.suggestions}
+                onChange={(e) => setReportInputs({...reportInputs, suggestions: e.target.value})}
+             ></textarea>
           </div>
         </div>
 
         <div className="flex justify-center pt-8">
-            <button className="bg-[#1e2a3b] text-white px-12 py-4 rounded-xl font-bold shadow-2xl hover:bg-black transition transform active:scale-95">
-                GỬI BÁO CÁO TUẦN
+            <button 
+                onClick={() => setShowReportPreview(true)}
+                className="bg-[#1e2a3b] text-white px-12 py-4 rounded-xl font-bold shadow-2xl hover:bg-black transition transform active:scale-95 flex items-center"
+            >
+                <FileText size={18} className="mr-2" /> GỬI BÁO CÁO TUẦN
             </button>
         </div>
       </div>
