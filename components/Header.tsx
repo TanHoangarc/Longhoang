@@ -1,16 +1,19 @@
+
 import React, { useState } from 'react';
-import { Menu, X, Phone, Mail, Facebook, Youtube, Instagram, User, LogOut, ChevronDown, ShieldCheck, Briefcase, Lock, Key, ArrowRight } from 'lucide-react';
+import { Menu, X, Phone, Mail, Facebook, Youtube, Instagram, User, LogOut, ChevronDown, ShieldCheck, Briefcase, Lock, Key, ArrowRight, ShieldAlert } from 'lucide-react';
 import { NAV_LINKS } from '../constants';
-import { UserRole } from '../App';
+import { UserRole, UserAccount } from '../App';
 
 interface HeaderProps {
   userRole: UserRole;
   onLogin: (role: UserRole) => void;
   onLogout: () => void;
   onOpenPage: (page: 'finance' | 'company' | 'management' | 'settings' | null) => void;
+  users: UserAccount[];
+  onLoginAttempt?: (email: string, isSuccess: boolean) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage }) => {
+const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage, users, onLoginAttempt }) => {
   const [isOpen, setIsOpen] = useState(false);
   
   // Login Modal State
@@ -44,8 +47,56 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
     const lowerUser = username.toLowerCase().trim();
     const pass = password.trim();
 
-    // Mock Authentication Logic
-    // In a real app, verify against API
+    // 1. Find user by email (insensitive)
+    const targetUser = users.find(acc => acc.email.toLowerCase() === lowerUser);
+
+    if (targetUser) {
+        // Check Status First
+        if (targetUser.status === 'Locked') {
+            setError('Tài khoản đã bị KHÓA do nhập sai mật khẩu quá 5 lần. Vui lòng liên hệ Admin.');
+            if (onLoginAttempt) onLoginAttempt(targetUser.email, false); // Log attempt on locked account
+            return;
+        }
+
+        // Check Password
+        if (targetUser.password === pass) {
+            // SUCCESS
+            if (onLoginAttempt) onLoginAttempt(targetUser.email, true);
+            
+            let role: UserRole = 'staff';
+            let redirectPage = 'company';
+
+            if (targetUser.role === 'Admin') {
+                role = 'admin';
+                redirectPage = 'settings';
+            } else if (targetUser.role === 'Accounting' || targetUser.role === 'Manager') {
+                role = 'manager';
+                redirectPage = 'management';
+            } else if (targetUser.role === 'Sales' || targetUser.role === 'Document') {
+                role = 'staff';
+                redirectPage = 'company';
+            }
+
+            onLogin(role);
+            onOpenPage(redirectPage as any);
+            setShowLoginModal(false);
+            return;
+        } else {
+            // WRONG PASSWORD
+            const attempts = (targetUser.failedAttempts || 0) + 1;
+            if (onLoginAttempt) onLoginAttempt(targetUser.email, false);
+
+            if (attempts >= 5) {
+                setError('Tài khoản của bạn vừa bị KHÓA do nhập sai quá 5 lần!');
+            } else {
+                setError(`Mật khẩu không đúng! Bạn còn ${5 - attempts} lần thử.`);
+            }
+            setPassword('');
+            return;
+        }
+    }
+
+    // 2. Fallback to Demo/Generic Accounts (if not found in list)
     if (pass === '123' || pass === 'admin') { 
         if (lowerUser === 'admin') {
             onLogin('admin');
@@ -64,10 +115,10 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
             onOpenPage('finance');
             setShowLoginModal(false);
         } else {
-            setError('Tài khoản không tồn tại trong hệ thống.');
+            setError('Tài khoản không tồn tại hoặc mật khẩu không đúng.');
         }
     } else {
-        setError('Mật khẩu không chính xác.');
+        setError('Tài khoản không tồn tại hoặc mật khẩu không đúng.');
     }
     
     // Clear password on error
@@ -263,20 +314,20 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
             <div className="p-8">
                 <form onSubmit={handleLoginSubmit} className="space-y-5">
                     {error && (
-                        <div className="bg-red-50 text-red-500 text-xs font-bold p-3 rounded-lg flex items-center border border-red-100">
-                            <ShieldCheck size={16} className="mr-2 flex-shrink-0" />
-                            {error}
+                        <div className="bg-red-50 text-red-500 text-xs font-bold p-3 rounded-lg flex items-start border border-red-100">
+                            <ShieldAlert size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+                            <span>{error}</span>
                         </div>
                     )}
                     
                     <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tên đăng nhập</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Email / Tên đăng nhập</label>
                         <div className="relative">
                             <User className="absolute left-3 top-3 text-gray-300" size={18} />
                             <input 
                                 type="text" 
                                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition font-bold text-gray-700" 
-                                placeholder="Nhập username..."
+                                placeholder="name@longhoanglogistics.com"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 autoFocus
@@ -307,7 +358,7 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
                 </form>
 
                 <div className="mt-6 text-center">
-                    <p className="text-[10px] text-gray-400 mb-2">Tài khoản dùng thử (Demo):</p>
+                    <p className="text-[10px] text-gray-400 mb-2">Hoặc tài khoản Demo (Pass: 123):</p>
                     <div className="flex flex-wrap justify-center gap-2">
                         {['customer', 'staff', 'manager', 'admin'].map(role => (
                             <span key={role} className="px-2 py-1 bg-gray-100 rounded text-[10px] font-mono text-gray-500 border border-gray-200 cursor-pointer hover:bg-gray-200" onClick={() => { setUsername(role); setPassword('123'); }}>
@@ -315,7 +366,6 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
                             </span>
                         ))}
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-1">(Mật khẩu chung: 123)</p>
                 </div>
             </div>
           </div>

@@ -1,14 +1,16 @@
+
 import React, { useState } from 'react';
 import { 
   X, FileText, Search, Download, Users, FileCheck, CreditCard, 
   ArrowLeft, Eye, ShieldCheck, Filter, ChevronRight, Package, 
   Ship, Truck, BarChart2, Briefcase
 } from 'lucide-react';
-import { UserRole } from '../App';
+import { UserRole, UserAccount } from '../App';
 
 interface ManagementPageProps {
   onClose: () => void;
   userRole: UserRole;
+  users: UserAccount[];
 }
 
 type ManagementSection = 'GUQ' | 'CVHC' | 'CVHT' | 'ADJUST' | 'EMPLOYEES';
@@ -35,37 +37,25 @@ const MOCK_ADJUSTMENTS = [
   { id: 3, bl: 'LH-BL-7711', date: '09/05/2024', status: 'Signed', fileName: 'BB_Adjust_7711_Signed.pdf' },
 ];
 
-const MOCK_EMPLOYEES = [
-  { 
-    id: 1, 
-    name: 'Nguyễn Văn Long', 
-    role: 'Sales Executive', 
+// Helper to generate mock details for any user
+const getMockEmployeeDetails = (user: UserAccount) => {
+  return {
+    ...user,
     shipments: [
-      { code: 'LH-S-001', commodity: 'Máy móc', status: 'In Transit' },
-      { code: 'LH-S-002', commodity: 'Nông sản', status: 'Delivered' }
+      { code: `LH-S-${user.id}01`, commodity: 'Máy móc', status: 'In Transit' },
+      { code: `LH-S-${user.id}02`, commodity: 'Nông sản', status: 'Delivered' }
     ],
     reports: [
-      { week: 'W19 (May)', fileName: 'Report_W19_Long.pdf' },
-      { week: 'W18 (May)', fileName: 'Report_W18_Long.pdf' }
+      { week: 'W19 (May)', fileName: `Report_W19_${user.name.split(' ').pop()}.pdf` },
+      { week: 'W18 (May)', fileName: `Report_W18_${user.name.split(' ').pop()}.pdf` }
     ]
-  },
-  { 
-    id: 2, 
-    name: 'Trần Thị Thu Hoa', 
-    role: 'Document Manager', 
-    shipments: [
-      { code: 'LH-S-003', commodity: 'Vải sợi', status: 'Clearing Customs' }
-    ],
-    reports: [
-      { week: 'W19 (May)', fileName: 'Report_W19_Hoa.pdf' }
-    ]
-  },
-];
+  };
+};
 
-const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole }) => {
+const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, users }) => {
   const [activeSection, setActiveSection] = useState<ManagementSection>('EMPLOYEES');
   const [adjustFilter, setAdjustFilter] = useState<'All' | 'Signed' | 'Unsigned'>('All');
-  const [selectedEmployee, setSelectedEmployee] = useState<typeof MOCK_EMPLOYEES[0] | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<ReturnType<typeof getMockEmployeeDetails> | null>(null);
 
   if (userRole !== 'admin' && userRole !== 'manager') {
       return (
@@ -78,6 +68,9 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole }) =>
           </div>
       );
   }
+
+  // Filter users to show only staff/sales/docs/accounting
+  const employeeList = users.filter(u => ['Sales', 'Document', 'Accounting', 'Staff'].includes(u.role) && u.status === 'Active');
 
   const renderSection = () => {
     switch (activeSection) {
@@ -194,9 +187,9 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole }) =>
             {/* List */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden h-fit">
               <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-gray-800 flex items-center"><Users size={18} className="mr-2 text-primary" /> Đội ngũ nhân viên</div>
-              <div className="divide-y divide-gray-50">
-                {MOCK_EMPLOYEES.map(emp => (
-                  <div key={emp.id} onClick={() => setSelectedEmployee(emp)} className={`p-4 cursor-pointer hover:bg-orange-50 transition-colors flex items-center justify-between group ${selectedEmployee?.id === emp.id ? 'bg-orange-50 border-r-4 border-primary' : ''}`}>
+              <div className="divide-y divide-gray-50 max-h-[600px] overflow-y-auto">
+                {employeeList.map(emp => (
+                  <div key={emp.id} onClick={() => setSelectedEmployee(getMockEmployeeDetails(emp))} className={`p-4 cursor-pointer hover:bg-orange-50 transition-colors flex items-center justify-between group ${selectedEmployee?.id === emp.id ? 'bg-orange-50 border-r-4 border-primary' : ''}`}>
                     <div>
                       <h4 className="font-bold text-gray-800 text-sm group-hover:text-primary transition-colors">{emp.name}</h4>
                       <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">{emp.role}</p>
@@ -204,6 +197,11 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole }) =>
                     <ChevronRight size={16} className={`text-gray-300 group-hover:text-primary transition-transform ${selectedEmployee?.id === emp.id ? 'rotate-90 translate-x-1' : ''}`} />
                   </div>
                 ))}
+                {employeeList.length === 0 && (
+                  <div className="p-8 text-center text-gray-400 text-sm italic">
+                    Chưa có nhân viên nào trong hệ thống.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -212,12 +210,13 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole }) =>
               {selectedEmployee ? (
                 <>
                   {/* Summary */}
-                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between animate-in fade-in slide-in-from-right-4 duration-300">
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary font-black text-xl">{selectedEmployee.name.split(' ').pop()?.charAt(0)}</div>
                         <div>
                             <h2 className="text-xl font-black text-gray-800">{selectedEmployee.name}</h2>
                             <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">{selectedEmployee.role}</p>
+                            <p className="text-xs text-gray-400 mt-1">{selectedEmployee.email}</p>
                         </div>
                     </div>
                     <div className="flex gap-4">
@@ -233,7 +232,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole }) =>
                   </div>
 
                   {/* Shipments Detail */}
-                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-100">
                     <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-sm text-gray-700 flex items-center"><Package size={16} className="mr-2" /> Các lô hàng đang quản lý</div>
                     <div className="p-0 overflow-x-auto">
                         <table className="w-full text-left">
@@ -257,7 +256,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole }) =>
                   </div>
 
                   {/* Weekly Reports */}
-                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200">
                     <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-sm text-gray-700 flex items-center"><BarChart2 size={16} className="mr-2" /> File báo cáo tuần</div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
                         {selectedEmployee.reports.map((r, idx) => (
