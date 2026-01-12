@@ -140,6 +140,8 @@ interface CvhtData {
   beneficiary: string;
   accountNumber: string;
   bank: string;
+  refundType: 'wrong' | 'excess';
+  excessAmount: string;
 }
 
 const FinancePage: React.FC<FinancePageProps> = ({ onClose }) => {
@@ -175,7 +177,9 @@ const FinancePage: React.FC<FinancePageProps> = ({ onClose }) => {
   const [cvhtData, setCvhtData] = useState<CvhtData>({
     companyName: '', taxId: '', address: '',
     paymentDate: '', amount: '', hbl: '',
-    reason: '', beneficiary: '', accountNumber: '', bank: ''
+    reason: '', beneficiary: '', accountNumber: '', bank: '',
+    refundType: 'wrong',
+    excessAmount: ''
   });
 
   const handleBlSearch = (e: React.FormEvent) => {
@@ -286,6 +290,9 @@ const FinancePage: React.FC<FinancePageProps> = ({ onClose }) => {
     const modalWidth = (activeModal === 'CVHC' && cvhcMode === 'create') || activeModal === 'CVHT' 
         ? 'max-w-[1400px] h-[90vh]' 
         : activeModal === 'GUQ' ? 'max-w-2xl' : 'max-w-4xl';
+    
+    // For CVHT Logic
+    const cvhtRefundAmount = cvhtData.refundType === 'excess' ? cvhtData.excessAmount : cvhtData.amount;
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:p-0">
@@ -737,10 +744,10 @@ const FinancePage: React.FC<FinancePageProps> = ({ onClose }) => {
 
                             <p className="mt-2">Tuy nhiên vì lý do: {cvhtData.reason || '................................................'}.</p>
 
-                            <p className="mt-4">Kính đề nghị Quý công ty chuyển khoản lại số tiền thừa {Number(cvhtData.amount || 0).toLocaleString()} VNĐ cho công ty chúng tôi như bên dưới:</p>
+                            <p className="mt-4">Kính đề nghị Quý công ty chuyển khoản lại số tiền thừa {Number(cvhtRefundAmount || 0).toLocaleString()} VNĐ cho công ty chúng tôi như bên dưới:</p>
 
                             <div className="pl-4 space-y-2 font-bold mt-2">
-                                <p>- Số tiền: {Number(cvhtData.amount || 0).toLocaleString()} VNĐ</p>
+                                <p>- Số tiền: {Number(cvhtRefundAmount || 0).toLocaleString()} VNĐ</p>
                                 <p>- Người thụ hưởng: {cvhtData.beneficiary || '................................................'}</p>
                                 <p>- Số TK: {cvhtData.accountNumber || '................................................'}</p>
                                 <p>- Ngân hàng: {cvhtData.bank || '................................................'}</p>
@@ -767,6 +774,30 @@ const FinancePage: React.FC<FinancePageProps> = ({ onClose }) => {
                          <h4 className="font-bold text-gray-800 flex items-center"><PenTool size={16} className="mr-2" /> Nhập thông tin</h4>
                       </div>
                       <div className="p-6 overflow-y-auto space-y-4 flex-1">
+                          {/* Payment Type Toggle */}
+                          <div className="flex gap-4 mb-2 p-1 bg-gray-50 rounded-lg">
+                              <label className="flex-1 flex items-center justify-center cursor-pointer p-2 rounded-md hover:bg-white transition">
+                                  <input 
+                                      type="radio" 
+                                      name="refundType" 
+                                      className="mr-2 accent-primary"
+                                      checked={cvhtData.refundType === 'wrong'} 
+                                      onChange={() => setCvhtData({...cvhtData, refundType: 'wrong'})} 
+                                  />
+                                  <span className="text-xs font-bold text-gray-600">Thanh toán nhầm</span>
+                              </label>
+                              <label className="flex-1 flex items-center justify-center cursor-pointer p-2 rounded-md hover:bg-white transition">
+                                  <input 
+                                      type="radio" 
+                                      name="refundType" 
+                                      className="mr-2 accent-primary"
+                                      checked={cvhtData.refundType === 'excess'} 
+                                      onChange={() => setCvhtData({...cvhtData, refundType: 'excess'})} 
+                                  />
+                                  <span className="text-xs font-bold text-gray-600">Thanh toán dư</span>
+                              </label>
+                          </div>
+
                           <div className="space-y-1">
                             <label className="text-[10px] font-black text-gray-400 uppercase">Tên công ty (*)</label>
                             <input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm focus:border-primary transition" value={cvhtData.companyName} onChange={(e) => setCvhtData({...cvhtData, companyName: e.target.value})} />
@@ -783,10 +814,22 @@ const FinancePage: React.FC<FinancePageProps> = ({ onClose }) => {
                             <label className="text-[10px] font-black text-gray-400 uppercase">Ngày thanh toán</label>
                             <input type="date" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm focus:border-primary transition" value={cvhtData.paymentDate} onChange={(e) => setCvhtData({...cvhtData, paymentDate: e.target.value})} />
                           </div>
+                          
+                          {/* Amount Fields based on type */}
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black text-gray-400 uppercase">Số tiền hoàn (VNĐ) (*)</label>
+                            <label className="text-[10px] font-black text-gray-400 uppercase">
+                                {cvhtData.refundType === 'excess' ? 'Số tiền đã chuyển khoản (VNĐ) (*)' : 'Số tiền hoàn (VNĐ) (*)'}
+                            </label>
                             <input type="number" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm font-bold focus:border-primary transition" value={cvhtData.amount} onChange={(e) => setCvhtData({...cvhtData, amount: e.target.value})} />
                           </div>
+
+                          {cvhtData.refundType === 'excess' && (
+                              <div className="space-y-1 animate-in slide-in-from-top-2">
+                                <label className="text-[10px] font-black text-primary uppercase">Số tiền dư cần hoàn (VNĐ) (*)</label>
+                                <input type="number" className="w-full px-3 py-2 bg-orange-50 border border-orange-100 text-primary rounded-lg outline-none text-sm font-bold focus:border-primary transition" value={cvhtData.excessAmount} onChange={(e) => setCvhtData({...cvhtData, excessAmount: e.target.value})} />
+                              </div>
+                          )}
+
                            <div className="space-y-1">
                             <label className="text-[10px] font-black text-gray-400 uppercase">Số HBL</label>
                             <input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm font-bold uppercase focus:border-primary transition" value={cvhtData.hbl} onChange={(e) => setCvhtData({...cvhtData, hbl: e.target.value})} />
