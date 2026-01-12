@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Phone, Mail, Facebook, Youtube, Instagram, User, LogOut, ChevronDown, ShieldCheck } from 'lucide-react';
+import { Menu, X, Phone, Mail, Facebook, Youtube, Instagram, User, LogOut, ChevronDown, ShieldCheck, Briefcase, Lock, Key, ArrowRight } from 'lucide-react';
 import { NAV_LINKS } from '../constants';
 import { UserRole } from '../App';
 
@@ -7,12 +7,17 @@ interface HeaderProps {
   userRole: UserRole;
   onLogin: (role: UserRole) => void;
   onLogout: () => void;
-  onOpenPage: (page: 'finance' | 'company' | 'settings' | null) => void;
+  onOpenPage: (page: 'finance' | 'company' | 'management' | 'settings' | null) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [showLoginOptions, setShowLoginOptions] = useState(false);
+  
+  // Login Modal State
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, target: string) => {
     e.preventDefault();
@@ -21,7 +26,7 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
     if (target === '#' || target === 'home') {
       onOpenPage(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (['finance', 'company', 'settings'].includes(target)) {
+    } else if (['finance', 'company', 'management', 'settings'].includes(target)) {
       onOpenPage(target as any);
     } else {
       onOpenPage(null);
@@ -32,13 +37,66 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
     }
   };
 
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const lowerUser = username.toLowerCase().trim();
+    const pass = password.trim();
+
+    // Mock Authentication Logic
+    // In a real app, verify against API
+    if (pass === '123' || pass === 'admin') { 
+        if (lowerUser === 'admin') {
+            onLogin('admin');
+            onOpenPage('settings');
+            setShowLoginModal(false);
+        } else if (lowerUser === 'manager') {
+            onLogin('manager');
+            onOpenPage('management');
+            setShowLoginModal(false);
+        } else if (lowerUser === 'staff') {
+            onLogin('staff');
+            onOpenPage('company');
+            setShowLoginModal(false);
+        } else if (lowerUser === 'customer') {
+            onLogin('customer');
+            onOpenPage('finance');
+            setShowLoginModal(false);
+        } else {
+            setError('Tài khoản không tồn tại trong hệ thống.');
+        }
+    } else {
+        setError('Mật khẩu không chính xác.');
+    }
+    
+    // Clear password on error
+    if (error) setPassword('');
+  };
+
+  const openLogin = () => {
+    setIsOpen(false);
+    setShowLoginModal(true);
+    setError('');
+    setUsername('');
+    setPassword('');
+  };
+
+  // Build links including Management for specific roles
+  const currentNavLinks = [...NAV_LINKS];
+  if (userRole === 'admin' || userRole === 'manager') {
+    if (!currentNavLinks.find(l => l.href === 'management')) {
+        currentNavLinks.push({ name: 'Management', href: 'management' });
+    }
+  }
+
   // Filter links based on role
-  const filteredLinks = NAV_LINKS.filter(link => {
-    // Hidden by default: Finance, Company, Settings
-    const isRestricted = ['finance', 'company', 'settings'].includes(link.href);
+  const filteredLinks = currentNavLinks.filter(link => {
+    const isRestricted = ['finance', 'company', 'management', 'settings'].includes(link.href);
     if (!isRestricted) return true;
 
-    if (userRole === 'admin') return true; // Admin sees all
+    if (userRole === 'admin') return true; 
+    if (userRole === 'manager' && ['management', 'company'].includes(link.href)) return true;
     if (userRole === 'staff' && link.href === 'company') return true;
     if (userRole === 'customer' && link.href === 'finance') return true;
 
@@ -47,6 +105,7 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
 
   const getRoleLabel = () => {
     if (userRole === 'admin') return 'Quản trị viên';
+    if (userRole === 'manager') return 'Quản lý';
     if (userRole === 'staff') return 'Nhân viên';
     if (userRole === 'customer') return 'Khách hàng';
     return '';
@@ -68,8 +127,8 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
             </div>
           </div>
           <div className="flex items-center space-x-4">
-             <a href="https://www.facebook.com/longhoanglogistics/?modal=admin_todo_tour" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition"><Facebook size={14} /></a>
-             <a href="https://www.youtube.com/channel/UCI6fi78pgFbdYH6W4KaV98Q?view_as=subscriber" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition"><Youtube size={14} /></a>
+             <a href="https://www.facebook.com/longhoanglogistics/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition"><Facebook size={14} /></a>
+             <a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition"><Youtube size={14} /></a>
              <a href="#" className="hover:text-primary transition" onClick={(e) => e.preventDefault()}><Instagram size={14} /></a>
           </div>
         </div>
@@ -84,9 +143,9 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
                <a 
                  href="#" 
                  onClick={(e) => handleNavClick(e, '#')}
-                 className="text-2xl font-bold text-gray-800 flex items-center"
+                 className="flex items-center"
                >
-                 <span className="text-primary mr-1">LONG</span>HOANG
+                 <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="Long Hoang Logistics Logo" className="h-12 w-auto object-contain" />
                </a>
             </div>
 
@@ -98,7 +157,7 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
                     key={link.name} 
                     href={link.href}
                     onClick={(e) => handleNavClick(e, link.href)}
-                    className="text-gray-600 font-bold hover:text-primary transition text-xs uppercase tracking-wider"
+                    className={`text-gray-600 font-bold hover:text-primary transition text-xs uppercase tracking-wider ${link.href === 'management' ? 'text-blue-600' : ''}`}
                   >
                     {link.name}
                   </a>
@@ -108,7 +167,7 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
                 <div className="relative ml-4 pl-4 border-l border-gray-100">
                   {!userRole ? (
                     <button 
-                      onClick={() => setShowLoginOptions(!showLoginOptions)}
+                      onClick={() => setShowLoginModal(true)}
                       className="bg-primary hover:bg-primaryDark text-white px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all transform active:scale-95 flex items-center shadow-lg shadow-orange-100"
                     >
                       <User size={14} className="mr-2" /> Đăng nhập
@@ -128,32 +187,6 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
                        </button>
                     </div>
                   )}
-
-                  {/* Login Selector Dropdown */}
-                  {showLoginOptions && !userRole && (
-                    <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-[60]">
-                      <p className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 mb-1">Chọn vai trò truy cập</p>
-                      <button 
-                        onClick={() => { onLogin('customer'); setShowLoginOptions(false); onOpenPage('finance'); }}
-                        className="w-full text-left px-4 py-3 text-sm font-bold text-gray-600 hover:bg-orange-50 hover:text-primary flex items-center transition"
-                      >
-                        <User size={16} className="mr-3 opacity-50" /> Portal Khách hàng
-                      </button>
-                      <button 
-                        onClick={() => { onLogin('staff'); setShowLoginOptions(false); onOpenPage('company'); }}
-                        className="w-full text-left px-4 py-3 text-sm font-bold text-gray-600 hover:bg-orange-50 hover:text-primary flex items-center transition"
-                      >
-                        <ShieldCheck size={16} className="mr-3 opacity-50" /> Cổng Nhân viên
-                      </button>
-                      <div className="h-px bg-gray-50 mx-2 my-1"></div>
-                      <button 
-                        onClick={() => { setShowLoginOptions(false); onOpenPage('settings'); }}
-                        className="w-full text-left px-4 py-3 text-sm font-bold text-gray-400 hover:bg-gray-50 hover:text-gray-900 flex items-center transition"
-                      >
-                        <ChevronDown size={16} className="mr-3 opacity-30" /> Quản trị Hệ thống
-                      </button>
-                    </div>
-                  )}
                 </div>
               </nav>
             </div>
@@ -170,7 +203,7 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
 
       {/* Mobile Menu Dropdown */}
       {isOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-2xl animate-in slide-in-from-top duration-300">
+        <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-2xl animate-in slide-in-from-top duration-300 z-40">
           <nav className="flex flex-col p-6 space-y-4">
             {filteredLinks.map((link) => (
               <a 
@@ -185,10 +218,12 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
             
             <div className="pt-4">
               {!userRole ? (
-                <div className="grid grid-cols-1 gap-2">
-                  <button onClick={() => { onLogin('customer'); setIsOpen(false); onOpenPage('finance'); }} className="bg-primary text-white font-bold py-3 rounded-lg text-sm">KHÁCH HÀNG ĐĂNG NHẬP</button>
-                  <button onClick={() => { onLogin('staff'); setIsOpen(false); onOpenPage('company'); }} className="bg-[#1e2a3b] text-white font-bold py-3 rounded-lg text-sm">NHÂN VIÊN ĐĂNG NHẬP</button>
-                </div>
+                <button 
+                  onClick={openLogin}
+                  className="w-full bg-primary text-white font-bold py-3 rounded-lg text-sm flex items-center justify-center"
+                >
+                  <User size={18} className="mr-2" /> ĐĂNG NHẬP HỆ THỐNG
+                </button>
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg">
                   <div>
@@ -202,6 +237,88 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
               )}
             </div>
           </nav>
+        </div>
+      )}
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLoginModal(false)}></div>
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl relative z-10 overflow-hidden animate-in fade-in zoom-in duration-300">
+            {/* Modal Header */}
+            <div className="bg-[#1e2a3b] p-8 text-center relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                    <div className="absolute right-0 top-0 w-32 h-32 bg-white rounded-full mix-blend-overlay filter blur-xl transform translate-x-10 -translate-y-10"></div>
+                    <div className="absolute left-0 bottom-0 w-32 h-32 bg-primary rounded-full mix-blend-overlay filter blur-xl transform -translate-x-10 translate-y-10"></div>
+                </div>
+                <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="LH Logo" className="h-12 w-auto object-contain mx-auto mb-4 brightness-0 invert" />
+                <h3 className="text-xl font-bold text-white uppercase tracking-wider">Cổng thông tin điện tử</h3>
+                <p className="text-gray-400 text-xs mt-2">Vui lòng đăng nhập để truy cập hệ thống</p>
+                <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white transition">
+                    <X size={20} />
+                </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-8">
+                <form onSubmit={handleLoginSubmit} className="space-y-5">
+                    {error && (
+                        <div className="bg-red-50 text-red-500 text-xs font-bold p-3 rounded-lg flex items-center border border-red-100">
+                            <ShieldCheck size={16} className="mr-2 flex-shrink-0" />
+                            {error}
+                        </div>
+                    )}
+                    
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tên đăng nhập</label>
+                        <div className="relative">
+                            <User className="absolute left-3 top-3 text-gray-300" size={18} />
+                            <input 
+                                type="text" 
+                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition font-bold text-gray-700" 
+                                placeholder="Nhập username..."
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mật khẩu</label>
+                        <div className="relative">
+                            <Lock className="absolute left-3 top-3 text-gray-300" size={18} />
+                            <input 
+                                type="password" 
+                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition font-bold text-gray-700" 
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        className="w-full bg-primary hover:bg-primaryDark text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 transition-all transform active:scale-95 flex items-center justify-center mt-4"
+                    >
+                        Đăng nhập <ArrowRight size={18} className="ml-2" />
+                    </button>
+                </form>
+
+                <div className="mt-6 text-center">
+                    <p className="text-[10px] text-gray-400 mb-2">Tài khoản dùng thử (Demo):</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                        {['customer', 'staff', 'manager', 'admin'].map(role => (
+                            <span key={role} className="px-2 py-1 bg-gray-100 rounded text-[10px] font-mono text-gray-500 border border-gray-200 cursor-pointer hover:bg-gray-200" onClick={() => { setUsername(role); setPassword('123'); }}>
+                                {role}
+                            </span>
+                        ))}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1">(Mật khẩu chung: 123)</p>
+                </div>
+            </div>
+          </div>
         </div>
       )}
     </header>

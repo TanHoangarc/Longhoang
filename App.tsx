@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -14,11 +15,12 @@ import Footer from './components/Footer';
 import FinancePage from './components/FinancePage';
 import CompanyPage from './components/CompanyPage';
 import SettingsPage from './components/SettingsPage';
+import ManagementPage from './components/ManagementPage';
 
-export type UserRole = 'admin' | 'staff' | 'customer' | null;
+export type UserRole = 'admin' | 'manager' | 'staff' | 'customer' | null;
 
 function App() {
-  const [activePage, setActivePage] = useState<'finance' | 'company' | 'settings' | null>(null);
+  const [activePage, setActivePage] = useState<'finance' | 'company' | 'management' | 'settings' | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
 
   // Initialize session from localStorage
@@ -46,6 +48,8 @@ function App() {
         return <FinancePage onClose={() => setActivePage(null)} />;
       case 'company':
         return <CompanyPage onClose={() => setActivePage(null)} />;
+      case 'management':
+        return <ManagementPage onClose={() => setActivePage(null)} userRole={userRole} />;
       case 'settings':
         return (
           <SettingsPage 

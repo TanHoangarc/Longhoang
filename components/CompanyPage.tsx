@@ -5,7 +5,7 @@ import {
   Ship, Truck, LayoutDashboard, FolderPlus, Folder, File, MoreVertical, 
   ShieldAlert, TrendingUp, UserPlus, UserMinus, MessageSquare, 
   AlertTriangle, HelpCircle, Save, Edit, Printer, Mail, Phone, MapPin,
-  Pin, PinOff, Calendar, AlertCircle, Info, CheckCircle, Search
+  Pin, PinOff, Calendar, AlertCircle, Info, CheckCircle, Search, Filter
 } from 'lucide-react';
 
 interface CompanyPageProps {
@@ -34,6 +34,7 @@ interface QuoteRow {
 }
 
 interface QuotationData {
+  region: 'Hồ Chí Minh' | 'Hải Phòng';
   pickup: string;
   aod: string;
   term: string;
@@ -41,7 +42,6 @@ interface QuotationData {
   volume: string;
   unit: string;
   commodity: string;
-  saler: string;
   note: string;
   salerName: string;
   salerPhone: string;
@@ -76,6 +76,24 @@ interface Shipment {
   warehouseAddr: string;
   type: 'import' | 'export';
 }
+
+const PORTS_HCM = [
+  'Cảng Cát Lái (HCM)',
+  'Cảng Hiệp Phước (HCM)',
+  'Cảng VICT (HCM)',
+  'Tân Cảng Phú Hữu (HCM)',
+  'ICD Phước Long (HCM)',
+  'Sân bay Tân Sơn Nhất (SGN)'
+];
+
+const PORTS_HP = [
+  'Cảng Tân Vũ (Hải Phòng)',
+  'Cảng Chùa Vẽ (Hải Phòng)',
+  'Cảng Đình Vũ (Hải Phòng)',
+  'Cảng Nam Hải Đình Vũ (Hải Phòng)',
+  'Cảng Lạch Huyện (TC-HICT)',
+  'Sân bay Cát Bi (HPH)'
+];
 
 const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
@@ -341,6 +359,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
     const [showPDF, setShowPDF] = useState(false);
     
     const [quoteData, setQuoteData] = useState<QuotationData>({
+      region: 'Hồ Chí Minh',
       pickup: '',
       aod: '',
       term: 'FOB',
@@ -348,7 +367,6 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
       volume: '',
       unit: 'CBM',
       commodity: '',
-      saler: '',
       note: '',
       salerName: '',
       salerPhone: '',
@@ -468,8 +486,8 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
                   <span className="text-[14px] font-bold text-gray-900 ml-4">{quoteData.unit || '—'}</span>
                 </div>
                 <div className="flex justify-between items-end border-b border-gray-100 pb-1">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase">NHÂN VIÊN PHỤ TRÁCH:</span>
-                  <span className="text-[14px] font-bold text-gray-900 ml-4">{quoteData.salerName || '—'}</span>
+                  <span className="text-[11px] font-bold text-gray-400 uppercase">KHU VỰC:</span>
+                  <span className="text-[14px] font-bold text-gray-900 ml-4">{quoteData.region}</span>
                 </div>
               </div>
             </div>
@@ -547,6 +565,8 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
       </div>
     );
 
+    const aodList = quoteData.region === 'Hồ Chí Minh' ? PORTS_HCM : PORTS_HP;
+
     return (
       <div className="space-y-8">
         {showPDF && <PDFPreview />}
@@ -577,10 +597,21 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
         <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-400 uppercase">Khu vực</label>
+              <select 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm font-bold"
+                value={quoteData.region}
+                onChange={(e) => setQuoteData({...quoteData, region: e.target.value as any, aod: ''})}
+              >
+                <option value="Hồ Chí Minh">Hồ Chí Minh</option>
+                <option value="Hải Phòng">Hải Phòng</option>
+              </select>
+            </div>
+            <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase">Pickup</label>
               <input 
                 type="text" 
-                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
                 placeholder="Địa điểm đóng hàng" 
                 value={quoteData.pickup}
                 onChange={(e) => setQuoteData({...quoteData, pickup: e.target.value})}
@@ -588,18 +619,28 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase">AOD (Cảng đích)</label>
-              <input 
-                type="text" 
-                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" 
-                placeholder="Airport of Destination" 
+              <select 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm"
                 value={quoteData.aod}
                 onChange={(e) => setQuoteData({...quoteData, aod: e.target.value})}
-              />
+              >
+                <option value="">Chọn cảng đích...</option>
+                {aodList.map(port => <option key={port} value={port}>{port}</option>)}
+                <option value="Other">Khác...</option>
+              </select>
+              {quoteData.aod === 'Other' && (
+                <input 
+                  type="text" 
+                  className="w-full border-b border-gray-200 py-1 focus:border-primary outline-none transition text-sm mt-1" 
+                  placeholder="Nhập tên cảng khác"
+                  onChange={(e) => setQuoteData({...quoteData, aod: e.target.value})}
+                />
+              )}
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase">Term</label>
               <select 
-                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition"
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm"
                 value={quoteData.term}
                 onChange={(e) => setQuoteData({...quoteData, term: e.target.value})}
               >
@@ -610,7 +651,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
               <label className="text-xs font-bold text-gray-400 uppercase">Gross Weight (KGS)</label>
               <input 
                 type="number" 
-                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
                 placeholder="0.00" 
                 value={quoteData.weight}
                 onChange={(e) => setQuoteData({...quoteData, weight: e.target.value})}
@@ -620,7 +661,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
               <label className="text-xs font-bold text-gray-400 uppercase">Volume</label>
               <input 
                 type="number" 
-                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
                 placeholder="0.00" 
                 value={quoteData.volume}
                 onChange={(e) => setQuoteData({...quoteData, volume: e.target.value})}
@@ -629,7 +670,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
             <div className="space-y-1">
               <label className="text-xs font-bold text-gray-400 uppercase">Đơn vị</label>
               <select 
-                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition"
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm"
                 value={quoteData.unit}
                 onChange={(e) => setQuoteData({...quoteData, unit: e.target.value})}
               >
@@ -648,20 +689,10 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
               <label className="text-xs font-bold text-gray-400 uppercase">Commodity</label>
               <input 
                 type="text" 
-                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" 
+                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
                 placeholder="Tên hàng hóa" 
                 value={quoteData.commodity}
                 onChange={(e) => setQuoteData({...quoteData, commodity: e.target.value})}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-400 uppercase">Saler</label>
-              <input 
-                type="text" 
-                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition" 
-                placeholder="Nhân viên phụ trách" 
-                value={quoteData.salerName}
-                onChange={(e) => setQuoteData({...quoteData, salerName: e.target.value})}
               />
             </div>
           </div>
@@ -683,14 +714,14 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
                     <th className="p-3 border text-center w-12"></th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="text-sm">
                   {rows.map((row, idx) => (
                     <tr key={row.id}>
-                      <td className="p-2 border text-center text-gray-400">{idx + 1}</td>
+                      <td className="p-2 border text-center text-gray-400 text-sm">{idx + 1}</td>
                       <td className="p-1 border">
                         <input 
                           type="text" 
-                          className="w-full p-1 outline-none" 
+                          className="w-full p-2 outline-none text-sm" 
                           placeholder="Local charge, Freight..." 
                           value={row.cost}
                           onChange={(e) => updateRow(row.id, 'cost', e.target.value)}
@@ -699,7 +730,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
                       <td className="p-1 border">
                         <div className="flex items-center space-x-1">
                           <select 
-                            className="w-full p-1 outline-none bg-transparent"
+                            className="w-full p-2 outline-none bg-transparent text-sm"
                             value={row.unit}
                             onChange={(e) => updateRow(row.id, 'unit', e.target.value)}
                           >
@@ -713,7 +744,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
                       <td className="p-1 border">
                         <input 
                           type="number" 
-                          className="w-full p-1 outline-none text-center" 
+                          className="w-full p-2 outline-none text-center text-sm" 
                           value={row.qty}
                           onChange={(e) => updateRow(row.id, 'qty', parseFloat(e.target.value) || 0)}
                         />
@@ -721,7 +752,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
                       <td className="p-1 border">
                         <input 
                           type="number" 
-                          className="w-full p-1 outline-none text-right" 
+                          className="w-full p-2 outline-none text-right text-sm" 
                           placeholder="0"
                           value={row.price}
                           onChange={(e) => updateRow(row.id, 'price', parseFloat(e.target.value) || 0)}
@@ -730,7 +761,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
                       <td className="p-1 border">
                         <div className="flex flex-col">
                           <select 
-                            className="w-full p-1 text-xs outline-none bg-transparent"
+                            className="w-full p-1 text-sm outline-none bg-transparent"
                             value={vats.includes(row.vat) ? row.vat : 'custom'}
                             onChange={(e) => {
                               const val = e.target.value;
@@ -743,7 +774,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
                           {(!vats.includes(row.vat) || row.vat === undefined) && (
                             <input 
                               type="number" 
-                              className="w-full p-1 text-xs outline-none border-t border-gray-100" 
+                              className="w-full p-1 text-sm outline-none border-t border-gray-100" 
                               placeholder="%"
                               value={row.vat}
                               onChange={(e) => updateRow(row.id, 'vat', parseFloat(e.target.value) || 0)}
@@ -754,7 +785,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
                       <td className="p-1 border">
                         <div className="flex items-center space-x-1">
                           <select 
-                            className="w-full p-1 outline-none bg-transparent"
+                            className="w-full p-2 outline-none bg-transparent text-sm"
                             value={row.currency}
                             onChange={(e) => updateRow(row.id, 'currency', e.target.value)}
                           >
@@ -765,7 +796,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
                           </button>
                         </div>
                       </td>
-                      <td className="p-2 border text-right font-bold text-gray-700">
+                      <td className="p-2 border text-right font-bold text-gray-700 text-sm">
                         {calculateRowTotal(row)}
                       </td>
                       <td className="p-2 border text-center">
@@ -1344,7 +1375,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveView('dashboard')}>
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center font-bold text-white text-xs">LH</div>
+              <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="LH Logo" className="h-8 w-auto object-contain" />
               <span className="font-bold uppercase tracking-tighter text-sm">Long Hoang <span className="text-primary">Staff</span></span>
             </div>
             <div className="hidden lg:flex items-center space-x-1 border-l border-white/10 pl-6 ml-6">

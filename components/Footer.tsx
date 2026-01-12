@@ -9,8 +9,8 @@ const Footer = () => {
           
           {/* Company Info */}
           <div>
-            <div className="text-2xl font-bold text-white mb-6 flex items-center">
-                 <span className="text-primary mr-1">LONG</span>HOANG
+            <div className="mb-6 flex items-center">
+                 <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="Long Hoang Logistics Logo" className="h-10 w-auto object-contain brightness-0 invert" />
             </div>
             <p className="mb-6 leading-relaxed text-sm">
               Hơn 30 năm kinh nghiệm trong lĩnh vực vận tải và Logistics. Chúng tôi cam kết mang lại giá trị bền vững cho đối tác.
