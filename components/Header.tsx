@@ -6,20 +6,22 @@ import { UserRole, UserAccount } from '../App';
 
 interface HeaderProps {
   userRole: UserRole;
-  onLogin: (role: UserRole, user?: UserAccount) => void;
+  currentUser: UserAccount | null; // Added currentUser prop
+  onLogin: (role: UserRole, user?: UserAccount, remember?: boolean) => void;
   onLogout: () => void;
   onOpenPage: (page: 'finance' | 'company' | 'management' | 'settings' | 'account' | null) => void;
   users: UserAccount[];
   onLoginAttempt?: (email: string, isSuccess: boolean) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage, users, onLoginAttempt }) => {
+const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogout, onOpenPage, users, onLoginAttempt }) => {
   const [isOpen, setIsOpen] = useState(false);
   
   // Login Modal State
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, target: string) => {
@@ -77,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
                 redirectPage = 'company';
             }
 
-            onLogin(role, targetUser); // Pass user object
+            onLogin(role, targetUser, rememberMe); // Pass user object and remember flag
             onOpenPage(redirectPage as any);
             setShowLoginModal(false);
             return;
@@ -96,30 +98,8 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
         }
     }
 
-    // 2. Fallback to Demo/Generic Accounts (if not found in list)
-    if (pass === '123' || pass === 'admin') { 
-        if (lowerUser === 'admin') {
-            onLogin('admin');
-            onOpenPage('settings');
-            setShowLoginModal(false);
-        } else if (lowerUser === 'manager') {
-            onLogin('manager');
-            onOpenPage('management');
-            setShowLoginModal(false);
-        } else if (lowerUser === 'staff') {
-            onLogin('staff');
-            onOpenPage('company');
-            setShowLoginModal(false);
-        } else if (lowerUser === 'customer') {
-            onLogin('customer');
-            onOpenPage('finance');
-            setShowLoginModal(false);
-        } else {
-            setError('Tài khoản không tồn tại hoặc mật khẩu không đúng.');
-        }
-    } else {
-        setError('Tài khoản không tồn tại hoặc mật khẩu không đúng.');
-    }
+    // No fallback to Demo Accounts anymore
+    setError('Tài khoản không tồn tại hoặc mật khẩu không đúng.');
     
     // Clear password on error
     if (error) setPassword('');
@@ -131,11 +111,13 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
     setError('');
     setUsername('');
     setPassword('');
+    setRememberMe(false);
   };
 
   // Build links including Management for specific roles
   const currentNavLinks = [...NAV_LINKS];
-  if (userRole === 'admin' || userRole === 'manager') {
+  if (userRole === 'admin' || (userRole === 'manager' && currentUser?.role !== 'Accounting')) {
+    // Only show Management if admin OR (manager AND NOT Accounting)
     if (!currentNavLinks.find(l => l.href === 'management')) {
         currentNavLinks.push({ name: 'Management', href: 'management' });
     }
@@ -147,7 +129,12 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
     if (!isRestricted) return true;
 
     if (userRole === 'admin') return true; 
-    if (userRole === 'manager' && ['management', 'company', 'account'].includes(link.href)) return true;
+    if (userRole === 'manager') {
+       // Management is already filtered by logic above construction of currentNavLinks
+       // Check other restricted links
+       if (['company', 'account'].includes(link.href)) return true;
+       if (link.href === 'management') return true; // It's only here if passed the check above
+    }
     if (userRole === 'staff' && (link.href === 'company')) return true;
     
     if (userRole === 'customer' && link.href === 'finance') return true;
@@ -219,7 +206,7 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
                 <div className="relative ml-4 pl-4 border-l border-gray-100">
                   {!userRole ? (
                     <button 
-                      onClick={() => setShowLoginModal(true)}
+                      onClick={openLogin}
                       className="bg-primary hover:bg-primaryDark text-white px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-wider transition-all transform active:scale-95 flex items-center shadow-lg shadow-orange-100"
                     >
                       <User size={14} className="mr-2" /> Đăng nhập
@@ -350,6 +337,20 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
                         </div>
                     </div>
 
+                    {/* Remember Me Checkbox */}
+                    <div className="flex items-center justify-between mt-2">
+                        <label className="flex items-center text-xs text-gray-600 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                className="mr-2 w-4 h-4 accent-primary rounded border-gray-300 focus:ring-primary"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                            />
+                            Ghi nhớ đăng nhập
+                        </label>
+                        <a href="#" className="text-xs text-primary hover:underline font-medium">Quên mật khẩu?</a>
+                    </div>
+
                     <button 
                         type="submit" 
                         className="w-full bg-primary hover:bg-primaryDark text-white font-bold py-3.5 rounded-xl shadow-lg shadow-orange-200 transition-all transform active:scale-95 flex items-center justify-center mt-4"
@@ -357,17 +358,6 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
                         Đăng nhập <ArrowRight size={18} className="ml-2" />
                     </button>
                 </form>
-
-                <div className="mt-6 text-center">
-                    <p className="text-[10px] text-gray-400 mb-2">Hoặc tài khoản Demo (Pass: 123):</p>
-                    <div className="flex flex-wrap justify-center gap-2">
-                        {['customer', 'staff', 'manager', 'admin'].map(role => (
-                            <span key={role} className="px-2 py-1 bg-gray-100 rounded text-[10px] font-mono text-gray-500 border border-gray-200 cursor-pointer hover:bg-gray-200" onClick={() => { setUsername(role); setPassword('123'); }}>
-                                {role}
-                            </span>
-                        ))}
-                    </div>
-                </div>
             </div>
           </div>
         </div>

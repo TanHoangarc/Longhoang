@@ -1,21 +1,28 @@
 
 import React, { useState } from 'react';
-import { StatementData } from '../../App';
-import { Truck, Search, Calendar, Eye, Printer, ArrowLeft, Lock, Save, Edit, Check } from 'lucide-react';
+import { StatementData, UserAccount } from '../../App';
+import { Truck, Search, Calendar, Eye, Printer, ArrowLeft, Lock, Save, Edit, Check, FileSpreadsheet } from 'lucide-react';
 
 interface CompanyManifestsProps {
   statements: StatementData[];
   onUpdateStatements: (data: StatementData[]) => void;
+  currentUser: UserAccount | null;
 }
 
-const CompanyManifests: React.FC<CompanyManifestsProps> = ({ statements, onUpdateStatements }) => {
+const CompanyManifests: React.FC<CompanyManifestsProps> = ({ statements, onUpdateStatements, currentUser }) => {
   const [selectedManifest, setSelectedManifest] = useState<StatementData | null>(null);
   
   // Local state for editing rows in the selected manifest
   const [editingRows, setEditingRows] = useState<any[]>([]);
 
-  // Filter only Shared or Locked statements
-  const visibleStatements = statements.filter(s => s.status === 'Shared' || s.status === 'Locked');
+  // Determine visibility logic
+  // If user is Accounting, Manager, or Admin, they can see ALL statements (including drafts)
+  // Otherwise (Staff), they only see Shared or Locked statements
+  const canSeeAll = currentUser?.role === 'Accounting' || currentUser?.role === 'Manager' || currentUser?.role === 'Admin';
+  
+  const visibleStatements = canSeeAll 
+    ? statements 
+    : statements.filter(s => s.status === 'Shared' || s.status === 'Locked');
 
   // Group by Month
   const grouped = visibleStatements.reduce((acc, stmt) => {
@@ -255,8 +262,13 @@ const CompanyManifests: React.FC<CompanyManifestsProps> = ({ statements, onUpdat
                                     <div className="p-2 bg-orange-50 text-orange-600 rounded-lg group-hover:bg-orange-600 group-hover:text-white transition">
                                         <Truck size={20} />
                                     </div>
-                                    <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${stmt.status === 'Locked' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                                        {stmt.status === 'Locked' ? 'Locked' : 'Shared'}
+                                    <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase flex items-center ${
+                                        stmt.status === 'Locked' ? 'bg-green-100 text-green-700' : 
+                                        stmt.status === 'Shared' ? 'bg-blue-100 text-blue-700' :
+                                        'bg-gray-100 text-gray-500' // Draft
+                                    }`}>
+                                        {stmt.status === 'Draft' && <FileSpreadsheet size={10} className="mr-1" />}
+                                        {stmt.status === 'Locked' ? 'Locked' : stmt.status === 'Shared' ? 'Shared' : 'Draft'}
                                     </div>
                                 </div>
                                 <h5 className="font-bold text-gray-800 line-clamp-1 group-hover:text-orange-600 transition">{stmt.senderName}</h5>

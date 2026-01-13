@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Settings, Users, ShieldAlert, Edit, Trash2, Check, AlertCircle, Plus, Save, Lock, Unlock, Key, Mail, User, Clock, Activity, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { X, Settings, Users, ShieldAlert, Edit, Trash2, Check, AlertCircle, Plus, Save, Lock, Unlock, Key, Mail, User, Clock, Activity, AlertTriangle, ShieldCheck, Database, HardDrive, DownloadCloud } from 'lucide-react';
 import { UserAccount } from '../App';
 
 interface SettingsPageProps {
@@ -12,13 +12,19 @@ interface SettingsPageProps {
   onAddUser: (user: UserAccount) => void;
   onUpdateUser: (user: UserAccount) => void;
   onDeleteUser: (id: number) => void;
+  // Backup Props
+  onUserBackup: () => void;
+  onFinanceBackup: () => void;
+  onSystemBackup: () => void;
+  currentUser: UserAccount | null;
 }
 
-type SettingsTab = 'users' | 'security' | 'config';
+type SettingsTab = 'users' | 'security' | 'config' | 'backup';
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ 
   onClose, isAuthenticated, onLoginSuccess, onLogout,
-  users, onAddUser, onUpdateUser, onDeleteUser
+  users, onAddUser, onUpdateUser, onDeleteUser,
+  onUserBackup, onFinanceBackup, onSystemBackup, currentUser
 }) => {
   // Admin Login State
   const [username, setUsername] = useState('');
@@ -36,6 +42,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [formData, setFormData] = useState<UserAccount>({
     id: 0,
     name: '',
+    englishName: '',
     role: 'Sales',
     email: '',
     password: '',
@@ -60,6 +67,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     setFormData({
       id: Date.now(),
       name: '',
+      englishName: '',
       role: 'Sales',
       email: '@longhoanglogistics.com',
       password: 'Jwckim@',
@@ -71,7 +79,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const handleEdit = (user: UserAccount) => {
     setEditingUser(user);
-    setFormData({ ...user });
+    setFormData({ ...user, englishName: user.englishName || '' });
     setIsModalOpen(true);
   };
 
@@ -188,6 +196,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                     <span>Nhật ký bảo mật</span>
                 </button>
                 <button 
+                  onClick={() => setActiveTab('backup')}
+                  className={`w-full flex items-center space-x-3 p-4 font-bold rounded-lg transition ${activeTab === 'backup' ? 'bg-orange-50 text-primary border border-orange-100 shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                    <HardDrive size={20} />
+                    <span>Sao lưu dữ liệu</span>
+                </button>
+                <button 
                   onClick={() => setActiveTab('config')}
                   className={`w-full flex items-center space-x-3 p-4 font-bold rounded-lg transition ${activeTab === 'config' ? 'bg-orange-50 text-primary border border-orange-100 shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
                 >
@@ -227,6 +242,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                       <tr key={user.id} className="hover:bg-gray-50/50 transition group">
                                           <td className="px-6 py-4">
                                               <div className="font-bold text-gray-800">{user.name}</div>
+                                              {user.englishName && <div className="text-xs font-bold text-primary">{user.englishName}</div>}
                                               <div className="text-xs text-gray-400 font-mono">{user.email}</div>
                                           </td>
                                           <td className="px-6 py-4">
@@ -363,6 +379,57 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                       </div>
                   </div>
                 )}
+
+                {/* BACKUP TAB */}
+                {activeTab === 'backup' && (
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-2">
+                      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition">
+                          <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                              <DownloadCloud size={24} />
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-800">Sao lưu dữ liệu cá nhân</h3>
+                          <p className="text-xs text-gray-500 mt-2 mb-6 h-10">Lưu file backup chứa dữ liệu Company và Account của bạn. Tên file sẽ dựa trên tên Tiếng Anh của bạn.</p>
+                          <button 
+                            onClick={onUserBackup}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold shadow-lg transition flex items-center justify-center"
+                          >
+                             <HardDrive size={16} className="mr-2" /> Backup User Data
+                          </button>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition">
+                          <div className="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center mb-4">
+                              <Database size={24} />
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-800">Sao lưu dữ liệu Finance</h3>
+                          <p className="text-xs text-gray-500 mt-2 mb-6 h-10">Lưu toàn bộ dữ liệu liên quan đến bộ phận Tài chính/Kế toán ra file riêng biệt.</p>
+                          <button 
+                            onClick={onFinanceBackup}
+                            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold shadow-lg transition flex items-center justify-center"
+                          >
+                             <HardDrive size={16} className="mr-2" /> Backup Finance
+                          </button>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition md:col-span-2">
+                          <div className="flex items-start justify-between">
+                              <div>
+                                  <div className="w-12 h-12 bg-gray-100 text-gray-700 rounded-xl flex items-center justify-center mb-4">
+                                      <Settings size={24} />
+                                  </div>
+                                  <h3 className="text-lg font-bold text-gray-800">Sao lưu Hệ thống (Cài đặt & Management)</h3>
+                                  <p className="text-xs text-gray-500 mt-2">Dành cho Admin. Lưu cấu hình user, phân quyền và dữ liệu quản lý chung.</p>
+                              </div>
+                              <button 
+                                onClick={onSystemBackup}
+                                className="bg-gray-800 hover:bg-black text-white px-8 py-4 rounded-xl font-bold shadow-lg transition flex items-center"
+                              >
+                                <HardDrive size={16} className="mr-2" /> Backup System
+                              </button>
+                          </div>
+                      </div>
+                   </div>
+                )}
                 
                 {/* CONFIG TAB (Placeholder) */}
                 {activeTab === 'config' && (
@@ -389,19 +456,34 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               </div>
               
               <div className="p-6 space-y-5">
-                {/* Name */}
-                <div className="space-y-1">
-                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tên nhân sự <span className="text-red-500">*</span></label>
-                   <div className="relative">
-                      <User className="absolute left-3 top-3 text-gray-300" size={18} />
-                      <input 
-                        type="text" 
-                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition font-bold text-gray-700" 
-                        placeholder="VD: Nguyễn Văn A"
-                        value={formData.name}
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      />
-                   </div>
+                {/* Names */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tên nhân sự <span className="text-red-500">*</span></label>
+                        <div className="relative">
+                            <User className="absolute left-3 top-3 text-gray-300" size={18} />
+                            <input 
+                                type="text" 
+                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition font-bold text-gray-700" 
+                                placeholder="Nguyễn Văn A"
+                                value={formData.name}
+                                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tên tiếng anh (Alias)</label>
+                        <div className="relative">
+                            <User className="absolute left-3 top-3 text-gray-300" size={18} />
+                            <input 
+                                type="text" 
+                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition font-bold text-gray-700" 
+                                placeholder="Mr. Andy..."
+                                value={formData.englishName}
+                                onChange={(e) => setFormData({...formData, englishName: e.target.value})}
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 {/* Email */}

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import WhyChooseUs from './components/WhyChooseUs';
@@ -30,6 +30,7 @@ export interface EmploymentStatus {
 export interface UserAccount {
   id: number;
   name: string;
+  englishName?: string; // Added English Name
   role: string;
   email: string;
   password?: string;
@@ -96,14 +97,10 @@ export interface AttendanceRecord {
   leaveReason?: string; // Lý do ngắn gọn
 }
 
+// Default data in case server is offline
 const INITIAL_USERS: UserAccount[] = [
-  { id: 1, name: 'Nguyễn Văn A (Sales 1)', role: 'Sales', email: 'sales1@longhoanglogistics.com', password: 'Jwckim@111', status: 'Active', failedAttempts: 0, department: 'Sales', position: 'Nhân viên kinh doanh' },
-  { id: 2, name: 'Alan (Sales 2)', role: 'Sales', email: 'alan@longhoanglogistics.com', password: 'Jwckim@112', status: 'Active', failedAttempts: 0, department: 'Sales', position: 'Nhân viên kinh doanh' },
-  { id: 3, name: 'Kế toán HPH', role: 'Accounting', email: 'acchph@longhoanglogistics.com', password: 'Jwckim@121', status: 'Active', failedAttempts: 0, department: 'Accounting', position: 'Kế toán viên' },
-  { id: 4, name: 'Kế toán HCM', role: 'Accounting', email: 'account@longhoanglogistics.com', password: 'Jwckim@122', status: 'Active', failedAttempts: 0, department: 'Accounting', position: 'Kế toán trưởng' },
-  { id: 5, name: 'Chuyên viên CT 1', role: 'Document', email: 'docs1@longhoanglogistics.com', password: 'Jwckim@131', status: 'Active', failedAttempts: 0, department: 'Document', position: 'Nhân viên chứng từ' },
-  { id: 6, name: 'Chuyên viên CT 2', role: 'Document', email: 'docs2@longhoanglogistics.com', password: 'Jwckim@132', status: 'Active', failedAttempts: 0, department: 'Document', position: 'Nhân viên chứng từ' },
-  { id: 7, name: 'Administrator', role: 'Admin', email: 'admin@longhoanglogistics.com', password: 'admin', status: 'Active', failedAttempts: 0, department: 'Board', position: 'Admin' },
+  { id: 1, name: 'Nguyễn Văn A', englishName: 'Mr. A', role: 'Sales', email: 'sales1@longhoanglogistics.com', password: '123', status: 'Active', failedAttempts: 0, department: 'Sales', position: 'Nhân viên kinh doanh' },
+  { id: 7, name: 'Administrator', englishName: 'Admin', role: 'Admin', email: 'admin@longhoanglogistics.com', password: 'admin', status: 'Active', failedAttempts: 0, department: 'Board', position: 'Admin' },
 ];
 
 function App() {
@@ -111,110 +108,104 @@ function App() {
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null); // Track logged in user
   
-  // Lifted User State
+  // Data States
   const [users, setUsers] = useState<UserAccount[]>(INITIAL_USERS);
+  const [notifications, setNotifications] = useState<SystemNotification[]>([]);
+  const [statements, setStatements] = useState<StatementData[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  
+  // Server connection status
+  const [isServerOnline, setIsServerOnline] = useState(true);
 
-  // Lifted Notifications State
-  const [notifications, setNotifications] = useState<SystemNotification[]>([
-    {
-      id: 1,
-      date: '20/05/2024',
-      title: 'Thông báo nghỉ Lễ Quốc Khánh 2/9',
-      content: 'Toàn thể nhân viên nghỉ lễ Quốc Khánh từ ngày 02/09 đến hết ngày 03/09.',
-      attachment: 'Holiday_Schedule.pdf',
-      startDate: '2024-09-02',
-      expiryDate: '2024-09-03',
-      isPinned: true,
-      image: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
-    },
-    {
-      id: 2,
-      date: '10/01/2024',
-      title: 'Thông báo nghỉ Tết Nguyên Đán 2025',
-      content: 'Lịch nghỉ Tết âm lịch bắt đầu từ 25/01/2025 đến hết 02/02/2025.',
-      attachment: '',
-      startDate: '2025-01-25',
-      expiryDate: '2025-02-02',
-      isPinned: true,
-      image: 'https://images.unsplash.com/photo-1526772662000-3f88f10405ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
-    },
-    {
-        id: 3,
-        date: '20/05/2024',
-        title: 'Cập nhật phụ phí nhiên liệu tháng 06/2024',
-        content: 'Thông báo về việc điều chỉnh phụ phí nhiên liệu (BAF) cho các tuyến vận tải biển quốc tế áp dụng từ ngày 01/06.',
-        attachment: 'BAF_Update_June.pdf',
-        startDate: '2024-06-01',
-        expiryDate: '2025-06-30',
-        isPinned: false,
-        image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+  // --- API HELPER ---
+  const syncToServer = async (type: string, data: any) => {
+    if (!isServerOnline) return;
+    try {
+      await fetch('http://localhost:5000/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type,
+          data,
+          user: currentUser?.englishName || currentUser?.name || 'Guest'
+        })
+      });
+      // console.log(`Synced ${type} to server.`);
+    } catch (e) {
+      console.warn(`Failed to sync ${type}. Server might be offline.`);
+      setIsServerOnline(false);
+      // Removed intrusive alert to allow offline usage without interruption
     }
-  ]);
+  };
 
-  // Lifted Statements State (Bảng kê)
-  const [statements, setStatements] = useState<StatementData[]>([
-     // Sample data
-     {
-        id: 17165342345,
-        month: '2025-07',
-        createdDate: '2025-07-02',
-        senderName: 'CÔNG TY TNHH DV VT THANH XUÂN ĐÀO',
-        receiverName: 'CÔNG TY TNHH LONG HOÀNG',
-        totalAmount: 2150000,
-        status: 'Draft',
-        rows: [
-          { id: 1, date: '2025-07-02', plateNumber: '76H00791', from: 'CÁT LÁI', to: 'THỦ ĐỨC - NGUYÊN KHANG', price: 610000, note: 'LH 60', jobNo: 'VNSHALFF0158' },
-          { id: 2, date: '2025-07-02', plateNumber: '50H35235', from: 'PHÚ HỮU', to: 'BÌNH THẠNH - PCCC', price: 680000, note: 'LH 80', jobNo: '' },
-          { id: 3, date: '2025-07-03', plateNumber: '51D12607', from: 'CÁT LÁI', to: 'THUẬN AN - WORIME', price: 860000, note: 'LH 60', jobNo: 'VNSHALFF0156' },
-        ],
-        headerInfo: {
-          sender: 'CÔNG TY TNHH DV VT THANH XUÂN ĐÀO',
-          address: '41/15d/5/10 Đường Gò Cát, Phường Phú Hữu, Tp Thủ Đức, Tp Hồ Chí Minh',
-          accountHolder: '',
-          accountNumber: '1044115528',
-          bank: 'Vietcombank',
-          receiver: 'CÔNG TY TNHH LONG HOÀNG',
-          invoiceDate: '2025-07-03'
-        }
-     }
-  ]);
-
-  // Lifted Attendance State
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([
-    { id: 1, userId: 1, userName: 'Nguyễn Văn A (Sales 1)', date: new Date().toISOString().split('T')[0], checkIn: '08:00', checkOut: '17:00', status: 'Present' },
-    { id: 2, userId: 2, userName: 'Alan (Sales 2)', date: new Date().toISOString().split('T')[0], checkIn: '08:15', checkOut: null, status: 'Late' },
-    // Mock history
-    { id: 3, userId: 1, userName: 'Nguyễn Văn A (Sales 1)', date: new Date(Date.now() - 86400000).toISOString().split('T')[0], checkIn: '07:55', checkOut: '17:05', status: 'Present' },
-    // Mock Leave
-    { 
-      id: 4, userId: 1, userName: 'Nguyễn Văn A (Sales 1)', date: '2025-07-10', checkIn: null, checkOut: null, status: 'On Leave', 
-      leaveType: 'Paid', leaveDuration: 1, leaveReason: 'Nghỉ phép năm' 
-    }
-  ]);
-
-  // Initialize session from localStorage
+  // --- INITIAL LOAD ---
   useEffect(() => {
-    const savedRole = localStorage.getItem('lh_user_role') as UserRole;
-    const savedUserJson = localStorage.getItem('lh_current_user');
-    if (savedRole) {
-      setUserRole(savedRole);
-    }
-    if (savedUserJson) {
-        try {
-            setCurrentUser(JSON.parse(savedUserJson));
-        } catch (e) {
-            console.error("Error parsing user");
+    const fetchData = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/data');
+        if (res.ok) {
+          const db = await res.json();
+          if (db.users && db.users.length > 0) setUsers(db.users);
+          if (db.notifications) setNotifications(db.notifications);
+          if (db.statements) setStatements(db.statements);
+          if (db.attendanceRecords) setAttendanceRecords(db.attendanceRecords);
+          setIsServerOnline(true);
+        } else {
+            console.warn("Server responded but with error. Using local defaults.");
+            setIsServerOnline(false);
         }
+      } catch (e) {
+        console.warn("Server offline, using local defaults.");
+        setIsServerOnline(false);
+      }
+    };
+    fetchData();
+
+    // Load session
+    let savedRole = localStorage.getItem('lh_user_role') as UserRole;
+    let savedUserJson = localStorage.getItem('lh_current_user');
+    if (!savedRole) {
+        savedRole = sessionStorage.getItem('lh_user_role') as UserRole;
+        savedUserJson = sessionStorage.getItem('lh_current_user');
+    }
+    if (savedRole) setUserRole(savedRole);
+    if (savedUserJson) {
+        try { setCurrentUser(JSON.parse(savedUserJson)); } catch (e) {}
     }
   }, []);
 
-  const handleLogin = (role: UserRole, user?: UserAccount) => {
+  // --- HANDLERS WRAPPERS (Update State + Sync Server) ---
+
+  const handleUpdateUsers = (newUsers: UserAccount[]) => {
+    setUsers(newUsers);
+    syncToServer('users', newUsers);
+  };
+
+  const handleUpdateNotifications = (newNotifs: SystemNotification[]) => {
+    setNotifications(newNotifs);
+    syncToServer('notifications', newNotifs);
+  };
+
+  const handleUpdateStatements = (newStmts: StatementData[]) => {
+    setStatements(newStmts);
+    syncToServer('statements', newStmts);
+  };
+
+  const handleUpdateAttendance = (newRecords: AttendanceRecord[]) => {
+    setAttendanceRecords(newRecords);
+    syncToServer('attendanceRecords', newRecords);
+  };
+
+  // --- AUTHENTICATION ---
+  const handleLogin = (role: UserRole, user?: UserAccount, remember: boolean = false) => {
     setUserRole(role);
-    if (role) localStorage.setItem('lh_user_role', role);
-    if (user) {
-        setCurrentUser(user);
-        localStorage.setItem('lh_current_user', JSON.stringify(user));
-    }
+    setCurrentUser(user || null);
+    const storage = remember ? localStorage : sessionStorage;
+    const otherStorage = remember ? sessionStorage : localStorage;
+    otherStorage.removeItem('lh_user_role');
+    otherStorage.removeItem('lh_current_user');
+    if (role) storage.setItem('lh_user_role', role);
+    if (user) storage.setItem('lh_current_user', JSON.stringify(user));
   };
 
   const handleLogout = () => {
@@ -223,44 +214,59 @@ function App() {
     setActivePage(null);
     localStorage.removeItem('lh_user_role');
     localStorage.removeItem('lh_current_user');
+    sessionStorage.removeItem('lh_user_role');
+    sessionStorage.removeItem('lh_current_user');
   };
 
-  // User Management Handlers
-  const handleAddUser = (user: UserAccount) => setUsers([...users, user]);
+  // --- USER MANAGEMENT LOGIC ---
+  const handleAddUser = (user: UserAccount) => handleUpdateUsers([...users, user]);
   
-  const handleUpdateUser = (updatedUser: UserAccount) => {
-    setUsers(users.map(u => {
+  const handleUpdateUserSingle = (updatedUser: UserAccount) => {
+    const newUsers = users.map(u => {
       if (u.id === updatedUser.id) {
-        // If Admin sets status back to Active, reset failed attempts
         if (updatedUser.status === 'Active' && u.status === 'Locked') {
            return { ...updatedUser, failedAttempts: 0 };
         }
         return updatedUser;
       }
       return u;
-    }));
+    });
+    handleUpdateUsers(newUsers);
   };
 
-  const handleDeleteUser = (id: number) => setUsers(users.filter(u => u.id !== id));
+  const handleDeleteUser = (id: number) => handleUpdateUsers(users.filter(u => u.id !== id));
 
-  // Security: Handle Login Attempts
   const handleLoginAttempt = (email: string, isSuccess: boolean) => {
-    setUsers(currentUsers => currentUsers.map(u => {
+    const newUsers = users.map(u => {
       if (u.email.toLowerCase() === email.toLowerCase()) {
         const timestamp = new Date().toLocaleString('vi-VN');
         if (isSuccess) {
-          // Reset on success
           return { ...u, failedAttempts: 0, lastAttemptTime: timestamp };
         } else {
-          // Increment on failure
-          const newAttempts = u.failedAttempts + 1;
-          // Auto-lock if attempts >= 5
+          const newAttempts = (u.failedAttempts || 0) + 1;
           const newStatus = newAttempts >= 5 ? 'Locked' : u.status;
-          return { ...u, failedAttempts: newAttempts, status: newStatus, lastAttemptTime: timestamp };
+          return { ...u, failedAttempts: newAttempts, status: newStatus as 'Active' | 'Locked', lastAttemptTime: timestamp };
         }
       }
       return u;
-    }));
+    });
+    // Optimistic UI update first, then sync
+    setUsers(newUsers);
+    syncToServer('users', newUsers);
+  };
+
+  // --- MANUAL BACKUPS ---
+  const API_URL = 'http://localhost:5000/api/backup';
+  const triggerManualBackup = async (label: string) => {
+    if (!isServerOnline) return alert('Server is offline. Cannot backup.');
+    try {
+        await fetch(`${API_URL}/manual`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user: currentUser?.englishName || 'User', label })
+        });
+        alert(`Đã sao lưu ${label} thành công vào thư mục History.`);
+    } catch (e) { alert('Lỗi sao lưu'); }
   };
 
   const renderActivePage = () => {
@@ -272,12 +278,12 @@ function App() {
             <CompanyPage 
                 onClose={() => setActivePage(null)} 
                 statements={statements} 
-                onUpdateStatements={setStatements}
+                onUpdateStatements={handleUpdateStatements}
                 currentUser={currentUser}
                 attendanceRecords={attendanceRecords}
-                onUpdateAttendance={setAttendanceRecords}
+                onUpdateAttendance={handleUpdateAttendance}
                 notifications={notifications}
-                onUpdateNotifications={setNotifications}
+                onUpdateNotifications={handleUpdateNotifications}
             />
         );
       case 'account':
@@ -285,12 +291,12 @@ function App() {
             <AccountPage 
                 onClose={() => setActivePage(null)} 
                 statements={statements}
-                onUpdateStatements={setStatements}
-                attendanceRecords={attendanceRecords} // Pass all records to manager
-                users={users} // Pass users to display full list
-                onUpdateAttendance={setAttendanceRecords} // Pass setter to update records
-                onUpdateUser={handleUpdateUser} // Pass user update handler
-                notifications={notifications} // Pass notifications for holidays
+                onUpdateStatements={handleUpdateStatements}
+                attendanceRecords={attendanceRecords} 
+                users={users} 
+                onUpdateAttendance={handleUpdateAttendance}
+                onUpdateUser={handleUpdateUserSingle} 
+                notifications={notifications}
             />
         );
       case 'management':
@@ -298,7 +304,7 @@ function App() {
           <ManagementPage 
             onClose={() => setActivePage(null)} 
             userRole={userRole} 
-            users={users} // Pass shared users
+            users={users} 
           />
         );
       case 'settings':
@@ -308,10 +314,15 @@ function App() {
             isAuthenticated={userRole === 'admin'}
             onLoginSuccess={() => handleLogin('admin')}
             onLogout={handleLogout}
-            users={users} // Pass shared users
+            users={users} 
             onAddUser={handleAddUser}
-            onUpdateUser={handleUpdateUser}
+            onUpdateUser={handleUpdateUserSingle}
             onDeleteUser={handleDeleteUser}
+            // Use manual backup endpoints
+            onUserBackup={() => triggerManualBackup('USER_REQUEST')}
+            onFinanceBackup={() => triggerManualBackup('FINANCE')}
+            onSystemBackup={() => triggerManualBackup('SYSTEM')}
+            currentUser={currentUser}
           />
         );
       default:
@@ -334,13 +345,19 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white">
+      {!isServerOnline && (
+        <div className="bg-yellow-500 text-white text-xs font-bold text-center py-1">
+          Chế độ Offline: Dữ liệu đang được lưu cục bộ trên trình duyệt.
+        </div>
+      )}
       <Header 
         userRole={userRole} 
+        currentUser={currentUser} 
         onLogin={handleLogin} 
         onLogout={handleLogout} 
         onOpenPage={setActivePage}
         users={users} 
-        onLoginAttempt={handleLoginAttempt} // Pass the handler
+        onLoginAttempt={handleLoginAttempt} 
       />
       <main>
         {renderActivePage()}
