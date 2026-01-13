@@ -5,6 +5,10 @@ import bodyParser from 'body-parser';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 5000;
@@ -14,23 +18,26 @@ const PORT = 5000;
 const PREFERRED_ROOT = 'E:\\ServerLH';
 const FALLBACK_ROOT = path.join(process.cwd(), 'ServerLH_Data');
 
-let ROOT_DIR = PREFERRED_ROOT;
+let ROOT_DIR = FALLBACK_ROOT;
 
-// Directory setup logic with fallback
 try {
-    // Check if we can write to the preferred root
-    if (!fs.existsSync(PREFERRED_ROOT)) {
-        // Try creating it. This will throw on Windows if E: drive doesn't exist
-        fs.mkdirSync(PREFERRED_ROOT, { recursive: true });
+    // Simple check if path starts with E:\ and we are on Windows (or environment that supports it)
+    if (fs.existsSync('E:\\')) {
+        if (!fs.existsSync(PREFERRED_ROOT)) {
+            fs.mkdirSync(PREFERRED_ROOT, { recursive: true });
+        }
+        // Test write
+        const testFile = path.join(PREFERRED_ROOT, '.test_write');
+        fs.writeFileSync(testFile, 'ok');
+        fs.unlinkSync(testFile);
+        ROOT_DIR = PREFERRED_ROOT;
+        console.log(`[STORAGE] Using Preferred Root: ${ROOT_DIR}`);
+    } else {
+        console.log(`[STORAGE] E: drive not found. Using Fallback: ${ROOT_DIR}`);
     }
-    // Test write permission
-    const testFile = path.join(PREFERRED_ROOT, '.test_write');
-    fs.writeFileSync(testFile, 'ok');
-    fs.unlinkSync(testFile);
-    console.log(`Using Storage: ${PREFERRED_ROOT}`);
 } catch (err) {
-    console.warn(`Warning: Cannot access ${PREFERRED_ROOT} (Drive might be missing).`);
-    console.warn(`Switching to local fallback: ${FALLBACK_ROOT}`);
+    console.warn(`[STORAGE] Warning: Cannot access ${PREFERRED_ROOT}. Error: ${err.message}`);
+    console.warn(`[STORAGE] Switching to local fallback: ${ROOT_DIR}`);
     ROOT_DIR = FALLBACK_ROOT;
 }
 
@@ -53,14 +60,12 @@ const MASTER_FILE = path.join(ROOT_DIR, 'Database', 'master_data.json');
 // --- MULTER STORAGE CONFIG ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Determine folder based on 'category' in body, default to 'GUQ'
-    // Note: req.body might not be fully populated before multer runs in some configs, 
-    // but with multer handling fields, we use a specific approach or default.
-    // For simplicity, we'll try to use a header or query param, or check req.body inside filename if needed.
-    // However, multer allows accessing req.body in destination if fields come before files.
-    // Safest strategy: Use a query param or default logic.
+    // Determine folder based on 'category' in QUERY param (safe for multer)
     const category = req.query.category || 'GUQ'; 
-    const targetDir = path.join(ROOT_DIR, category);
+    
+    // Sanitize category to prevent directory traversal
+    const safeCategory = category.toString().replace(/[^a-zA-Z0-9_]/g, '');
+    const targetDir = path.join(ROOT_DIR, safeCategory);
     
     if (!fs.existsSync(targetDir)){
         fs.mkdirSync(targetDir, { recursive: true });
@@ -70,16 +75,28 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     // Prevent filename collisions and keep extension
     // Format: YYYYMMDD_OriginalName
+    // Sanitize original name
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
     const datePrefix = new Date().toISOString().split('T')[0].replace(/-/g, '');
-    cb(null, `${datePrefix}_${file.originalname}`);
+    cb(null, `${datePrefix}_${safeName}`);
   }
 });
 
 const upload = multer({ storage: storage });
 
 // --- MIDDLEWARE ---
-app.use(cors());
+app.use(cors({
+    origin: '*', // Allow all origins for development
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(bodyParser.json({ limit: '50mb' }));
+
+// Request Logger
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
 
 // --- UTILS ---
 const ensureDirectories = () => {
@@ -101,7 +118,7 @@ const getTimestamp = () => {
   return now.toISOString().replace(/T/, '_').replace(/:/g, '-').split('.')[0];
 };
 
-// Initial Data Structure (if file doesn't exist)
+// Initial Data Structure
 const INITIAL_DB = {
   users: [
     { id: 1, name: 'Nguyễn Văn A', englishName: 'Mr. A', role: 'Sales', email: 'sales1@longhoanglogistics.com', password: '123', status: 'Active', failedAttempts: 0, department: 'Sales', position: 'Nhân viên kinh doanh' },
@@ -111,7 +128,7 @@ const INITIAL_DB = {
   attendanceRecords: [],
   notifications: [],
   carriers: [],
-  guq: [] // New GUQ Array
+  guq: []
 };
 
 // Helper: Read Master Data
@@ -124,10 +141,7 @@ const readMasterData = () => {
   }
   try {
     const data = fs.readFileSync(MASTER_FILE, 'utf8');
-    const parsed = JSON.parse(data);
-    // Ensure new fields exist if reading old DB
-    if (!parsed.guq) parsed.guq = [];
-    return parsed;
+    return JSON.parse(data);
   } catch (err) {
     console.error("Error reading master file:", err);
     return INITIAL_DB;
@@ -138,11 +152,10 @@ const readMasterData = () => {
 const writeData = (newData, changeType, userChanged) => {
   ensureDirectories();
   
-  // 1. Save to Master (Persistence)
+  // 1. Save to Master
   fs.writeFileSync(MASTER_FILE, JSON.stringify(newData, null, 2));
 
-  // 2. Create Backup (History/Audit)
-  // Folder structure: History/YYYY-MM-DD/
+  // 2. Create Backup
   const dateFolder = new Date().toISOString().split('T')[0];
   const targetBackupDir = path.join(ROOT_DIR, 'History', dateFolder);
   if (!fs.existsSync(targetBackupDir)) fs.mkdirSync(targetBackupDir, { recursive: true });
@@ -157,7 +170,12 @@ const writeData = (newData, changeType, userChanged) => {
 
 // --- ENDPOINTS ---
 
-// 1. GET INITIAL DATA (Load on startup)
+// Health Check
+app.get('/', (req, res) => {
+    res.send('Long Hoang Logistics Server is Running');
+});
+
+// 1. GET INITIAL DATA
 app.get('/api/data', (req, res) => {
   try {
     const data = readMasterData();
@@ -168,7 +186,7 @@ app.get('/api/data', (req, res) => {
   }
 });
 
-// 2. GENERIC SYNC ENDPOINT (Handle concurrency better)
+// 2. GENERIC SYNC ENDPOINT
 app.post('/api/sync', (req, res) => {
   const { type, data, user } = req.body;
 
@@ -187,9 +205,8 @@ app.post('/api/sync', (req, res) => {
   }
 });
 
-// 3. FILE UPLOAD & METADATA SAVE
-// Accepts 'file' field and query param 'category' (default GUQ)
-// Metadata is passed via body.metadata string (JSON)
+// 3. FILE UPLOAD
+// Accepts 'file' and query 'category'. Metadata in 'metadata' body field.
 app.post('/api/upload', upload.single('file'), (req, res) => {
     try {
         if (!req.file) {
@@ -199,7 +216,6 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
         const category = req.query.category || 'GUQ';
         const user = req.body.user || 'Unknown';
         
-        // Read Metadata
         let metadata = {};
         if (req.body.metadata) {
             try {
@@ -209,7 +225,6 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
             }
         }
 
-        // Construct Record
         const newRecord = {
             id: Date.now(),
             ...metadata,
@@ -219,16 +234,13 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
             uploadDate: new Date().toISOString().split('T')[0]
         };
 
-        // Update DB
         const db = readMasterData();
         
-        // Handle specific categories
         if (category === 'GUQ') {
             if (!db.guq) db.guq = [];
             db.guq.push(newRecord);
             writeData(db, 'UPLOAD_GUQ', user);
         }
-        // Can add 'CVHC', 'CVHT' logic here later
 
         res.json({ success: true, record: newRecord });
 
@@ -238,7 +250,7 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
     }
 });
 
-// 4. SPECIAL: BACKUP MANUAL (For the settings page button)
+// 4. MANUAL BACKUP
 app.post('/api/backup/manual', (req, res) => {
   const { user, label } = req.body;
   try {
@@ -251,11 +263,10 @@ app.post('/api/backup/manual', (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`==================================================`);
   console.log(` LOGISTICS SERVER RUNNING ON PORT ${PORT}`);
   console.log(` Storage Root: ${ROOT_DIR}`);
-  console.log(` Folders Created: ${STORAGE_DIRS.join(', ')}`);
   console.log(`==================================================`);
   ensureDirectories();
 });
