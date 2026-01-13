@@ -5,22 +5,18 @@ import {
   ArrowLeft, Eye, ShieldCheck, Filter, ChevronRight, Package, 
   Ship, Truck, BarChart2, Briefcase
 } from 'lucide-react';
-import { UserRole, UserAccount } from '../App';
+import { UserRole, UserAccount, GUQRecord } from '../App';
 
 interface ManagementPageProps {
   onClose: () => void;
   userRole: UserRole;
   users: UserAccount[];
+  guqRecords: GUQRecord[]; // Receive real records
 }
 
 type ManagementSection = 'GUQ' | 'CVHC' | 'CVHT' | 'ADJUST' | 'EMPLOYEES';
 
-const MOCK_GUQ = [
-  { id: 1, company: 'Công ty TNHH Việt Nhật', date: '12/05/2024', fileName: 'GUQ_VietNhat_May.pdf' },
-  { id: 2, company: 'Logistics Global Ltd', date: '10/05/2024', fileName: 'GUQ_Global_1005.pdf' },
-  { id: 3, company: 'May mặc Phương Đông', date: '08/05/2024', fileName: 'GUQ_PhuongDong.docx' },
-];
-
+// Mock Data for other sections (CVHC, CVHT, Adjustments) preserved
 const MOCK_CVHC = [
   { id: 1, company: 'Công ty Samsung Vina', bl: 'LH-HBL-20240987', date: '11/05/2024', fileCvhc: 'CVHC_Samsung.pdf', fileEir: 'EIR_Samsung_01.jpg' },
   { id: 2, company: 'VinFast Hải Phòng', bl: 'LH-HBL-20241022', date: '09/05/2024', fileCvhc: 'CVHC_Vinfast.pdf', fileEir: 'EIR_Vinfast_VF8.pdf' },
@@ -52,10 +48,11 @@ const getMockEmployeeDetails = (user: UserAccount) => {
   };
 };
 
-const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, users }) => {
+const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, users, guqRecords }) => {
   const [activeSection, setActiveSection] = useState<ManagementSection>('EMPLOYEES');
   const [adjustFilter, setAdjustFilter] = useState<'All' | 'Signed' | 'Unsigned'>('All');
   const [selectedEmployee, setSelectedEmployee] = useState<ReturnType<typeof getMockEmployeeDetails> | null>(null);
+  const [guqSearch, setGuqSearch] = useState('');
 
   if (userRole !== 'admin' && userRole !== 'manager') {
       return (
@@ -72,6 +69,8 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
   // Filter users to show only staff/sales/docs/accounting
   const employeeList = users.filter(u => ['Sales', 'Document', 'Accounting', 'Staff'].includes(u.role) && u.status === 'Active');
 
+  const filteredGuq = guqRecords.filter(r => r.companyName.toLowerCase().includes(guqSearch.toLowerCase()));
+
   const renderSection = () => {
     switch (activeSection) {
       case 'GUQ':
@@ -79,23 +78,36 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in duration-300">
             <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
                 <h3 className="font-bold text-gray-800 flex items-center"><FileText className="mr-2 text-primary" size={20} /> Danh sách Giấy ủy quyền</h3>
-                <div className="relative"><Search className="absolute left-3 top-2.5 text-gray-300" size={16} /><input className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-white" placeholder="Tìm tên công ty..." /></div>
+                <div className="relative">
+                    <Search className="absolute left-3 top-2.5 text-gray-300" size={16} />
+                    <input 
+                        className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-white outline-none focus:border-primary" 
+                        placeholder="Tìm tên công ty..." 
+                        value={guqSearch}
+                        onChange={(e) => setGuqSearch(e.target.value)}
+                    />
+                </div>
             </div>
-            <table className="w-full text-left">
-              <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white border-b border-gray-100">
-                <tr><th className="px-6 py-4">Tên công ty</th><th className="px-6 py-4">Ngày nộp</th><th className="px-6 py-4">File đính kèm</th><th className="px-6 py-4 text-right">Thao tác</th></tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {MOCK_GUQ.map(item => (
-                  <tr key={item.id} className="hover:bg-gray-50/50 transition">
-                    <td className="px-6 py-4 font-bold text-gray-800">{item.company}</td>
-                    <td className="px-6 py-4 text-gray-500 text-sm">{item.date}</td>
-                    <td className="px-6 py-4"><span className="text-xs text-blue-600 font-medium underline cursor-pointer">{item.fileName}</span></td>
-                    <td className="px-6 py-4 text-right"><button className="p-2 text-gray-400 hover:text-primary"><Eye size={18} /></button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="max-h-[500px] overflow-y-auto">
+                <table className="w-full text-left">
+                <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white border-b border-gray-100 sticky top-0 z-10">
+                    <tr><th className="px-6 py-4">Tên công ty</th><th className="px-6 py-4">Ngày nộp</th><th className="px-6 py-4">File đính kèm</th><th className="px-6 py-4 text-right">Thao tác</th></tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                    {filteredGuq.map(item => (
+                    <tr key={item.id} className="hover:bg-gray-50/50 transition">
+                        <td className="px-6 py-4 font-bold text-gray-800">{item.companyName}</td>
+                        <td className="px-6 py-4 text-gray-500 text-sm">{item.date}</td>
+                        <td className="px-6 py-4"><span className="text-xs text-blue-600 font-medium underline cursor-pointer">{item.fileName}</span></td>
+                        <td className="px-6 py-4 text-right"><button className="p-2 text-gray-400 hover:text-primary"><Eye size={18} /></button></td>
+                    </tr>
+                    ))}
+                    {filteredGuq.length === 0 && (
+                        <tr><td colSpan={4} className="text-center py-8 text-gray-400 italic">Chưa có dữ liệu</td></tr>
+                    )}
+                </tbody>
+                </table>
+            </div>
           </div>
         );
       case 'CVHC':

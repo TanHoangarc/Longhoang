@@ -4,6 +4,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import fs from 'fs';
 import path from 'path';
+import multer from 'multer';
 
 const app = express();
 const PORT = 5000;
@@ -49,6 +50,33 @@ const STORAGE_DIRS = [
 
 const MASTER_FILE = path.join(ROOT_DIR, 'Database', 'master_data.json');
 
+// --- MULTER STORAGE CONFIG ---
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // Determine folder based on 'category' in body, default to 'GUQ'
+    // Note: req.body might not be fully populated before multer runs in some configs, 
+    // but with multer handling fields, we use a specific approach or default.
+    // For simplicity, we'll try to use a header or query param, or check req.body inside filename if needed.
+    // However, multer allows accessing req.body in destination if fields come before files.
+    // Safest strategy: Use a query param or default logic.
+    const category = req.query.category || 'GUQ'; 
+    const targetDir = path.join(ROOT_DIR, category);
+    
+    if (!fs.existsSync(targetDir)){
+        fs.mkdirSync(targetDir, { recursive: true });
+    }
+    cb(null, targetDir);
+  },
+  filename: (req, file, cb) => {
+    // Prevent filename collisions and keep extension
+    // Format: YYYYMMDD_OriginalName
+    const datePrefix = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    cb(null, `${datePrefix}_${file.originalname}`);
+  }
+});
+
+const upload = multer({ storage: storage });
+
 // --- MIDDLEWARE ---
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -82,7 +110,8 @@ const INITIAL_DB = {
   statements: [],
   attendanceRecords: [],
   notifications: [],
-  carriers: []
+  carriers: [],
+  guq: [] // New GUQ Array
 };
 
 // Helper: Read Master Data
@@ -95,7 +124,10 @@ const readMasterData = () => {
   }
   try {
     const data = fs.readFileSync(MASTER_FILE, 'utf8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    // Ensure new fields exist if reading old DB
+    if (!parsed.guq) parsed.guq = [];
+    return parsed;
   } catch (err) {
     console.error("Error reading master file:", err);
     return INITIAL_DB;
@@ -137,7 +169,6 @@ app.get('/api/data', (req, res) => {
 });
 
 // 2. GENERIC SYNC ENDPOINT (Handle concurrency better)
-// Clients send { type: 'users', data: [...], user: 'EnglishName' }
 app.post('/api/sync', (req, res) => {
   const { type, data, user } = req.body;
 
@@ -146,15 +177,9 @@ app.post('/api/sync', (req, res) => {
   }
 
   try {
-    // 1. Read latest state from disk (Critical for concurrency)
     const currentDb = readMasterData();
-
-    // 2. Update specific section
     currentDb[type] = data;
-
-    // 3. Write back to disk + Backup
     writeData(currentDb, type.toUpperCase(), user || 'Unknown');
-
     res.json({ success: true, message: 'Synced successfully' });
   } catch (err) {
     console.error(err);
@@ -162,7 +187,58 @@ app.post('/api/sync', (req, res) => {
   }
 });
 
-// 3. SPECIAL: BACKUP MANUAL (For the settings page button)
+// 3. FILE UPLOAD & METADATA SAVE
+// Accepts 'file' field and query param 'category' (default GUQ)
+// Metadata is passed via body.metadata string (JSON)
+app.post('/api/upload', upload.single('file'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const category = req.query.category || 'GUQ';
+        const user = req.body.user || 'Unknown';
+        
+        // Read Metadata
+        let metadata = {};
+        if (req.body.metadata) {
+            try {
+                metadata = JSON.parse(req.body.metadata);
+            } catch (e) {
+                console.warn("Invalid metadata JSON");
+            }
+        }
+
+        // Construct Record
+        const newRecord = {
+            id: Date.now(),
+            ...metadata,
+            fileName: req.file.filename,
+            originalName: req.file.originalname,
+            path: `${category}/${req.file.filename}`,
+            uploadDate: new Date().toISOString().split('T')[0]
+        };
+
+        // Update DB
+        const db = readMasterData();
+        
+        // Handle specific categories
+        if (category === 'GUQ') {
+            if (!db.guq) db.guq = [];
+            db.guq.push(newRecord);
+            writeData(db, 'UPLOAD_GUQ', user);
+        }
+        // Can add 'CVHC', 'CVHT' logic here later
+
+        res.json({ success: true, record: newRecord });
+
+    } catch (e) {
+        console.error("Upload Error:", e);
+        res.status(500).json({ error: 'Upload failed' });
+    }
+});
+
+// 4. SPECIAL: BACKUP MANUAL (For the settings page button)
 app.post('/api/backup/manual', (req, res) => {
   const { user, label } = req.body;
   try {

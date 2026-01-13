@@ -97,6 +97,16 @@ export interface AttendanceRecord {
   leaveReason?: string; // Lý do ngắn gọn
 }
 
+// Interface for GUQ Record
+export interface GUQRecord {
+  id: number;
+  companyName: string;
+  date: string; // Submission date
+  fileName: string; // Physical file name
+  originalName?: string;
+  path?: string; // Relative path on server
+}
+
 // Default data in case server is offline
 const INITIAL_USERS: UserAccount[] = [
   { id: 1, name: 'Nguyễn Văn A', englishName: 'Mr. A', role: 'Sales', email: 'sales1@longhoanglogistics.com', password: '123', status: 'Active', failedAttempts: 0, department: 'Sales', position: 'Nhân viên kinh doanh' },
@@ -113,15 +123,16 @@ function App() {
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
   const [statements, setStatements] = useState<StatementData[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [guqRecords, setGuqRecords] = useState<GUQRecord[]>([]);
   
   // Server connection status
   const [isServerOnline, setIsServerOnline] = useState(true);
 
   // --- API HELPER ---
   const syncToServer = async (type: string, data: any) => {
-    if (!isServerOnline) return;
+    // Optimistically try to sync even if we think it's offline (it might have come back)
     try {
-      await fetch('http://localhost:5000/api/sync', {
+      await fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -130,11 +141,10 @@ function App() {
           user: currentUser?.englishName || currentUser?.name || 'Guest'
         })
       });
-      // console.log(`Synced ${type} to server.`);
+      if (!isServerOnline) setIsServerOnline(true);
     } catch (e) {
       console.warn(`Failed to sync ${type}. Server might be offline.`);
       setIsServerOnline(false);
-      // Removed intrusive alert to allow offline usage without interruption
     }
   };
 
@@ -142,13 +152,14 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/data');
+        const res = await fetch('/api/data');
         if (res.ok) {
           const db = await res.json();
           if (db.users && db.users.length > 0) setUsers(db.users);
           if (db.notifications) setNotifications(db.notifications);
           if (db.statements) setStatements(db.statements);
           if (db.attendanceRecords) setAttendanceRecords(db.attendanceRecords);
+          if (db.guq) setGuqRecords(db.guq);
           setIsServerOnline(true);
         } else {
             console.warn("Server responded but with error. Using local defaults.");
@@ -194,6 +205,12 @@ function App() {
   const handleUpdateAttendance = (newRecords: AttendanceRecord[]) => {
     setAttendanceRecords(newRecords);
     syncToServer('attendanceRecords', newRecords);
+  };
+
+  // GUQ updates typically come from File Upload, but this allows manual sync/delete if needed
+  const handleUpdateGuq = (newGuq: GUQRecord[]) => {
+    setGuqRecords(newGuq);
+    syncToServer('guq', newGuq);
   };
 
   // --- AUTHENTICATION ---
@@ -256,23 +273,28 @@ function App() {
   };
 
   // --- MANUAL BACKUPS ---
-  const API_URL = 'http://localhost:5000/api/backup';
   const triggerManualBackup = async (label: string) => {
-    if (!isServerOnline) return alert('Server is offline. Cannot backup.');
     try {
-        await fetch(`${API_URL}/manual`, {
+        await fetch(`/api/backup/manual`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user: currentUser?.englishName || 'User', label })
         });
         alert(`Đã sao lưu ${label} thành công vào thư mục History.`);
-    } catch (e) { alert('Lỗi sao lưu'); }
+    } catch (e) { alert('Lỗi sao lưu hoặc server offline.'); }
   };
 
   const renderActivePage = () => {
     switch (activePage) {
       case 'finance':
-        return <FinancePage onClose={() => setActivePage(null)} />;
+        return (
+            <FinancePage 
+                onClose={() => setActivePage(null)} 
+                guqRecords={guqRecords}
+                onUpdateGuq={handleUpdateGuq}
+                currentUser={currentUser}
+            />
+        );
       case 'company':
         return (
             <CompanyPage 
@@ -305,6 +327,7 @@ function App() {
             onClose={() => setActivePage(null)} 
             userRole={userRole} 
             users={users} 
+            guqRecords={guqRecords}
           />
         );
       case 'settings':
