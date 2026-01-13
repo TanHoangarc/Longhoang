@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { Printer, X, Phone, Mail, Download, Plus, Trash2 } from 'lucide-react';
+import { Printer, X, Phone, Mail, Download, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { UserAccount } from '../../App';
 
 interface QuoteRow {
   id: number;
@@ -28,6 +29,10 @@ interface QuotationData {
   salerEmail: string;
 }
 
+interface CompanyQuotationProps {
+  currentUser: UserAccount | null;
+}
+
 const PORTS_HCM = [
   'Cảng Cát Lái (HCM)',
   'Cảng Hiệp Phước (HCM)',
@@ -53,7 +58,7 @@ const FOREIGN_PORTS = [
   'Tokyo (JPN)', 'Port Klang (MYS)', 'Dubai (ARE)', 'Bangkok (THA)', 'Laem Chabang (THA)'
 ];
 
-const CompanyQuotation = () => {
+const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
   const [rows, setRows] = useState<QuoteRow[]>([{ id: 1, cost: '', unit: 'Lô', qty: 1, price: 0, vat: 10, currency: 'USD' }]);
   const [units, setUnits] = useState(['Lô', 'Bill', 'Bộ', 'Cont', 'CBM', 'Kgs', 'Chuyến']);
   const [currencies, setCurrencies] = useState(['USD', 'VND', 'EUR']);
@@ -71,10 +76,20 @@ const CompanyQuotation = () => {
     unit: 'CBM',
     commodity: '',
     note: '',
-    salerName: '',
-    salerPhone: '',
-    salerEmail: ''
+    salerName: currentUser ? currentUser.name : '',
+    salerPhone: currentUser?.department === 'Sales' ? '090xxxxxxx' : '',
+    salerEmail: currentUser ? currentUser.email : ''
   });
+
+  if (!currentUser) {
+      return (
+          <div className="flex flex-col items-center justify-center p-12 text-gray-400 h-[60vh]">
+              <AlertCircle size={48} className="mb-4 text-orange-400" />
+              <p className="font-bold text-lg text-gray-600">Vui lòng đăng nhập</p>
+              <p className="text-sm mt-1">Bạn cần đăng nhập để sử dụng tính năng tạo báo giá.</p>
+          </div>
+      );
+  }
 
   const vats = [0, 5, 8, 10];
   

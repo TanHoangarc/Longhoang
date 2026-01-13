@@ -2,8 +2,9 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Package, TrendingUp, Ship, BarChart3, Filter, Briefcase, Plus, Save, Edit, Trash2, 
-  UserPlus, AlertTriangle, UserMinus, MessageSquare, HelpCircle, FileText, Send, X, Printer
+  UserPlus, AlertTriangle, UserMinus, MessageSquare, HelpCircle, FileText, Send, X, Printer, AlertCircle
 } from 'lucide-react';
+import { UserAccount } from '../../App';
 
 interface Customer {
   id: number;
@@ -28,7 +29,11 @@ interface ExistingCustomer {
   status: 'Đang lấy Booking' | 'Đang vận chuyển' | 'Hoàn thành';
 }
 
-const CompanyReports = () => {
+interface CompanyReportsProps {
+  currentUser: UserAccount | null;
+}
+
+const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
   const today = new Date();
   const currentWeek = Math.ceil(today.getDate() / 7);
   
@@ -63,6 +68,16 @@ const CompanyReports = () => {
       feedback: '',
       suggestions: ''
   });
+
+  if (!currentUser) {
+      return (
+          <div className="flex flex-col items-center justify-center p-12 text-gray-400 h-[60vh]">
+              <AlertCircle size={48} className="mb-4 text-orange-400" />
+              <p className="font-bold text-lg text-gray-600">Vui lòng đăng nhập</p>
+              <p className="text-sm mt-1">Bạn cần đăng nhập để sử dụng tính năng báo cáo.</p>
+          </div>
+      );
+  }
 
   const formatCurrency = (val: number) => val.toLocaleString('en-US');
   const parseCurrency = (val: string) => parseFloat(val.replace(/,/g, '')) || 0;
@@ -137,7 +152,7 @@ const CompanyReports = () => {
   }, [existingCustomers, filteredExistingCustomers, reportFilter]);
 
   const handleSendReport = () => {
-      alert("Báo cáo tuần đã được gửi thành công và lưu vào hồ sơ nhân viên: Nguyễn Văn Long");
+      alert(`Báo cáo tuần đã được gửi thành công và lưu vào hồ sơ nhân viên: ${currentUser.name}`);
       setShowReportPreview(false);
   };
 
@@ -173,7 +188,7 @@ const CompanyReports = () => {
               <p className="text-sm font-bold mt-1 uppercase">Tháng {reportFilter.month}/{reportFilter.year} {reportFilter.week !== 'All' ? `- Tuần ${reportFilter.week}` : ''}</p>
           </div>
           <div className="text-right">
-              <p className="text-sm font-bold">Người báo cáo: Nguyễn Văn Long</p>
+              <p className="text-sm font-bold">Người báo cáo: {currentUser.name}</p>
               <p className="text-sm">Ngày báo cáo: {new Date().toLocaleDateString('vi-VN')}</p>
           </div>
       </div>
@@ -347,8 +362,8 @@ const CompanyReports = () => {
         <div key="signature" className="mt-8 text-right h-[200px]">
             <p className="font-bold uppercase">Người lập báo cáo</p>
             <div className="h-20"></div>
-            <p className="font-bold">Nguyễn Văn Long</p>
-            <p className="text-sm italic text-gray-500">Sales Executive</p>
+            <p className="font-bold">{currentUser.name}</p>
+            <p className="text-sm italic text-gray-500">{currentUser.position || 'Nhân viên'}</p>
         </div>
     );
 

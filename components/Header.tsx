@@ -6,9 +6,9 @@ import { UserRole, UserAccount } from '../App';
 
 interface HeaderProps {
   userRole: UserRole;
-  onLogin: (role: UserRole) => void;
+  onLogin: (role: UserRole, user?: UserAccount) => void;
   onLogout: () => void;
-  onOpenPage: (page: 'finance' | 'company' | 'management' | 'settings' | null) => void;
+  onOpenPage: (page: 'finance' | 'company' | 'management' | 'settings' | 'account' | null) => void;
   users: UserAccount[];
   onLoginAttempt?: (email: string, isSuccess: boolean) => void;
 }
@@ -29,7 +29,7 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
     if (target === '#' || target === 'home') {
       onOpenPage(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (['finance', 'company', 'management', 'settings'].includes(target)) {
+    } else if (['finance', 'company', 'management', 'settings', 'account'].includes(target)) {
       onOpenPage(target as any);
     } else {
       onOpenPage(null);
@@ -71,13 +71,13 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
                 redirectPage = 'settings';
             } else if (targetUser.role === 'Accounting' || targetUser.role === 'Manager') {
                 role = 'manager';
-                redirectPage = 'management';
+                redirectPage = 'account'; // Accounting goes to Account Portal
             } else if (targetUser.role === 'Sales' || targetUser.role === 'Document') {
                 role = 'staff';
                 redirectPage = 'company';
             }
 
-            onLogin(role);
+            onLogin(role, targetUser); // Pass user object
             onOpenPage(redirectPage as any);
             setShowLoginModal(false);
             return;
@@ -143,12 +143,13 @@ const Header: React.FC<HeaderProps> = ({ userRole, onLogin, onLogout, onOpenPage
 
   // Filter links based on role
   const filteredLinks = currentNavLinks.filter(link => {
-    const isRestricted = ['finance', 'company', 'management', 'settings'].includes(link.href);
+    const isRestricted = ['finance', 'company', 'management', 'settings', 'account'].includes(link.href);
     if (!isRestricted) return true;
 
     if (userRole === 'admin') return true; 
-    if (userRole === 'manager' && ['management', 'company'].includes(link.href)) return true;
-    if (userRole === 'staff' && link.href === 'company') return true;
+    if (userRole === 'manager' && ['management', 'company', 'account'].includes(link.href)) return true;
+    if (userRole === 'staff' && (link.href === 'company')) return true;
+    
     if (userRole === 'customer' && link.href === 'finance') return true;
 
     return false;

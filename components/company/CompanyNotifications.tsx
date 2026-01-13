@@ -3,17 +3,7 @@ import React, { useState } from 'react';
 import { 
   Bell, Plus, Calendar, Pin, AlertCircle, PinOff, Edit, Trash2, X, Image as ImageIcon, RefreshCcw, FileText, Upload 
 } from 'lucide-react';
-
-interface SystemNotification {
-  id: number;
-  date: string;
-  title: string;
-  content: string;
-  attachment?: string;
-  expiryDate: string;
-  isPinned: boolean;
-  image: string;
-}
+import { SystemNotification } from '../../App';
 
 const LOGISTICS_IMAGES = [
   "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
@@ -24,72 +14,58 @@ const LOGISTICS_IMAGES = [
   "https://images.unsplash.com/photo-1566576912906-253200c681bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
 ];
 
-const CompanyNotifications = () => {
-  const [notifications, setNotifications] = useState<SystemNotification[]>([
-    {
-      id: 1,
-      date: '20/05/2024',
-      title: 'Cập nhật phụ phí nhiên liệu tháng 06/2024',
-      content: 'Thông báo về việc điều chỉnh phụ phí nhiên liệu (BAF) cho các tuyến vận tải biển quốc tế áp dụng từ ngày 01/06.',
-      attachment: 'BAF_Update_June.pdf',
-      expiryDate: '2025-06-30',
-      isPinned: true,
-      image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
-    },
-    {
-      id: 2,
-      date: '15/05/2024',
-      title: 'Lịch nghỉ lễ Quốc khánh 2/9',
-      content: 'Thông báo lịch trực và vận hành kho bãi trong kỳ nghỉ lễ sắp tới để quý đối tác chủ động kế hoạch.',
-      attachment: 'Holiday_Schedule.pdf',
-      expiryDate: '2024-09-05',
-      isPinned: false,
-      image: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
-    },
-    {
-      id: 3,
-      date: '10/01/2024',
-      title: 'Thông báo hết hạn chương trình khuyến mãi Tết',
-      content: 'Chương trình tri ân khách hàng nhân dịp Tết Giáp Thìn đã chính thức khép lại. Cảm ơn quý khách đã đồng hành.',
-      expiryDate: '2024-02-15',
-      isPinned: false,
-      image: 'https://images.unsplash.com/photo-1526772662000-3f88f10405ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
-    }
-  ]);
+interface CompanyNotificationsProps {
+  notifications: SystemNotification[];
+  onUpdate: (notifs: SystemNotification[]) => void;
+}
 
+const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notifications, onUpdate }) => {
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  
   const [newNotifData, setNewNotifData] = useState({
     title: '',
     content: '',
     image: LOGISTICS_IMAGES[0],
     attachment: '',
+    startDate: '',
     expiryDate: ''
   });
 
   const togglePin = (id: number) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isPinned: !n.isPinned } : n));
+    onUpdate(notifications.map(n => n.id === id ? { ...n, isPinned: !n.isPinned } : n));
   };
 
   const deleteNotification = (id: number) => {
     if (confirm('Bạn có chắc chắn muốn xóa thông báo này?')) {
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      onUpdate(notifications.filter(n => n.id !== id));
     }
   };
 
   const editNotification = (id: number) => {
     const n = notifications.find(notif => notif.id === id);
-    const newTitle = prompt('Nhập tiêu đề mới:', n?.title);
-    if (newTitle) {
-      setNotifications(prev => prev.map(notif => notif.id === id ? { ...notif, title: newTitle } : notif));
+    if (n) {
+      setEditingId(id);
+      setNewNotifData({
+        title: n.title,
+        content: n.content,
+        image: n.image,
+        attachment: n.attachment || '',
+        startDate: n.startDate,
+        expiryDate: n.expiryDate
+      });
+      setIsNotifModalOpen(true);
     }
   };
 
   const addNotification = () => {
+    setEditingId(null);
     setNewNotifData({
       title: '',
       content: '',
       image: LOGISTICS_IMAGES[Math.floor(Math.random() * LOGISTICS_IMAGES.length)],
       attachment: '',
+      startDate: new Date().toISOString().split('T')[0],
       expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     });
     setIsNotifModalOpen(true);
@@ -103,24 +79,44 @@ const CompanyNotifications = () => {
     return `${url}${separator}auto=format&fit=crop&w=800&q=80`;
   };
 
-  const handleCreateNotification = () => {
+  const handleSaveNotification = () => {
     if (!newNotifData.title.trim() || !newNotifData.content.trim()) {
       alert('Vui lòng nhập tiêu đề và nội dung thông báo!');
       return;
     }
 
-    const newNotif: SystemNotification = {
-      id: Date.now(),
-      date: new Date().toLocaleDateString('vi-VN'),
-      title: newNotifData.title,
-      content: newNotifData.content,
-      attachment: newNotifData.attachment || undefined,
-      expiryDate: newNotifData.expiryDate,
-      isPinned: false,
-      image: ensureImageSuffix(newNotifData.image) || LOGISTICS_IMAGES[0]
-    };
+    if (newNotifData.startDate > newNotifData.expiryDate) {
+        alert('Ngày bắt đầu không được lớn hơn ngày hết hạn!');
+        return;
+    }
 
-    setNotifications([newNotif, ...notifications]);
+    if (editingId) {
+      // Update existing
+      onUpdate(notifications.map(n => n.id === editingId ? {
+        ...n,
+        title: newNotifData.title,
+        content: newNotifData.content,
+        image: ensureImageSuffix(newNotifData.image),
+        attachment: newNotifData.attachment,
+        startDate: newNotifData.startDate,
+        expiryDate: newNotifData.expiryDate
+      } : n));
+    } else {
+      // Create new
+      const newNotif: SystemNotification = {
+        id: Date.now(),
+        date: new Date().toLocaleDateString('vi-VN'),
+        title: newNotifData.title,
+        content: newNotifData.content,
+        attachment: newNotifData.attachment || undefined,
+        startDate: newNotifData.startDate,
+        expiryDate: newNotifData.expiryDate,
+        isPinned: false,
+        image: ensureImageSuffix(newNotifData.image) || LOGISTICS_IMAGES[0]
+      };
+      onUpdate([newNotif, ...notifications]);
+    }
+
     setIsNotifModalOpen(false);
   };
 
@@ -204,7 +200,9 @@ const CompanyNotifications = () => {
                 )}
 
                 <div className="flex justify-between items-center pt-2 text-[10px] font-bold text-gray-400 uppercase">
-                  <span>Hiệu lực đến: {new Date(notif.expiryDate).toLocaleDateString('vi-VN')}</span>
+                  <span>
+                      Hiệu lực: {new Date(notif.startDate).toLocaleDateString('vi-VN')} - {new Date(notif.expiryDate).toLocaleDateString('vi-VN')}
+                  </span>
                 </div>
               </div>
 
@@ -237,14 +235,14 @@ const CompanyNotifications = () => {
         })}
       </div>
 
-      {/* CREATE NOTIFICATION MODAL */}
+      {/* CREATE/EDIT NOTIFICATION MODAL */}
       {isNotifModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsNotifModalOpen(false)}></div>
           <div className="bg-white rounded-2xl w-full max-w-2xl relative z-10 overflow-hidden animate-in fade-in zoom-in duration-300 shadow-2xl">
              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                  <Bell className="mr-2 text-primary" /> Tạo thông báo mới
+                  <Bell className="mr-2 text-primary" /> {editingId ? 'Chỉnh sửa thông báo' : 'Tạo thông báo mới'}
                 </h3>
                 <button onClick={() => setIsNotifModalOpen(false)} className="text-gray-400 hover:text-red-500 transition"><X size={24} /></button>
              </div>
@@ -255,7 +253,7 @@ const CompanyNotifications = () => {
                   <input 
                     type="text" 
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary transition font-bold text-gray-700"
-                    placeholder="Nhập tiêu đề..."
+                    placeholder="Nhập tiêu đề (VD: Nghỉ lễ 2/9...)"
                     value={newNotifData.title}
                     onChange={(e) => setNewNotifData({...newNotifData, title: e.target.value})}
                   />
@@ -292,14 +290,25 @@ const CompanyNotifications = () => {
                   </div>
                   
                   <div className="space-y-4">
-                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-gray-500 uppercase">Ngày hết hạn</label>
-                        <input 
-                          type="date" 
-                          className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary transition text-sm"
-                          value={newNotifData.expiryDate}
-                          onChange={(e) => setNewNotifData({...newNotifData, expiryDate: e.target.value})}
-                        />
+                     <div className="grid grid-cols-2 gap-2">
+                         <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase">Ngày bắt đầu</label>
+                            <input 
+                              type="date" 
+                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary transition text-sm"
+                              value={newNotifData.startDate}
+                              onChange={(e) => setNewNotifData({...newNotifData, startDate: e.target.value})}
+                            />
+                         </div>
+                         <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase">Ngày kết thúc</label>
+                            <input 
+                              type="date" 
+                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary transition text-sm"
+                              value={newNotifData.expiryDate}
+                              onChange={(e) => setNewNotifData({...newNotifData, expiryDate: e.target.value})}
+                            />
+                         </div>
                      </div>
                      
                      <div className="space-y-2">
@@ -363,10 +372,10 @@ const CompanyNotifications = () => {
                   Hủy bỏ
                 </button>
                 <button 
-                  onClick={handleCreateNotification}
+                  onClick={handleSaveNotification}
                   className="px-6 py-2 rounded-xl font-bold text-white bg-primary hover:bg-primaryDark transition shadow-lg shadow-orange-200"
                 >
-                  Đăng thông báo
+                  {editingId ? 'Lưu thay đổi' : 'Đăng thông báo'}
                 </button>
              </div>
           </div>

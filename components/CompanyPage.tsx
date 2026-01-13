@@ -1,32 +1,51 @@
 
 import React, { useState } from 'react';
 import { 
-  X, Bell, FileSpreadsheet, BarChart3, Library, ArrowLeft, LayoutDashboard, ChevronRight
+  X, Bell, FileSpreadsheet, BarChart3, Library, ArrowLeft, LayoutDashboard, ChevronRight, BookOpen, Truck, Clock
 } from 'lucide-react';
 import CompanyNotifications from './company/CompanyNotifications';
 import CompanyQuotation from './company/CompanyQuotation';
 import CompanyReports from './company/CompanyReports';
 import CompanyLibrary from './company/CompanyLibrary';
+import CompanyDecrees from './company/CompanyDecrees';
+import CompanyManifests from './company/CompanyManifests'; 
+import Timekeeping from './attendance/Timekeeping';
+import { StatementData, UserAccount, AttendanceRecord, SystemNotification } from '../App';
 
 interface CompanyPageProps {
   onClose: () => void;
+  statements: StatementData[]; 
+  onUpdateStatements: (data: StatementData[]) => void;
+  currentUser: UserAccount | null;
+  attendanceRecords: AttendanceRecord[];
+  onUpdateAttendance: (records: AttendanceRecord[]) => void;
+  notifications: SystemNotification[];
+  onUpdateNotifications: (notifs: SystemNotification[]) => void;
 }
 
-type ViewType = 'dashboard' | 'notifications' | 'quotation' | 'reports' | 'library';
+type ViewType = 'dashboard' | 'notifications' | 'quotation' | 'reports' | 'library' | 'decrees' | 'manifests' | 'attendance';
 
-const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
+const CompanyPage: React.FC<CompanyPageProps> = ({ 
+  onClose, statements, onUpdateStatements, currentUser, attendanceRecords, onUpdateAttendance, notifications, onUpdateNotifications 
+}) => {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
 
   const renderContent = () => {
     switch (activeView) {
-      case 'notifications': return <CompanyNotifications />;
-      case 'quotation': return <CompanyQuotation />;
-      case 'reports': return <CompanyReports />;
+      case 'notifications': return <CompanyNotifications notifications={notifications} onUpdate={onUpdateNotifications} />;
+      case 'quotation': return <CompanyQuotation currentUser={currentUser} />;
+      case 'reports': return <CompanyReports currentUser={currentUser} />;
       case 'library': return <CompanyLibrary />;
+      case 'decrees': return <CompanyDecrees />;
+      case 'manifests': return <CompanyManifests statements={statements} onUpdateStatements={onUpdateStatements} />;
+      case 'attendance': return <Timekeeping currentUser={currentUser} attendanceRecords={attendanceRecords} onUpdateAttendance={onUpdateAttendance} />;
       default: return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
+            { id: 'attendance', title: 'Chấm công', icon: Clock, color: 'bg-indigo-600', desc: 'Check-in/Check-out hàng ngày' },
             { id: 'notifications', title: 'Thông báo', icon: Bell, color: 'bg-blue-500', desc: 'Thông tin nội bộ và tin tức chung' },
+            { id: 'decrees', title: 'Nghị định', icon: BookOpen, color: 'bg-red-500', desc: 'Cập nhật văn bản pháp luật mới' },
+            { id: 'manifests', title: 'Bảng kê xe tải', icon: Truck, color: 'bg-orange-500', desc: 'Xem bảng kê được chia sẻ từ Kế toán' },
             { id: 'quotation', title: 'Lập báo giá', icon: FileSpreadsheet, color: 'bg-green-500', desc: 'Báo giá hàng nhập/xuất chuyên nghiệp' },
             { id: 'reports', title: 'Báo cáo', icon: BarChart3, color: 'bg-purple-500', desc: 'Thống kê sản lượng và doanh thu cá nhân' },
             { id: 'library', title: 'Thư viện mẫu', icon: Library, color: 'bg-gray-800', desc: 'Kho biểu mẫu và tài liệu chuẩn hóa' }
@@ -63,8 +82,10 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
             <div className="hidden lg:flex items-center space-x-1 border-l border-white/10 pl-6 ml-6">
               {[
                 { id: 'dashboard', icon: LayoutDashboard, label: 'Bàn làm việc' },
+                { id: 'attendance', icon: Clock, label: 'Chấm công' },
+                { id: 'manifests', icon: Truck, label: 'Bảng kê' },
                 { id: 'quotation', icon: FileSpreadsheet, label: 'Báo giá' },
-                { id: 'reports', icon: BarChart3, label: 'Báo cáo' }
+                { id: 'reports', icon: BarChart3, label: 'Báo cáo' },
               ].map(item => (
                 <button 
                   key={item.id}
@@ -77,9 +98,19 @@ const CompanyPage: React.FC<CompanyPageProps> = ({ onClose }) => {
               ))}
             </div>
           </div>
-          <button onClick={onClose} className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition">
-            <X size={20} />
-          </button>
+          <div className="flex items-center space-x-4">
+             {currentUser && (
+                 <div className="hidden md:flex items-center bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">
+                     <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs font-bold mr-2">
+                         {currentUser.name.charAt(0)}
+                     </div>
+                     <span className="text-xs font-medium">{currentUser.name}</span>
+                 </div>
+             )}
+             <button onClick={onClose} className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition">
+                <X size={20} />
+             </button>
+          </div>
         </div>
       </div>
       <div className="flex-1 container mx-auto px-4 py-12 max-w-7xl print:py-0 print:px-0 print:max-w-none">

@@ -1,3 +1,4 @@
+
 import { Truck, Ship, Plane, Package, Shield, Clock, Headphones, Globe, MapPin, Anchor, FileText, Smartphone } from 'lucide-react';
 
 export const NAV_LINKS = [
@@ -8,6 +9,7 @@ export const NAV_LINKS = [
   { name: 'Liên hệ', href: '#contact' },
   { name: 'Finance', href: 'finance' },
   { name: 'Company', href: 'company' },
+  { name: 'Account', href: 'account' },
   { name: 'Cài đặt', href: 'settings' },
 ];
 
