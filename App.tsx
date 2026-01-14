@@ -205,10 +205,11 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch Data from Production API
-        const res = await fetch(`${API_BASE_URL}/api/data`);
+        // Fetch Data from Production API with Cache Busting
+        const res = await fetch(`${API_BASE_URL}/api/data?t=${new Date().getTime()}`);
         if (res.ok) {
           const db = await res.json();
+          // Only update if data exists to avoid wiping local state with empty DB
           if (db.users && db.users.length > 0) setUsers(db.users);
           if (db.notifications) setNotifications(db.notifications);
           if (db.statements) setStatements(db.statements);

@@ -1,8 +1,8 @@
 
 import { Truck, Ship, Plane, Package, Shield, Clock, Headphones, Globe, MapPin, Anchor, FileText, Smartphone } from 'lucide-react';
 
-// Leave empty to use relative path (uses Vite proxy in dev, and relative path in prod)
-export const API_BASE_URL = '';
+// Use absolute path for production environment to ensure connection to the correct server
+export const API_BASE_URL = 'https://api.longhoanglogistics.com';
 
 export const NAV_LINKS = [
   { name: 'Trang chủ', href: '#' },
