@@ -8,6 +8,7 @@ import {
   AlertTriangle, Clock, Info, PenTool, ChevronDown, Save, Eye
 } from 'lucide-react';
 import { GUQRecord, UserAccount } from '../App';
+import { API_BASE_URL } from '../constants';
 
 // --- HELPER FUNCTIONS FOR VIETNAMESE CURRENCY READING ---
 const DOCSO = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
@@ -230,8 +231,8 @@ const FinancePage: React.FC<FinancePageProps> = ({ onClose, guqRecords, onUpdate
     }));
 
     try {
-        // Use relative path via proxy
-        const response = await fetch('/api/upload?category=GUQ', {
+        // Updated to use absolute API_BASE_URL
+        const response = await fetch(`${API_BASE_URL}/api/upload?category=GUQ`, {
             method: 'POST',
             body: formData
         });

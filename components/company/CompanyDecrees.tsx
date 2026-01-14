@@ -3,16 +3,12 @@ import React, { useState } from 'react';
 import { 
   BookOpen, Plus, Calendar, Pin, AlertCircle, PinOff, Edit, Trash2, X, Image as ImageIcon, RefreshCcw, FileText, Upload 
 } from 'lucide-react';
+import { Decree } from '../../App';
+import { API_BASE_URL } from '../../constants';
 
-interface Decree {
-  id: number;
-  date: string;
-  title: string;
-  content: string;
-  attachment?: string;
-  expiryDate: string;
-  isPinned: boolean;
-  image: string;
+interface CompanyDecreesProps {
+  decrees: Decree[];
+  onUpdate: (decrees: Decree[]) => void;
 }
 
 const STOCK_IMAGES = [
@@ -22,31 +18,11 @@ const STOCK_IMAGES = [
   "https://images.unsplash.com/photo-1479142506502-19b3a3b7ff33?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"  // Pen
 ];
 
-const CompanyDecrees = () => {
-  const [decrees, setDecrees] = useState<Decree[]>([
-    {
-      id: 1,
-      date: '01/06/2024',
-      title: 'Nghị định 15/2022/NĐ-CP',
-      content: 'Quy định chính sách miễn, giảm thuế theo Nghị quyết 43/2022/QH15 của Quốc hội về chính sách tài khóa, tiền tệ hỗ trợ Chương trình phục hồi và phát triển kinh tế - xã hội.',
-      attachment: 'ND_15_2022_CP.pdf',
-      expiryDate: '2025-12-31',
-      isPinned: true,
-      image: STOCK_IMAGES[0]
-    },
-    {
-      id: 2,
-      date: '15/05/2024',
-      title: 'Thông tư về phí CSHT Cảng biển',
-      content: 'Cập nhật biểu mức thu phí sử dụng công trình kết cấu hạ tầng, công trình dịch vụ, tiện ích công cộng trong khu vực cửa khẩu cảng biển TP. Hồ Chí Minh.',
-      attachment: 'TT_Phi_CSHT_HCM.pdf',
-      expiryDate: '2024-12-31',
-      isPinned: false,
-      image: STOCK_IMAGES[1]
-    }
-  ]);
-
+const CompanyDecrees: React.FC<CompanyDecreesProps> = ({ decrees, onUpdate }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newDecreeFile, setNewDecreeFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  
   const [newDecreeData, setNewDecreeData] = useState({
     title: '',
     content: '',
@@ -56,12 +32,12 @@ const CompanyDecrees = () => {
   });
 
   const togglePin = (id: number) => {
-    setDecrees(prev => prev.map(n => n.id === id ? { ...n, isPinned: !n.isPinned } : n));
+    onUpdate(decrees.map(n => n.id === id ? { ...n, isPinned: !n.isPinned } : n));
   };
 
   const deleteDecree = (id: number) => {
     if (confirm('Bạn có chắc chắn muốn xóa nghị định này?')) {
-      setDecrees(prev => prev.filter(n => n.id !== id));
+      onUpdate(decrees.filter(n => n.id !== id));
     }
   };
 
@@ -69,7 +45,7 @@ const CompanyDecrees = () => {
     const n = decrees.find(d => d.id === id);
     const newTitle = prompt('Nhập tiêu đề mới:', n?.title);
     if (newTitle) {
-      setDecrees(prev => prev.map(d => d.id === id ? { ...d, title: newTitle } : d));
+      onUpdate(decrees.map(d => d.id === id ? { ...d, title: newTitle } : d));
     }
   };
 
@@ -81,6 +57,7 @@ const CompanyDecrees = () => {
       attachment: '',
       expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     });
+    setNewDecreeFile(null);
     setIsModalOpen(true);
   };
 
@@ -92,24 +69,55 @@ const CompanyDecrees = () => {
     return `${url}${separator}auto=format&fit=crop&w=800&q=80`;
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newDecreeData.title.trim() || !newDecreeData.content.trim()) {
       alert('Vui lòng nhập tiêu đề và nội dung!');
       return;
     }
 
+    setIsUploading(true);
+    let finalAttachmentName = newDecreeData.attachment;
+
+    // 1. Upload file if exists
+    if (newDecreeFile) {
+        try {
+            const formData = new FormData();
+            formData.append('file', newDecreeFile);
+            // Updated to use absolute API_BASE_URL
+            const res = await fetch(`${API_BASE_URL}/api/upload?category=NGHIDINH`, {
+                method: 'POST',
+                body: formData
+            });
+            if (res.ok) {
+                const data = await res.json();
+                finalAttachmentName = data.record.fileName;
+            } else {
+                alert('Lỗi tải file. Vui lòng thử lại.');
+                setIsUploading(false);
+                return;
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Lỗi kết nối khi tải file.');
+            setIsUploading(false);
+            return;
+        }
+    }
+
+    // 2. Save Decree
     const newDecree: Decree = {
       id: Date.now(),
       date: new Date().toLocaleDateString('vi-VN'),
       title: newDecreeData.title,
       content: newDecreeData.content,
-      attachment: newDecreeData.attachment || undefined,
+      attachment: finalAttachmentName || undefined,
       expiryDate: newDecreeData.expiryDate,
       isPinned: false,
       image: ensureImageSuffix(newDecreeData.image) || STOCK_IMAGES[0]
     };
 
-    setDecrees([newDecree, ...decrees]);
+    onUpdate([newDecree, ...decrees]);
+    setIsUploading(false);
     setIsModalOpen(false);
   };
 
@@ -239,13 +247,13 @@ const CompanyDecrees = () => {
       {/* CREATE MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isUploading && setIsModalOpen(false)}></div>
           <div className="bg-white rounded-2xl w-full max-w-2xl relative z-10 overflow-hidden animate-in fade-in zoom-in duration-300 shadow-2xl">
              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 className="text-xl font-bold text-gray-800 flex items-center">
                   <BookOpen className="mr-2 text-primary" /> Thêm nghị định mới
                 </h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-red-500 transition"><X size={24} /></button>
+                <button onClick={() => !isUploading && setIsModalOpen(false)} className="text-gray-400 hover:text-red-500 transition"><X size={24} /></button>
              </div>
              
              <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
@@ -316,6 +324,7 @@ const CompanyDecrees = () => {
                                     onChange={(e) => {
                                         const file = e.target.files?.[0];
                                         if (file) {
+                                            setNewDecreeFile(file);
                                             setNewDecreeData({ ...newDecreeData, attachment: file.name });
                                         }
                                     }}
@@ -336,7 +345,7 @@ const CompanyDecrees = () => {
                             </div>
                              {newDecreeData.attachment && (
                                 <button 
-                                    onClick={() => setNewDecreeData({...newDecreeData, attachment: ''})}
+                                    onClick={() => { setNewDecreeData({...newDecreeData, attachment: ''}); setNewDecreeFile(null); }}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 bg-white text-red-500 rounded-full shadow-sm hover:bg-red-50 z-10"
                                     title="Xóa file"
                                 >
@@ -361,16 +370,18 @@ const CompanyDecrees = () => {
 
              <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end space-x-3">
                 <button 
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => !isUploading && setIsModalOpen(false)}
                   className="px-6 py-2 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition"
+                  disabled={isUploading}
                 >
                   Hủy bỏ
                 </button>
                 <button 
                   onClick={handleCreate}
-                  className="px-6 py-2 rounded-xl font-bold text-white bg-primary hover:bg-primaryDark transition shadow-lg shadow-orange-200"
+                  className={`px-6 py-2 rounded-xl font-bold text-white transition shadow-lg shadow-orange-200 ${isUploading ? 'bg-gray-400' : 'bg-primary hover:bg-primaryDark'}`}
+                  disabled={isUploading}
                 >
-                  Lưu nghị định
+                  {isUploading ? 'Đang lưu...' : 'Lưu nghị định'}
                 </button>
              </div>
           </div>

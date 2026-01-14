@@ -14,26 +14,19 @@ interface AccountPageProps {
   users: UserAccount[];
   onUpdateAttendance: (records: AttendanceRecord[]) => void;
   onUpdateUser: (user: UserAccount) => void;
-  notifications: SystemNotification[]; // Add notifications prop
+  notifications: SystemNotification[];
+  carriers: Carrier[];
+  onUpdateCarriers: (carriers: Carrier[]) => void;
 }
 
 type ViewType = 'dashboard' | 'statement_list' | 'statement_edit' | 'attendance' | 'data';
 
-const AccountPage: React.FC<AccountPageProps> = ({ onClose, statements, onUpdateStatements, attendanceRecords, users, onUpdateAttendance, onUpdateUser, notifications }) => {
+const AccountPage: React.FC<AccountPageProps> = ({ 
+  onClose, statements, onUpdateStatements, attendanceRecords, users, 
+  onUpdateAttendance, onUpdateUser, notifications, carriers, onUpdateCarriers 
+}) => {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [selectedStatement, setSelectedStatement] = useState<StatementData | undefined>(undefined);
-
-  // Lifted state for Carriers (Trucking Companies)
-  const [carriers, setCarriers] = useState<Carrier[]>([
-    {
-      id: 1,
-      name: 'CÔNG TY TNHH DV VT THANH XUÂN ĐÀO',
-      address: '41/15d/5/10 Đường Gò Cát, Phường Phú Hữu, Tp Thủ Đức, Tp Hồ Chí Minh',
-      accountHolder: '',
-      accountNumber: '1044115528',
-      bank: 'Vietcombank'
-    }
-  ]);
 
   const handleCreateNewStatement = () => {
       setSelectedStatement(undefined);
@@ -143,7 +136,7 @@ const AccountPage: React.FC<AccountPageProps> = ({ onClose, statements, onUpdate
             />
         );
 
-      case 'data': return <AccountData carriers={carriers} onUpdate={setCarriers} />;
+      case 'data': return <AccountData carriers={carriers} onUpdate={onUpdateCarriers} />;
       case 'attendance': return <AccountAttendance attendanceRecords={attendanceRecords} users={users} onUpdate={onUpdateAttendance} onUpdateUser={onUpdateUser} notifications={notifications} />;
       
       default: return (

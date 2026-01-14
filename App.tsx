@@ -17,6 +17,8 @@ import CompanyPage from './components/CompanyPage';
 import SettingsPage from './components/SettingsPage';
 import ManagementPage from './components/ManagementPage';
 import AccountPage from './components/AccountPage';
+import { Carrier } from './components/account/AccountData';
+import { API_BASE_URL } from './constants';
 
 export type UserRole = 'admin' | 'manager' | 'staff' | 'customer' | null;
 
@@ -50,6 +52,18 @@ export interface SystemNotification {
   attachment?: string;
   startDate: string; // New: Start of event/holiday
   expiryDate: string; // End of event/holiday
+  isPinned: boolean;
+  image: string;
+}
+
+// Interface for Decree
+export interface Decree {
+  id: number;
+  date: string;
+  title: string;
+  content: string;
+  attachment?: string;
+  expiryDate: string;
   isPinned: boolean;
   image: string;
 }
@@ -113,6 +127,11 @@ const INITIAL_USERS: UserAccount[] = [
   { id: 7, name: 'Administrator', englishName: 'Admin', role: 'Admin', email: 'admin@longhoanglogistics.com', password: 'admin', status: 'Active', failedAttempts: 0, department: 'Board', position: 'Admin' },
 ];
 
+const STOCK_IMAGES = [
+  "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+];
+
 function App() {
   const [activePage, setActivePage] = useState<'finance' | 'company' | 'management' | 'settings' | 'account' | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
@@ -124,35 +143,70 @@ function App() {
   const [statements, setStatements] = useState<StatementData[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [guqRecords, setGuqRecords] = useState<GUQRecord[]>([]);
+  const [carriers, setCarriers] = useState<Carrier[]>([
+    {
+      id: 1,
+      name: 'CÔNG TY TNHH DV VT THANH XUÂN ĐÀO',
+      address: '41/15d/5/10 Đường Gò Cát, Phường Phú Hữu, Tp Thủ Đức, Tp Hồ Chí Minh',
+      accountHolder: '',
+      accountNumber: '1044115528',
+      bank: 'Vietcombank'
+    }
+  ]);
+  const [decrees, setDecrees] = useState<Decree[]>([
+    {
+      id: 1,
+      date: '01/06/2024',
+      title: 'Nghị định 15/2022/NĐ-CP',
+      content: 'Quy định chính sách miễn, giảm thuế theo Nghị quyết 43/2022/QH15...',
+      attachment: 'ND_15_2022_CP.pdf',
+      expiryDate: '2025-12-31',
+      isPinned: true,
+      image: STOCK_IMAGES[0]
+    }
+  ]);
   
   // Server connection status
   const [isServerOnline, setIsServerOnline] = useState(true);
+  const [serverInfo, setServerInfo] = useState({ rootDir: '', eDriveAvailable: false, isUsingEDrive: false });
 
   // --- API HELPER ---
-  const syncToServer = async (type: string, data: any) => {
-    // Optimistically try to sync even if we think it's offline (it might have come back)
+  // Sends the FULL state to the backend to be backed up
+  const syncToServer = async (fullData: any) => {
     try {
-      await fetch('/api/sync', {
+      // UPDATED: Use absolute API_BASE_URL to ensure data goes to the production server
+      await fetch(`${API_BASE_URL}/api/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type,
-          data,
-          user: currentUser?.englishName || currentUser?.name || 'Guest'
-        })
+        body: JSON.stringify(fullData)
       });
       if (!isServerOnline) setIsServerOnline(true);
     } catch (e) {
-      console.warn(`Failed to sync ${type}. Server might be offline.`);
+      console.warn(`Failed to sync data. Server might be offline.`);
       setIsServerOnline(false);
     }
+  };
+
+  // Helper to gather all current state and override with the update
+  const getFullState = (overrides: any = {}) => {
+    return {
+      users,
+      notifications,
+      statements,
+      attendanceRecords,
+      guqRecords,
+      carriers,
+      decrees,
+      ...overrides
+    };
   };
 
   // --- INITIAL LOAD ---
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/data');
+        // Fetch Data from Production API
+        const res = await fetch(`${API_BASE_URL}/api/data`);
         if (res.ok) {
           const db = await res.json();
           if (db.users && db.users.length > 0) setUsers(db.users);
@@ -160,11 +214,21 @@ function App() {
           if (db.statements) setStatements(db.statements);
           if (db.attendanceRecords) setAttendanceRecords(db.attendanceRecords);
           if (db.guq) setGuqRecords(db.guq);
+          if (db.carriers && db.carriers.length > 0) setCarriers(db.carriers);
+          if (db.decrees && db.decrees.length > 0) setDecrees(db.decrees);
           setIsServerOnline(true);
         } else {
             console.warn("Server responded but with error. Using local defaults.");
             setIsServerOnline(false);
         }
+
+        // Fetch Server Status (Storage Path)
+        const statusRes = await fetch(`${API_BASE_URL}/api/status`);
+        if (statusRes.ok) {
+            const info = await statusRes.json();
+            setServerInfo(info);
+        }
+
       } catch (e) {
         console.warn("Server offline, using local defaults.");
         setIsServerOnline(false);
@@ -189,28 +253,37 @@ function App() {
 
   const handleUpdateUsers = (newUsers: UserAccount[]) => {
     setUsers(newUsers);
-    syncToServer('users', newUsers);
+    syncToServer(getFullState({ users: newUsers }));
   };
 
   const handleUpdateNotifications = (newNotifs: SystemNotification[]) => {
     setNotifications(newNotifs);
-    syncToServer('notifications', newNotifs);
+    syncToServer(getFullState({ notifications: newNotifs }));
   };
 
   const handleUpdateStatements = (newStmts: StatementData[]) => {
     setStatements(newStmts);
-    syncToServer('statements', newStmts);
+    syncToServer(getFullState({ statements: newStmts }));
   };
 
   const handleUpdateAttendance = (newRecords: AttendanceRecord[]) => {
     setAttendanceRecords(newRecords);
-    syncToServer('attendanceRecords', newRecords);
+    syncToServer(getFullState({ attendanceRecords: newRecords }));
   };
 
-  // GUQ updates typically come from File Upload, but this allows manual sync/delete if needed
+  const handleUpdateCarriers = (newCarriers: Carrier[]) => {
+    setCarriers(newCarriers);
+    syncToServer(getFullState({ carriers: newCarriers }));
+  };
+
+  const handleUpdateDecrees = (newDecrees: Decree[]) => {
+    setDecrees(newDecrees);
+    syncToServer(getFullState({ decrees: newDecrees }));
+  };
+
   const handleUpdateGuq = (newGuq: GUQRecord[]) => {
     setGuqRecords(newGuq);
-    syncToServer('guq', newGuq);
+    syncToServer(getFullState({ guq: newGuq }));
   };
 
   // --- AUTHENTICATION ---
@@ -269,19 +342,7 @@ function App() {
     });
     // Optimistic UI update first, then sync
     setUsers(newUsers);
-    syncToServer('users', newUsers);
-  };
-
-  // --- MANUAL BACKUPS ---
-  const triggerManualBackup = async (label: string) => {
-    try {
-        await fetch(`/api/backup/manual`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user: currentUser?.englishName || 'User', label })
-        });
-        alert(`Đã sao lưu ${label} thành công vào thư mục History.`);
-    } catch (e) { alert('Lỗi sao lưu hoặc server offline.'); }
+    syncToServer(getFullState({ users: newUsers }));
   };
 
   const renderActivePage = () => {
@@ -306,6 +367,8 @@ function App() {
                 onUpdateAttendance={handleUpdateAttendance}
                 notifications={notifications}
                 onUpdateNotifications={handleUpdateNotifications}
+                decrees={decrees} 
+                onUpdateDecrees={handleUpdateDecrees} 
             />
         );
       case 'account':
@@ -319,6 +382,8 @@ function App() {
                 onUpdateAttendance={handleUpdateAttendance}
                 onUpdateUser={handleUpdateUserSingle} 
                 notifications={notifications}
+                carriers={carriers} 
+                onUpdateCarriers={handleUpdateCarriers} 
             />
         );
       case 'management':
@@ -341,11 +406,8 @@ function App() {
             onAddUser={handleAddUser}
             onUpdateUser={handleUpdateUserSingle}
             onDeleteUser={handleDeleteUser}
-            // Use manual backup endpoints
-            onUserBackup={() => triggerManualBackup('USER_REQUEST')}
-            onFinanceBackup={() => triggerManualBackup('FINANCE')}
-            onSystemBackup={() => triggerManualBackup('SYSTEM')}
             currentUser={currentUser}
+            serverInfo={serverInfo}
           />
         );
       default:
@@ -368,11 +430,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white">
-      {!isServerOnline && (
-        <div className="bg-yellow-500 text-white text-xs font-bold text-center py-1">
-          Chế độ Offline: Dữ liệu đang được lưu cục bộ trên trình duyệt.
-        </div>
-      )}
       <Header 
         userRole={userRole} 
         currentUser={currentUser} 

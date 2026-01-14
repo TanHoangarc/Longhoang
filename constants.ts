@@ -1,6 +1,8 @@
 
 import { Truck, Ship, Plane, Package, Shield, Clock, Headphones, Globe, MapPin, Anchor, FileText, Smartphone } from 'lucide-react';
 
+export const API_BASE_URL = 'https://api.longhoanglogistics.com';
+
 export const NAV_LINKS = [
   { name: 'Trang chủ', href: '#' },
   { name: 'Giới thiệu', href: '#about' },

@@ -4,6 +4,7 @@ import {
   Bell, Plus, Calendar, Pin, AlertCircle, PinOff, Edit, Trash2, X, Image as ImageIcon, RefreshCcw, FileText, Upload 
 } from 'lucide-react';
 import { SystemNotification } from '../../App';
+import { API_BASE_URL } from '../../constants';
 
 const LOGISTICS_IMAGES = [
   "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
@@ -22,6 +23,8 @@ interface CompanyNotificationsProps {
 const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notifications, onUpdate }) => {
   const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [newNotifFile, setNewNotifFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const [newNotifData, setNewNotifData] = useState({
     title: '',
@@ -54,6 +57,7 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
         startDate: n.startDate,
         expiryDate: n.expiryDate
       });
+      setNewNotifFile(null);
       setIsNotifModalOpen(true);
     }
   };
@@ -68,6 +72,7 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
       startDate: new Date().toISOString().split('T')[0],
       expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     });
+    setNewNotifFile(null);
     setIsNotifModalOpen(true);
   };
 
@@ -79,7 +84,7 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
     return `${url}${separator}auto=format&fit=crop&w=800&q=80`;
   };
 
-  const handleSaveNotification = () => {
+  const handleSaveNotification = async () => {
     if (!newNotifData.title.trim() || !newNotifData.content.trim()) {
       alert('Vui lòng nhập tiêu đề và nội dung thông báo!');
       return;
@@ -90,6 +95,35 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
         return;
     }
 
+    setIsUploading(true);
+    let finalAttachmentName = newNotifData.attachment;
+
+    // 1. Upload file if newly selected
+    if (newNotifFile) {
+        try {
+            const formData = new FormData();
+            formData.append('file', newNotifFile);
+            // Updated to use absolute API_BASE_URL
+            const res = await fetch(`${API_BASE_URL}/api/upload?category=THONGBAO`, {
+                method: 'POST',
+                body: formData
+            });
+            if (res.ok) {
+                const data = await res.json();
+                finalAttachmentName = data.record.fileName;
+            } else {
+                alert('Lỗi tải file. Vui lòng thử lại.');
+                setIsUploading(false);
+                return;
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Lỗi kết nối khi tải file.');
+            setIsUploading(false);
+            return;
+        }
+    }
+
     if (editingId) {
       // Update existing
       onUpdate(notifications.map(n => n.id === editingId ? {
@@ -97,7 +131,7 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
         title: newNotifData.title,
         content: newNotifData.content,
         image: ensureImageSuffix(newNotifData.image),
-        attachment: newNotifData.attachment,
+        attachment: finalAttachmentName,
         startDate: newNotifData.startDate,
         expiryDate: newNotifData.expiryDate
       } : n));
@@ -108,7 +142,7 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
         date: new Date().toLocaleDateString('vi-VN'),
         title: newNotifData.title,
         content: newNotifData.content,
-        attachment: newNotifData.attachment || undefined,
+        attachment: finalAttachmentName || undefined,
         startDate: newNotifData.startDate,
         expiryDate: newNotifData.expiryDate,
         isPinned: false,
@@ -117,6 +151,7 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
       onUpdate([newNotif, ...notifications]);
     }
 
+    setIsUploading(false);
     setIsNotifModalOpen(false);
   };
 
@@ -238,13 +273,13 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
       {/* CREATE/EDIT NOTIFICATION MODAL */}
       {isNotifModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsNotifModalOpen(false)}></div>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isUploading && setIsNotifModalOpen(false)}></div>
           <div className="bg-white rounded-2xl w-full max-w-2xl relative z-10 overflow-hidden animate-in fade-in zoom-in duration-300 shadow-2xl">
              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 className="text-xl font-bold text-gray-800 flex items-center">
                   <Bell className="mr-2 text-primary" /> {editingId ? 'Chỉnh sửa thông báo' : 'Tạo thông báo mới'}
                 </h3>
-                <button onClick={() => setIsNotifModalOpen(false)} className="text-gray-400 hover:text-red-500 transition"><X size={24} /></button>
+                <button onClick={() => !isUploading && setIsNotifModalOpen(false)} className="text-gray-400 hover:text-red-500 transition"><X size={24} /></button>
              </div>
              
              <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
@@ -321,6 +356,7 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
                                     onChange={(e) => {
                                         const file = e.target.files?.[0];
                                         if (file) {
+                                            setNewNotifFile(file);
                                             setNewNotifData({ ...newNotifData, attachment: file.name });
                                         }
                                     }}
@@ -341,7 +377,7 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
                             </div>
                              {newNotifData.attachment && (
                                 <button 
-                                    onClick={() => setNewNotifData({...newNotifData, attachment: ''})}
+                                    onClick={() => { setNewNotifData({...newNotifData, attachment: ''}); setNewNotifFile(null); }}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 bg-white text-red-500 rounded-full shadow-sm hover:bg-red-50 z-10"
                                     title="Xóa file"
                                 >
@@ -366,16 +402,18 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
 
              <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end space-x-3">
                 <button 
-                  onClick={() => setIsNotifModalOpen(false)}
+                  onClick={() => !isUploading && setIsNotifModalOpen(false)}
                   className="px-6 py-2 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition"
+                  disabled={isUploading}
                 >
                   Hủy bỏ
                 </button>
                 <button 
                   onClick={handleSaveNotification}
-                  className="px-6 py-2 rounded-xl font-bold text-white bg-primary hover:bg-primaryDark transition shadow-lg shadow-orange-200"
+                  className={`px-6 py-2 rounded-xl font-bold text-white transition shadow-lg shadow-orange-200 ${isUploading ? 'bg-gray-400' : 'bg-primary hover:bg-primaryDark'}`}
+                  disabled={isUploading}
                 >
-                  {editingId ? 'Lưu thay đổi' : 'Đăng thông báo'}
+                  {isUploading ? 'Đang tải lên...' : (editingId ? 'Lưu thay đổi' : 'Đăng thông báo')}
                 </button>
              </div>
           </div>
