@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Facebook, Twitter, Instagram, Linkedin, Send, MapPin, Phone, Mail, Youtube } from 'lucide-react';
 
@@ -13,7 +14,7 @@ const Footer = () => {
                  <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="Long Hoang Logistics Logo" className="h-10 w-auto object-contain brightness-0 invert" />
             </div>
             <p className="mb-6 leading-relaxed text-sm">
-              Hơn 30 năm kinh nghiệm trong lĩnh vực vận tải và Logistics. Chúng tôi cam kết mang lại giá trị bền vững cho đối tác.
+              Hơn 6 năm kinh nghiệm trong lĩnh vực vận tải và Logistics. Chúng tôi cam kết mang lại giá trị bền vững cho đối tác.
             </p>
             <p className="text-xs">
               Chúng tôi làm việc 7 ngày một tuần, mỗi ngày kể cả ngày lễ lớn. Liên hệ với chúng tôi để biết thêm chi tiết.

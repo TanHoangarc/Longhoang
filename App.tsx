@@ -68,6 +68,26 @@ export interface Decree {
   image: string;
 }
 
+// Interface for Project
+export interface Project {
+  id: number;
+  title: string;
+  category: string;
+  location: string;
+  date: string;
+  images: string[]; // Album support
+  desc: string;
+}
+
+// Interface for Job
+export interface Job {
+  id: number;
+  title: string;
+  branch: 'HCM' | 'HPH';
+  type: string;
+  quantity: number;
+}
+
 // Interface for Statement (Bảng kê)
 export interface StatementData {
   id: number;
@@ -132,6 +152,52 @@ const STOCK_IMAGES = [
   "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
 ];
 
+const INITIAL_PROJECTS: Project[] = [
+  {
+    id: 1,
+    title: "Vận chuyển Tuabin Gió - Dự án Điện gió Bạc Liêu",
+    category: "Hàng siêu trường siêu trọng",
+    location: "Bạc Liêu, Việt Nam",
+    date: "T8/2023",
+    images: ["https://images.unsplash.com/photo-1466611653911-95081537e5b7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"],
+    desc: "Vận chuyển và lắp đặt thành công 10 trụ tuabin gió với chiều dài cánh quạt lên đến 70m, đảm bảo an toàn tuyệt đối trên địa hình phức tạp."
+  },
+  {
+    id: 2,
+    title: "Xuất khẩu 500 Container Gạo đi Châu Âu",
+    category: "Vận tải biển (FCL)",
+    location: "Cảng Cát Lái - Rotterdam",
+    date: "T11/2023",
+    images: ["https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"],
+    desc: "Hoàn tất thủ tục hải quan và vận chuyển lô hàng nông sản chủ lực đúng tiến độ, đáp ứng tiêu chuẩn khắt khe của EU."
+  },
+  {
+    id: 3,
+    title: "Dây chuyền sản xuất Nhà máy VinFast",
+    category: "Logistics Dự án",
+    location: "Hải Phòng, Việt Nam",
+    date: "T5/2022",
+    images: ["https://images.unsplash.com/photo-1565514020176-db793306c52b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"],
+    desc: "Vận chuyển thiết bị robot và dây chuyền lắp ráp tự động từ cảng Hải Phòng về khu công nghiệp, hỗ trợ lắp đặt tận nơi."
+  },
+  {
+    id: 4,
+    title: "Vận chuyển Vắc-xin & Thiết bị Y tế",
+    category: "Vận tải hàng không (Cold Chain)",
+    location: "Nội Bài - Tân Sơn Nhất",
+    date: "T2/2021",
+    images: ["https://images.unsplash.com/photo-1584036561566-b93a945c50f6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"],
+    desc: "Giải pháp chuỗi cung ứng lạnh (Cold Chain) đảm bảo nhiệt độ ổn định cho lô hàng vắc-xin và thiết bị y tế khẩn cấp."
+  }
+];
+
+const INITIAL_JOBS: Job[] = [
+  { id: 1, title: "Nhân viên Kinh doanh Logistics", branch: "HCM", quantity: 2, type: "Toàn thời gian" },
+  { id: 2, title: "Nhân viên chứng từ", branch: "HCM", quantity: 1, type: "Toàn thời gian" },
+  { id: 3, title: "Nhân viên kế toán", branch: "HPH", quantity: 0, type: "Toàn thời gian" },
+  { id: 4, title: "Nhân viên Ops", branch: "HPH", quantity: 1, type: "Toàn thời gian" }
+];
+
 function App() {
   const [activePage, setActivePage] = useState<'finance' | 'company' | 'management' | 'settings' | 'account' | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
@@ -165,6 +231,8 @@ function App() {
       image: STOCK_IMAGES[0]
     }
   ]);
+  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
   
   // Server connection status
   const [isServerOnline, setIsServerOnline] = useState(true);
@@ -197,6 +265,8 @@ function App() {
       guqRecords,
       carriers,
       decrees,
+      projects,
+      jobs,
       ...overrides
     };
   };
@@ -217,6 +287,8 @@ function App() {
           if (db.guq) setGuqRecords(db.guq);
           if (db.carriers && db.carriers.length > 0) setCarriers(db.carriers);
           if (db.decrees && db.decrees.length > 0) setDecrees(db.decrees);
+          if (db.projects && db.projects.length > 0) setProjects(db.projects);
+          if (db.jobs && db.jobs.length > 0) setJobs(db.jobs);
           setIsServerOnline(true);
         } else {
             console.warn("Server responded but with error. Using local defaults.");
@@ -285,6 +357,16 @@ function App() {
   const handleUpdateGuq = (newGuq: GUQRecord[]) => {
     setGuqRecords(newGuq);
     syncToServer(getFullState({ guq: newGuq }));
+  };
+
+  const handleUpdateProjects = (newProjects: Project[]) => {
+    setProjects(newProjects);
+    syncToServer(getFullState({ projects: newProjects }));
+  };
+
+  const handleUpdateJobs = (newJobs: Job[]) => {
+    setJobs(newJobs);
+    syncToServer(getFullState({ jobs: newJobs }));
   };
 
   // --- AUTHENTICATION ---
@@ -414,12 +496,20 @@ function App() {
       default:
         return (
           <>
-            <Hero />
+            <Hero 
+              projects={projects} 
+              onUpdateProjects={handleUpdateProjects} 
+              userRole={userRole}
+            />
             <WhyChooseUs />
             <About />
             <Services />
             <SafetyFeatures />
-            <Jobs />
+            <Jobs 
+              jobs={jobs}
+              onUpdateJobs={handleUpdateJobs}
+              userRole={userRole}
+            />
             <News />
             <Testimonials />
             <Partners />

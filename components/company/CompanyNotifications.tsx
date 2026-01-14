@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { 
-  Bell, Plus, Calendar, Pin, AlertCircle, PinOff, Edit, Trash2, X, Image as ImageIcon, RefreshCcw, FileText, Upload 
+  Bell, Plus, Calendar, Pin, AlertCircle, PinOff, Edit, Trash2, X, Image as ImageIcon, RefreshCcw, FileText, Upload, Eye
 } from 'lucide-react';
 import { SystemNotification } from '../../App';
 import { API_BASE_URL } from '../../constants';
@@ -70,7 +70,7 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
       image: LOGISTICS_IMAGES[Math.floor(Math.random() * LOGISTICS_IMAGES.length)],
       attachment: '',
       startDate: new Date().toISOString().split('T')[0],
-      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      expiryDate: '' // Optional by default
     });
     setNewNotifFile(null);
     setIsNotifModalOpen(true);
@@ -90,8 +90,14 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
       return;
     }
 
-    if (newNotifData.startDate > newNotifData.expiryDate) {
-        alert('Ngày bắt đầu không được lớn hơn ngày hết hạn!');
+    if (!newNotifData.startDate) {
+        alert('Vui lòng chọn ngày bắt đầu!');
+        return;
+    }
+
+    // Only validate range if expiry date is set
+    if (newNotifData.expiryDate && newNotifData.startDate > newNotifData.expiryDate) {
+        alert('Ngày bắt đầu không được lớn hơn ngày kết thúc!');
         return;
     }
 
@@ -103,7 +109,6 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
         try {
             const formData = new FormData();
             formData.append('file', newNotifFile);
-            // Updated to use absolute API_BASE_URL
             const res = await fetch(`${API_BASE_URL}/api/upload?category=THONGBAO`, {
                 method: 'POST',
                 body: formData
@@ -160,6 +165,23 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
     setNewNotifData({ ...newNotifData, image: randomImg });
   };
 
+  const formatDate = (dateStr: string) => {
+      if (!dateStr) return '...';
+      return new Date(dateStr).toLocaleDateString('en-GB'); // dd/mm/yyyy
+  };
+
+  const handleViewFile = (fileName: string) => {
+      // In a real app, this would open the file URL
+      // For now, we simulate or try to open if it's a full URL, otherwise alert
+      if (fileName.startsWith('http')) {
+          window.open(fileName, '_blank');
+      } else {
+          // Assuming backend serves files from /uploads/THONGBAO/
+          // Since we don't have a real static file server mapped in this frontend code, we just show alert or try to open
+          alert(`Đang mở file: ${fileName}`);
+      }
+  };
+
   const sortedNotifications = [...notifications].sort((a, b) => {
     if (a.isPinned === b.isPinned) return 0;
     return a.isPinned ? -1 : 1;
@@ -182,7 +204,7 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {sortedNotifications.map((notif) => {
-          const isExpired = new Date(notif.expiryDate) < new Date();
+          const isExpired = notif.expiryDate && new Date(notif.expiryDate) < new Date();
           
           return (
             <div 
@@ -228,15 +250,23 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
                 </div>
 
                 {notif.attachment && (
-                  <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-orange-50 hover:border-orange-100 transition-all group/file">
-                    <FileText size={16} className="text-gray-400 group-hover/file:text-primary" />
-                    <span className="text-xs font-bold text-gray-600 group-hover/file:text-primary transition-colors">{notif.attachment}</span>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:border-orange-100 transition-all">
+                    <div className="flex items-center space-x-2 overflow-hidden">
+                        <FileText size={16} className="text-primary flex-shrink-0" />
+                        <span className="text-xs font-bold text-gray-600 truncate">Tài liệu đính kèm</span>
+                    </div>
+                    <button 
+                        onClick={() => handleViewFile(notif.attachment!)}
+                        className="flex items-center bg-white border border-gray-200 text-primary text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition shadow-sm"
+                    >
+                        <Eye size={12} className="mr-1" /> Xem
+                    </button>
                   </div>
                 )}
 
                 <div className="flex justify-between items-center pt-2 text-[10px] font-bold text-gray-400 uppercase">
                   <span>
-                      Hiệu lực: {new Date(notif.startDate).toLocaleDateString('vi-VN')} - {new Date(notif.expiryDate).toLocaleDateString('vi-VN')}
+                      Hiệu lực: {formatDate(notif.startDate)} - {notif.expiryDate ? formatDate(notif.expiryDate) : 'Vô thời hạn'}
                   </span>
                 </div>
               </div>
@@ -343,6 +373,7 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
                               value={newNotifData.expiryDate}
                               onChange={(e) => setNewNotifData({...newNotifData, expiryDate: e.target.value})}
                             />
+                            <p className="text-[10px] text-gray-400 text-right">Để trống nếu không có hạn</p>
                          </div>
                      </div>
                      
