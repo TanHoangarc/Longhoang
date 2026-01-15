@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, LogIn, LogOut, Calendar, UserCheck, MapPin, AlertCircle, History, ChevronLeft, ChevronRight, FileText, Upload, X, PenTool, Printer } from 'lucide-react';
 import { UserAccount, AttendanceRecord, LeaveFormDetails } from '../../App';
+import { API_BASE_URL } from '../../constants';
 
 interface TimekeepingProps {
   currentUser: UserAccount | null;
@@ -25,6 +26,9 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
   // Multi-day Leave State
   const [isMultiDay, setIsMultiDay] = useState(false);
   const [leaveEndDate, setLeaveEndDate] = useState<string>('');
+
+  // Uploading State (auto-generation)
+  const [isUploading, setIsUploading] = useState(false);
 
   // Detailed Leave Application Form Data
   const [leaveFormData, setLeaveFormData] = useState<LeaveFormDetails>({
@@ -126,7 +130,90 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
       return diffDays > 0 ? diffDays : 1;
   };
 
-  const handleSubmitLeave = () => {
+  const generateHTMLFile = (totalDays: number) => {
+      if (!selectedDateForLeave) return null;
+      
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body { font-family: 'Times New Roman', Times, serif; color: #000; padding: 40px; max-width: 800px; margin: 0 auto; }
+                .text-center { text-align: center; }
+                .uppercase { text-transform: uppercase; }
+                .bold { font-weight: bold; }
+                .italic { font-style: italic; }
+                .underline { text-decoration: underline; }
+                .mt-4 { margin-top: 16px; }
+                .mb-4 { margin-bottom: 16px; }
+                .flex-between { display: flex; justify-content: space-between; }
+                .signature-box { margin-top: 50px; }
+            </style>
+        </head>
+        <body>
+            <div class="text-center mb-4">
+                <h3 class="bold uppercase" style="font-size: 13px; margin: 0;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</h3>
+                <p class="underline bold" style="font-size: 12px; margin: 5px 0;">Độc lập – Tự do – Hạnh phúc</p>
+                <hr style="width: 60px; border-top: 1px solid black;" />
+            </div>
+            
+            <h2 class="text-center bold uppercase mt-4" style="font-size: 20px;">ĐƠN XIN NGHỈ PHÉP</h2>
+            
+            <div style="font-size: 14px; line-height: 1.6;">
+                <p><strong>Kính gửi:</strong> Ban Giám Đốc Công Ty<br/>
+                <span style="padding-left: 70px;">Phòng Hành chính – Nhân sự</span></p>
+                
+                <p>Tôi tên là: <strong>${currentUser?.name}</strong><br/>
+                Chức vụ: ${currentUser?.position || 'Nhân viên'}<br/>
+                Bộ phận: ${currentUser?.department}<br/>
+                Địa chỉ: ${leaveFormData.address}<br/>
+                Điện thoại: ${leaveFormData.phone}</p>
+
+                <p class="mt-4" style="text-align: justify;">
+                    Nay tôi trình đơn này kính xin Ban Giám Đốc chấp thuận cho tôi được nghỉ phép trong thời gian 
+                    <strong>${totalDays}</strong> ngày.
+                </p>
+                <p style="text-align: justify;">
+                    (Từ ngày <strong>${new Date(selectedDateForLeave).toLocaleDateString('vi-VN')}</strong>
+                    đến hết ngày <strong>${new Date(leaveEndDate || selectedDateForLeave).toLocaleDateString('vi-VN')}</strong>
+                    ${!isMultiDay && leaveDuration === 0.5 ? `- Buổi ${leavePeriod === 'Morning' ? 'Sáng' : 'Chiều'}` : ''})
+                </p>
+
+                <p>Lý do xin nghỉ phép:</p>
+                <p class="italic" style="border-bottom: 1px dotted #ccc;">${leaveFormData.reason}</p>
+
+                <p class="mt-4">Tôi đã bàn giao công việc cho: <strong>${leaveFormData.handoverTo}</strong> - Bộ phận: ${leaveFormData.department}</p>
+                
+                <p>Các công việc được bàn giao:</p>
+                <p class="italic" style="border-bottom: 1px dotted #ccc;">${leaveFormData.handoverWork}</p>
+
+                <p class="mt-4">Tôi xin hứa sẽ cập nhật đầy đủ nội dung công tác trong thời gian vắng.</p>
+                <p>Kính mong Ban Giám Đốc xem xét và chấp thuận.</p>
+            </div>
+
+            <div class="flex-between signature-box" style="font-size: 14px;">
+                <div class="text-center">
+                    <p class="bold">Trưởng Bộ phận</p>
+                    <p class="italic" style="font-size: 11px;">(Ký, ghi rõ họ tên)</p>
+                </div>
+                <div class="text-center">
+                    <p class="italic">Tp.HCM, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}</p>
+                    <p class="bold">Người làm đơn</p>
+                    <p class="italic" style="font-size: 11px;">(Ký, ghi rõ họ tên)</p>
+                    <p style="margin-top: 50px;" class="bold">${currentUser?.name}</p>
+                </div>
+            </div>
+        </body>
+        </html>
+      `;
+      
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const fileName = `Don_Xin_Nghi_${currentUser?.name.replace(/\s+/g, '_')}_${selectedDateForLeave}.html`;
+      return new File([blob], fileName, { type: 'text/html' });
+  };
+
+  const handleSubmitLeave = async () => {
       if (!currentUser || !selectedDateForLeave) return;
       
       const totalDaysToBook = calculateTotalDays();
@@ -153,8 +240,7 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
           datesToBook.push(selectedDateForLeave);
       }
 
-      // Check for conflicts: Ensure no date in the range already has a record
-      // We do not allow overwriting existing records from the Company side once created.
+      // Check for conflicts
       const conflicts = datesToBook.filter(date => 
           attendanceRecords.some(r => r.userId === currentUser.id && r.date === date)
       );
@@ -165,12 +251,36 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
           return;
       }
 
+      // Auto-generate and Upload File
+      setIsUploading(true);
+      let uploadedFileName = undefined;
+
+      try {
+          const file = generateHTMLFile(totalDaysToBook);
+          if (file) {
+              const formData = new FormData();
+              formData.append('file', file);
+              
+              const res = await fetch(`${API_BASE_URL}/api/upload?category=LEAVE`, {
+                  method: 'POST',
+                  body: formData
+              });
+
+              if (res.ok) {
+                  const data = await res.json();
+                  uploadedFileName = data.record.fileName;
+              } else {
+                  console.error('Failed to auto-upload generated leave form');
+              }
+          }
+      } catch (e) {
+          console.error('Error auto-generating file', e);
+      }
+
       // Process records
       let currentRecords = [...attendanceRecords];
 
       datesToBook.forEach(targetDate => {
-          // No filtering needed as we checked for conflicts above
-          
           const newRecord: AttendanceRecord = {
               id: Date.now() + Math.random(), // Ensure unique ID
               userId: currentUser.id,
@@ -183,6 +293,7 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
               leaveDuration: isMultiDay ? 1 : leaveDuration, // If multiday, each day counts as 1
               leavePeriod: isMultiDay ? 'All Day' : leavePeriod,
               leaveForm: leaveType === 'Paid' ? leaveFormData : undefined,
+              leaveFile: uploadedFileName, // Save the generated HTML filename here
               leaveReason: leaveType === 'Paid' ? leaveFormData.reason : 'Nghỉ không lương',
               note: leaveType === 'Paid' 
                   ? `Nghỉ phép ${isMultiDay ? `(Chuỗi ${totalDaysToBook} ngày)` : `(${leavePeriod === 'All Day' ? '1 ngày' : leavePeriod})`}` 
@@ -193,6 +304,7 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
       });
 
       onUpdateAttendance(currentRecords);
+      setIsUploading(false);
 
       // Reset & Close
       setLeaveModalOpen(false);
@@ -428,7 +540,7 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
                               </p>
                           </div>
                       </div>
-                      <button onClick={() => setLeaveModalOpen(false)} className="text-gray-400 hover:text-red-500 transition"><X size={20} /></button>
+                      <button onClick={() => !isUploading && setLeaveModalOpen(false)} className="text-gray-400 hover:text-red-500 transition"><X size={20} /></button>
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-6">
@@ -611,6 +723,7 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
                                                   onChange={(e) => setLeaveFormData({...leaveFormData, handoverWork: e.target.value})}
                                               ></textarea>
                                           </div>
+                                          
                                           <div className="grid grid-cols-2 gap-2">
                                               <div>
                                                   <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">SĐT Liên hệ</label>
@@ -637,16 +750,18 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
                   {/* Footer Actions */}
                   <div className="p-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
                       <button 
-                        onClick={() => setLeaveModalOpen(false)}
+                        onClick={() => !isUploading && setLeaveModalOpen(false)}
                         className="px-5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-100 transition"
+                        disabled={isUploading}
                       >
                           Hủy bỏ
                       </button>
                       <button 
                         onClick={handleSubmitLeave}
-                        className="px-6 py-2.5 bg-primary hover:bg-primaryDark text-white rounded-xl text-sm font-bold shadow-lg transition flex items-center"
+                        className={`px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg transition flex items-center ${isUploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-primaryDark text-white'}`}
+                        disabled={isUploading}
                       >
-                          <Upload size={16} className="mr-2" /> Gửi đơn xin nghỉ
+                          <Upload size={16} className="mr-2" /> {isUploading ? 'Đang gửi...' : 'Gửi đơn xin nghỉ'}
                       </button>
                   </div>
               </div>

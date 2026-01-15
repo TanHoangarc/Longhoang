@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Download, X, User, Save, FileText, Settings, Briefcase, Calendar } from 'lucide-react';
+import { Search, Download, X, User, Save, FileText, Settings, Briefcase, Calendar, Paperclip, Eye, Upload } from 'lucide-react';
 import { AttendanceRecord, UserAccount, EmploymentStatus, SystemNotification } from '../../App';
+import { API_BASE_URL } from '../../constants';
 
 interface AccountAttendanceProps {
   attendanceRecords: AttendanceRecord[];
@@ -37,6 +38,9 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
   const [editStatus, setEditStatus] = useState<AttendanceStatus | ''>('');
   const [editReason, setEditReason] = useState('');
   const [editFile, setEditFile] = useState('');
+
+  // File Preview State
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Initialize Settings Modal when a user is selected
   useEffect(() => {
@@ -148,6 +152,10 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
 
       onUpdateUser(updatedUser);
       setSettingsUser(null);
+  };
+
+  const handlePreview = (fileName: string) => {
+      setPreviewUrl(`${API_BASE_URL}/files/LEAVE/${fileName}`);
   };
 
   return (
@@ -509,6 +517,16 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                               <p className="font-bold text-gray-700">Chi tiết đơn nghỉ:</p>
                               <p>Lý do: {selectedCell.record.leaveForm.reason}</p>
                               <p>Bàn giao: {selectedCell.record.leaveForm.handoverWork}</p>
+                              {selectedCell.record.leaveFile && (
+                                  <div className="mt-2 pt-2 border-t border-gray-200">
+                                      <button 
+                                          onClick={() => handlePreview(selectedCell.record!.leaveFile!)}
+                                          className="text-blue-600 hover:underline text-xs font-bold flex items-center bg-transparent border-none p-0 cursor-pointer"
+                                      >
+                                          <Paperclip size={12} className="mr-1"/> Xem đơn đính kèm
+                                      </button>
+                                  </div>
+                              )}
                           </div>
                       )}
 
@@ -527,15 +545,31 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                               </div>
                               <div>
                                   <label className="text-[10px] font-bold text-blue-500 uppercase block mb-1">Tệp đính kèm (Đơn xin nghỉ)</label>
-                                  <div className="flex items-center space-x-2">
-                                      <div className="flex-1 border border-blue-200 bg-white rounded-lg px-3 py-2 text-sm text-gray-600 truncate">
-                                          {editFile || 'Chưa có tệp'}
+                                  
+                                  {editFile ? (
+                                      <div className="flex items-center gap-2">
+                                          <button 
+                                              onClick={() => handlePreview(editFile)}
+                                              className="flex-1 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center transition shadow-sm"
+                                          >
+                                              <Eye size={16} className="mr-2" /> Xem đơn đính kèm
+                                          </button>
+                                          <label className="p-2 bg-white border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-50 text-blue-400 transition shadow-sm" title="Tải file khác">
+                                              <Upload size={16} />
+                                              <input type="file" className="hidden" onChange={(e) => setEditFile(e.target.files?.[0]?.name || '')} />
+                                          </label>
                                       </div>
-                                      <label className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition shadow-md">
-                                          Upload
-                                          <input type="file" className="hidden" onChange={(e) => setEditFile(e.target.files?.[0]?.name || '')} />
-                                      </label>
-                                  </div>
+                                  ) : (
+                                      <div className="flex items-center space-x-2">
+                                          <div className="flex-1 border border-blue-200 bg-white rounded-lg px-3 py-2 text-sm text-gray-400 italic">
+                                              Chưa có tệp
+                                          </div>
+                                          <label className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold cursor-pointer transition shadow-md flex items-center">
+                                              <Upload size={14} className="mr-1" /> Upload
+                                              <input type="file" className="hidden" onChange={(e) => setEditFile(e.target.files?.[0]?.name || '')} />
+                                          </label>
+                                      </div>
+                                  )}
                               </div>
                           </div>
                       )}
@@ -554,6 +588,30 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                       >
                           <Save size={16} className="mr-2" /> Lưu cập nhật
                       </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* FILE PREVIEW MODAL */}
+      {previewUrl && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewUrl(null)}>
+              <div className="bg-white w-full max-w-5xl h-[90vh] rounded-2xl flex flex-col shadow-2xl animate-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                  <div className="flex justify-between items-center p-4 border-b border-gray-100">
+                      <h3 className="font-bold text-gray-800 flex items-center">
+                          <FileText className="mr-2 text-primary" /> Chi tiết đơn đính kèm
+                      </h3>
+                      <div className="flex items-center gap-2">
+                          <a href={previewUrl} target="_blank" rel="noreferrer" download className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition" title="Tải xuống / Mở tab mới">
+                              <Download size={20} />
+                          </a>
+                          <button onClick={() => setPreviewUrl(null)} className="p-2 hover:bg-red-50 hover:text-red-500 rounded-full transition">
+                              <X size={20} />
+                          </button>
+                      </div>
+                  </div>
+                  <div className="flex-1 bg-gray-50 p-0 overflow-hidden relative">
+                       <iframe src={previewUrl} className="w-full h-full border-none bg-white" title="Document Preview"></iframe>
                   </div>
               </div>
           </div>

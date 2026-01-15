@@ -142,6 +142,19 @@ export interface GUQRecord {
   path?: string; // Relative path on server
 }
 
+// Interface for User Files (Quotations, Reports, Leave Forms saved)
+export interface UserFileRecord {
+  id: number;
+  userId: number;
+  userName: string;
+  fileName: string;
+  type: 'QUOTATION' | 'REPORT' | 'LEAVE' | 'OTHER';
+  date: string;
+  path?: string; // Optional URL/Path
+  customer?: string; // Specific for quotations
+  description?: string;
+}
+
 // Interfaces for Library
 export interface LibraryFile {
   id: number;
@@ -301,6 +314,7 @@ function App() {
   const [statements, setStatements] = useState<StatementData[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [guqRecords, setGuqRecords] = useState<GUQRecord[]>([]);
+  const [userFiles, setUserFiles] = useState<UserFileRecord[]>([]); // New: Track all user files
   const [carriers, setCarriers] = useState<Carrier[]>([
     {
       id: 1,
@@ -382,6 +396,7 @@ function App() {
       statements,
       attendanceRecords,
       guqRecords,
+      userFiles,
       carriers,
       decrees,
       projects,
@@ -407,6 +422,7 @@ function App() {
           if (db.statements) setStatements(db.statements);
           if (db.attendanceRecords) setAttendanceRecords(db.attendanceRecords);
           if (db.guq) setGuqRecords(db.guq);
+          if (db.userFiles) setUserFiles(db.userFiles);
           if (db.carriers && db.carriers.length > 0) setCarriers(db.carriers);
           if (db.decrees && db.decrees.length > 0) setDecrees(db.decrees);
           if (db.projects && db.projects.length > 0) setProjects(db.projects);
@@ -462,6 +478,16 @@ function App() {
     syncToServer(getFullState({ attendanceRecords: newRecords }));
   };
 
+  const handleUpdateGuq = (newGuq: GUQRecord[]) => {
+    setGuqRecords(newGuq);
+    syncToServer(getFullState({ guq: newGuq }));
+  };
+
+  const handleUpdateUserFiles = (newFiles: UserFileRecord[]) => {
+    setUserFiles(newFiles);
+    syncToServer(getFullState({ userFiles: newFiles }));
+  };
+
   const handleUpdateCarriers = (newCarriers: Carrier[]) => {
     setCarriers(newCarriers);
     syncToServer(getFullState({ carriers: newCarriers }));
@@ -470,11 +496,6 @@ function App() {
   const handleUpdateDecrees = (newDecrees: Decree[]) => {
     setDecrees(newDecrees);
     syncToServer(getFullState({ decrees: newDecrees }));
-  };
-
-  const handleUpdateGuq = (newGuq: GUQRecord[]) => {
-    setGuqRecords(newGuq);
-    syncToServer(getFullState({ guq: newGuq }));
   };
 
   const handleUpdateProjects = (newProjects: Project[]) => {
@@ -587,6 +608,8 @@ function App() {
                 onUpdateDecrees={handleUpdateDecrees} 
                 library={library}
                 onUpdateLibrary={handleUpdateLibrary}
+                userFiles={userFiles}
+                onUpdateUserFiles={handleUpdateUserFiles}
             />
         );
       case 'account':
@@ -611,6 +634,8 @@ function App() {
             userRole={userRole} 
             users={users} 
             guqRecords={guqRecords}
+            userFiles={userFiles}
+            onUpdateUserFiles={handleUpdateUserFiles}
           />
         );
       case 'settings':

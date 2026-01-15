@@ -1,52 +1,68 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Long Hoang Logistics</title>
-    <meta name="description" content="Giải pháp Logistics toàn diện - Long Hoang Logistics" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              primary: '#f97316', // Orange-500 from the reference image
-              primaryDark: '#c2410c',
-              dark: '#1f2937', // Gray-800
-              light: '#f9fafb',
+              primary: '#f97316', // Orange-500
+              primaryDark: '#ea580c', // Orange-600
             },
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+            animation: {
+              'spin-slow': 'spin 3s linear infinite',
             }
           }
         }
       }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-      body { font-family: 'Inter', sans-serif; }
-      html { 
-        scroll-behavior: smooth; 
-        scroll-padding-top: 100px; /* Ensures header doesn't cover section titles */
+      /* Custom scrollbar for better aesthetics */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8; 
+      }
+      
+      /* Hide scrollbar for elements with class .scrollbar-hide */
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
       }
     </style>
   <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "path": "https://esm.sh/path@^0.12.7",
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "url": "https://esm.sh/url@^0.11.4",
     "express": "https://esm.sh/express@^5.2.1",
     "cors": "https://esm.sh/cors@^2.8.5",
-    "fs": "https://esm.sh/fs@^0.0.1-security",
     "body-parser": "https://esm.sh/body-parser@^2.2.2",
-    "multer": "https://esm.sh/multer@^2.0.2"
+    "fs": "https://esm.sh/fs@^0.0.1-security",
+    "path": "https://esm.sh/path@^0.12.7",
+    "multer": "https://esm.sh/multer@^2.0.2",
+    "url": "https://esm.sh/url@^0.11.4",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
@@ -54,6 +70,6 @@
 </head>
   <body>
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>

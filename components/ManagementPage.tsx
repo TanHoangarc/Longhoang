@@ -3,15 +3,18 @@ import React, { useState } from 'react';
 import { 
   X, FileText, Search, Download, Users, FileCheck, CreditCard, 
   ArrowLeft, Eye, ShieldCheck, Filter, ChevronRight, Package, 
-  Ship, Truck, BarChart2, Briefcase, FileOutput, FolderOpen, Calendar
+  Ship, Truck, BarChart2, Briefcase, FileOutput, FolderOpen, Calendar, Trash2
 } from 'lucide-react';
-import { UserRole, UserAccount, GUQRecord } from '../App';
+import { UserRole, UserAccount, GUQRecord, UserFileRecord } from '../App';
+import { API_BASE_URL } from '../constants';
 
 interface ManagementPageProps {
   onClose: () => void;
   userRole: UserRole;
   users: UserAccount[];
   guqRecords: GUQRecord[]; // Receive real records
+  userFiles: UserFileRecord[]; // Receive real user files
+  onUpdateUserFiles: (files: UserFileRecord[]) => void;
 }
 
 type ManagementSection = 'GUQ' | 'CVHC' | 'CVHT' | 'ADJUST' | 'EMPLOYEES';
@@ -33,36 +36,25 @@ const MOCK_ADJUSTMENTS = [
   { id: 3, bl: 'LH-BL-7711', date: '09/05/2024', status: 'Signed', fileName: 'BB_Adjust_7711_Signed.pdf' },
 ];
 
-// Helper to generate mock details for any user
+// Helper to generate mock details for any user (Shipments only now)
 const getMockEmployeeDetails = (user: UserAccount) => {
   return {
     ...user,
     shipments: [
       { code: `LH-S-${user.id}01`, commodity: 'Máy móc', status: 'In Transit' },
       { code: `LH-S-${user.id}02`, commodity: 'Nông sản', status: 'Delivered' }
-    ],
-    reports: [
-      { week: 'W19 (May)', fileName: `Report_W19_${user.name.split(' ').pop()}.pdf` },
-      { week: 'W18 (May)', fileName: `Report_W18_${user.name.split(' ').pop()}.pdf` }
-    ],
-    // New: Quotations saved as PDF
-    quotations: [
-        { id: 101, fileName: `BG_LOGISTICS_ABC_CORP.pdf`, date: '15/05/2024', customer: 'ABC Corp' },
-        { id: 102, fileName: `QUOTE_SEA_FREIGHT_US.pdf`, date: '10/05/2024', customer: 'Global Trading' }
-    ],
-    // New: Other files including Leave Requests
-    otherFiles: [
-        { id: 201, fileName: `DON_XIN_NGHI_PHEP_${user.name.toUpperCase()}.pdf`, date: '01/05/2024', type: 'LEAVE', desc: 'Nghỉ phép năm (Du lịch)' },
-        { id: 202, fileName: `BB_BAN_GIAO_TS.docx`, date: '01/01/2024', type: 'ASSET', desc: 'Bàn giao Laptop Dell' }
     ]
   };
 };
 
-const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, users, guqRecords }) => {
+const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, users, guqRecords, userFiles, onUpdateUserFiles }) => {
   const [activeSection, setActiveSection] = useState<ManagementSection>('EMPLOYEES');
   const [adjustFilter, setAdjustFilter] = useState<'All' | 'Signed' | 'Unsigned'>('All');
   const [selectedEmployee, setSelectedEmployee] = useState<ReturnType<typeof getMockEmployeeDetails> | null>(null);
   const [guqSearch, setGuqSearch] = useState('');
+  
+  // Preview Modal State
+  const [previewFile, setPreviewFile] = useState<{ url: string; name: string } | null>(null);
 
   if (userRole !== 'admin' && userRole !== 'manager') {
       return (
@@ -80,6 +72,33 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
   const employeeList = users.filter(u => ['Sales', 'Document', 'Accounting', 'Staff'].includes(u.role) && u.status === 'Active');
 
   const filteredGuq = guqRecords.filter(r => r.companyName.toLowerCase().includes(guqSearch.toLowerCase()));
+
+  // --- PREVIEW HANDLER ---
+  const handlePreview = (fileData: string | { fileName: string, path?: string }, defaultCategory: string = 'UPLOADS') => {
+      let url = '';
+      let name = '';
+
+      if (typeof fileData === 'string') {
+          name = fileData;
+          // Assume generic path for strings
+          url = `${API_BASE_URL}/files/${defaultCategory}/${fileData}`;
+      } else {
+          name = fileData.fileName;
+          if (fileData.path) {
+               // If path is provided by server record (e.g. GUQRecord)
+               url = `${API_BASE_URL}/files/${fileData.path}`;
+          } else {
+               url = `${API_BASE_URL}/files/${defaultCategory}/${fileData.fileName}`;
+          }
+      }
+      setPreviewFile({ url, name });
+  };
+
+  const handleDeleteFile = (id: number) => {
+      if (confirm('Bạn có chắc chắn muốn xóa file này?')) {
+          onUpdateUserFiles(userFiles.filter(f => f.id !== id));
+      }
+  };
 
   const renderSection = () => {
     switch (activeSection) {
@@ -108,8 +127,19 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                     <tr key={item.id} className="hover:bg-gray-50/50 transition">
                         <td className="px-6 py-4 font-bold text-gray-800">{item.companyName}</td>
                         <td className="px-6 py-4 text-gray-500 text-sm">{item.date}</td>
-                        <td className="px-6 py-4"><span className="text-xs text-blue-600 font-medium underline cursor-pointer">{item.fileName}</span></td>
-                        <td className="px-6 py-4 text-right"><button className="p-2 text-gray-400 hover:text-primary"><Eye size={18} /></button></td>
+                        <td className="px-6 py-4">
+                            <span 
+                                onClick={() => handlePreview(item, 'GUQ')}
+                                className="text-xs text-blue-600 font-medium underline cursor-pointer hover:text-blue-800"
+                            >
+                                {item.fileName}
+                            </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                            <button onClick={() => handlePreview(item, 'GUQ')} className="p-2 text-gray-400 hover:text-primary transition" title="Xem trước">
+                                <Eye size={18} />
+                            </button>
+                        </td>
                     </tr>
                     ))}
                     {filteredGuq.length === 0 && (
@@ -134,10 +164,14 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                     <td className="px-6 py-4 font-bold text-gray-800">{item.company}</td>
                     <td className="px-6 py-4 font-mono text-xs font-bold text-gray-500">{item.bl}</td>
                     <td className="px-6 py-4 space-y-1">
-                      <div className="text-[10px] font-bold text-blue-500 flex items-center"><FileText size={12} className="mr-1" /> {item.fileCvhc}</div>
-                      <div className="text-[10px] font-bold text-orange-500 flex items-center"><Package size={12} className="mr-1" /> {item.fileEir}</div>
+                      <div onClick={() => handlePreview(item.fileCvhc, 'CVHC')} className="text-[10px] font-bold text-blue-500 flex items-center cursor-pointer hover:underline"><FileText size={12} className="mr-1" /> {item.fileCvhc}</div>
+                      <div onClick={() => handlePreview(item.fileEir, 'CVHC')} className="text-[10px] font-bold text-orange-500 flex items-center cursor-pointer hover:underline"><Package size={12} className="mr-1" /> {item.fileEir}</div>
                     </td>
-                    <td className="px-6 py-4 text-right"><button className="p-2 text-gray-400 hover:text-primary"><Download size={18} /></button></td>
+                    <td className="px-6 py-4 text-right">
+                        <button onClick={() => handlePreview(item.fileCvhc, 'CVHC')} className="p-2 text-gray-400 hover:text-primary transition" title="Xem/Tải xuống">
+                            <Download size={18} />
+                        </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -159,7 +193,11 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                     <td className="px-6 py-4 font-mono text-xs">{item.bl}</td>
                     <td className="px-6 py-4 font-black text-primary">{item.amount} VNĐ</td>
                     <td className="px-6 py-4 text-gray-500 text-sm">{item.date}</td>
-                    <td className="px-6 py-4 text-right"><button className="bg-gray-100 p-2 rounded hover:bg-primary hover:text-white transition"><Eye size={18} /></button></td>
+                    <td className="px-6 py-4 text-right">
+                        <button onClick={() => handlePreview(item.fileName, 'CVHT')} className="bg-gray-100 p-2 rounded hover:bg-primary hover:text-white transition" title="Xem trước">
+                            <Eye size={18} />
+                        </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -193,8 +231,12 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                    <button className="text-gray-400 hover:text-primary"><Eye size={18} /></button>
-                                    <button className="text-gray-400 hover:text-blue-500"><Download size={18} /></button>
+                                    <button onClick={() => handlePreview(item.fileName, 'BBDC')} className="text-gray-400 hover:text-primary transition" title="Xem trước">
+                                        <Eye size={18} />
+                                    </button>
+                                    <button onClick={() => handlePreview(item.fileName, 'BBDC')} className="text-gray-400 hover:text-blue-500 transition" title="Tải xuống">
+                                        <Download size={18} />
+                                    </button>
                                 </td>
                             </tr>
                         ))}
@@ -204,6 +246,12 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
           </div>
         );
       case 'EMPLOYEES':
+        // Filter files for selected employee
+        const employeeFiles = selectedEmployee ? userFiles.filter(f => f.userId === selectedEmployee.id) : [];
+        const employeeReports = employeeFiles.filter(f => f.type === 'REPORT');
+        const employeeQuotes = employeeFiles.filter(f => f.type === 'QUOTATION');
+        const employeeOthers = employeeFiles.filter(f => f.type !== 'REPORT' && f.type !== 'QUOTATION');
+
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-300">
             {/* List */}
@@ -247,7 +295,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                             <span className="text-[10px] font-bold text-gray-400 uppercase">Lô hàng</span>
                         </div>
                         <div className="text-center bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
-                            <span className="block text-xl font-black text-blue-600">{selectedEmployee.reports.length}</span>
+                            <span className="block text-xl font-black text-blue-600">{employeeReports.length}</span>
                             <span className="text-[10px] font-bold text-gray-400 uppercase">Báo cáo</span>
                         </div>
                     </div>
@@ -281,69 +329,95 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                   <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200">
                     <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-sm text-gray-700 flex items-center"><BarChart2 size={16} className="mr-2" /> File báo cáo tuần</div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
-                        {selectedEmployee.reports.map((r, idx) => (
-                            <div key={idx} className="border border-gray-100 p-4 rounded-xl hover:bg-orange-50 transition cursor-pointer flex items-center justify-between group">
+                        {employeeReports.map((r, idx) => (
+                            <div 
+                                key={r.id} 
+                                onClick={() => handlePreview(r.fileName, 'REPORTS')}
+                                className="border border-gray-100 p-4 rounded-xl hover:bg-orange-50 transition cursor-pointer flex items-center justify-between group"
+                            >
                                 <div className="flex items-center gap-3">
                                     <div className="bg-white p-2 rounded shadow-sm group-hover:bg-primary group-hover:text-white transition-colors">
                                         <FileText size={20} />
                                     </div>
                                     <div>
-                                        <span className="block text-sm font-bold text-gray-800">{r.week}</span>
+                                        <span className="block text-sm font-bold text-gray-800">{r.description || 'Báo cáo tuần'}</span>
                                         <span className="text-[10px] text-gray-400 font-mono">{r.fileName}</span>
                                     </div>
                                 </div>
-                                <Download size={16} className="text-gray-300 group-hover:text-primary" />
+                                <div className="flex items-center gap-2">
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteFile(r.id); }} className="text-gray-300 hover:text-red-500"><Trash2 size={16} /></button>
+                                </div>
                             </div>
                         ))}
+                        {employeeReports.length === 0 && <p className="text-sm text-gray-400 italic col-span-2">Chưa có báo cáo nào.</p>}
                     </div>
                   </div>
 
-                  {/* NEW: Quotation Files (PDF) */}
+                  {/* REAL: Quotation Files (PDF) */}
                   <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200">
                     <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-sm text-gray-700 flex items-center"><FileOutput size={16} className="mr-2" /> Lịch sử Báo giá (PDF)</div>
                     <div className="p-0 overflow-x-auto">
                         <table className="w-full text-left">
                             <thead className="bg-white border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase">
-                                <tr><th className="px-6 py-3">File Báo giá</th><th className="px-6 py-3">Khách hàng</th><th className="px-6 py-3">Ngày tạo</th><th className="px-6 py-3 text-right">Tải về</th></tr>
+                                <tr><th className="px-6 py-3">File Báo giá</th><th className="px-6 py-3">Khách hàng</th><th className="px-6 py-3">Ngày tạo</th><th className="px-6 py-3 text-right">Thao tác</th></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {selectedEmployee.quotations.map((q, idx) => (
-                                    <tr key={idx} className="hover:bg-gray-50/30">
-                                        <td className="px-6 py-4 font-mono text-xs font-bold text-blue-600 flex items-center">
+                                {employeeQuotes.map((q) => (
+                                    <tr key={q.id} className="hover:bg-gray-50/30">
+                                        <td 
+                                            className="px-6 py-4 font-mono text-xs font-bold text-blue-600 flex items-center cursor-pointer hover:underline"
+                                            onClick={() => handlePreview(q.fileName, 'QUOTATION')} // Assuming mock uses default path logic for now if not real upload
+                                        >
                                             <FileText size={14} className="mr-2 text-red-500" />
                                             {q.fileName}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600 font-bold">{q.customer}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-600 font-bold">{q.customer || 'Unknown'}</td>
                                         <td className="px-6 py-4 text-xs text-gray-500">{q.date}</td>
-                                        <td className="px-6 py-4 text-right"><button className="text-gray-400 hover:text-green-600"><Download size={16} /></button></td>
+                                        <td className="px-6 py-4 text-right flex justify-end gap-2">
+                                            <button onClick={() => handlePreview(q.fileName, 'QUOTATION')} className="text-gray-400 hover:text-green-600 transition" title="Tải xuống">
+                                                <Download size={16} />
+                                            </button>
+                                            <button onClick={() => handleDeleteFile(q.id)} className="text-gray-400 hover:text-red-500 transition" title="Xóa file">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
+                                {employeeQuotes.length === 0 && (
+                                    <tr><td colSpan={4} className="px-6 py-4 text-sm text-gray-400 italic text-center">Chưa có báo giá nào được tạo.</td></tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
                   </div>
 
-                  {/* NEW: Other Files (Leave Requests) */}
+                  {/* REAL: Other Files (Leave Requests, etc.) */}
                   <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200">
                     <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-sm text-gray-700 flex items-center"><FolderOpen size={16} className="mr-2" /> Hồ sơ khác & Đơn từ</div>
                     <div className="grid grid-cols-1 gap-3 p-6">
-                        {selectedEmployee.otherFiles.map((f, idx) => (
-                            <div key={idx} className="border border-gray-100 p-3 rounded-lg hover:bg-gray-50 transition flex items-center justify-between group">
+                        {employeeOthers.map((f) => (
+                            <div key={f.id} className="border border-gray-100 p-3 rounded-lg hover:bg-gray-50 transition flex items-center justify-between group">
                                 <div className="flex items-center gap-3">
                                     <div className={`p-2 rounded-lg ${f.type === 'LEAVE' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
                                         {f.type === 'LEAVE' ? <Calendar size={18} /> : <FileText size={18} />}
                                     </div>
                                     <div>
                                         <span className="block text-xs font-bold text-gray-800">{f.type === 'LEAVE' ? 'ĐƠN XIN NGHỈ PHÉP' : f.type}</span>
-                                        <span className="text-[10px] text-gray-500">{f.desc} - {f.date}</span>
-                                        <p className="text-[10px] text-blue-500 underline mt-0.5">{f.fileName}</p>
+                                        <span className="text-[10px] text-gray-500">{f.description || f.fileName} - {f.date}</span>
+                                        <p onClick={() => handlePreview(f.fileName, f.type === 'LEAVE' ? 'LEAVE' : 'UPLOADS')} className="text-[10px] text-blue-500 underline mt-0.5 cursor-pointer hover:text-blue-700">{f.fileName}</p>
                                     </div>
                                 </div>
-                                <button className="p-2 bg-white border border-gray-200 rounded text-gray-400 hover:text-primary hover:border-primary transition shadow-sm">
-                                    <Eye size={16} />
-                                </button>
+                                <div className="flex gap-2">
+                                    <button onClick={() => handlePreview(f.fileName, f.type === 'LEAVE' ? 'LEAVE' : 'UPLOADS')} className="p-2 bg-white border border-gray-200 rounded text-gray-400 hover:text-primary hover:border-primary transition shadow-sm">
+                                        <Eye size={16} />
+                                    </button>
+                                    <button onClick={() => handleDeleteFile(f.id)} className="p-2 bg-white border border-gray-200 rounded text-gray-400 hover:text-red-500 hover:border-red-200 transition shadow-sm">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                             </div>
                         ))}
+                        {employeeOthers.length === 0 && <p className="text-sm text-gray-400 italic">Chưa có hồ sơ khác.</p>}
                     </div>
                   </div>
 
@@ -420,6 +494,42 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
         
         {renderSection()}
       </div>
+
+      {/* FILE PREVIEW MODAL */}
+      {previewFile && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewFile(null)}>
+            <div className="bg-white w-full max-w-5xl h-[85vh] rounded-xl flex flex-col shadow-2xl animate-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center p-4 border-b border-gray-100">
+                    <h3 className="font-bold text-gray-800 flex items-center truncate">
+                        <FileText className="mr-2 text-primary" /> {previewFile.name}
+                    </h3>
+                    <div className="flex items-center space-x-2">
+                        <a href={previewFile.url} download target="_blank" rel="noreferrer" className="p-2 bg-gray-100 hover:bg-primary hover:text-white rounded-lg transition" title="Tải xuống">
+                            <Download size={20} />
+                        </a>
+                        <button onClick={() => setPreviewFile(null)} className="p-2 hover:bg-red-50 hover:text-red-500 rounded-lg transition">
+                            <X size={20} />
+                        </button>
+                    </div>
+                </div>
+                <div className="flex-1 bg-gray-100 p-4 overflow-hidden relative flex items-center justify-center">
+                     {previewFile.name.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                         <img src={previewFile.url} alt="Preview" className="w-full h-full object-contain" />
+                     ) : previewFile.name.match(/\.pdf$/i) ? (
+                         <iframe src={previewFile.url} className="w-full h-full rounded-lg border border-gray-200 bg-white" title="PDF Preview"></iframe>
+                     ) : (
+                         <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                             <FileText size={64} className="mb-4 opacity-50" />
+                             <p className="font-bold">Không thể xem trước định dạng này.</p>
+                             <a href={previewFile.url} download className="mt-4 px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primaryDark transition shadow-md">
+                                 Tải xuống để xem
+                             </a>
+                         </div>
+                     )}
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

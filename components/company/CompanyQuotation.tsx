@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { Printer, X, Phone, Mail, Download, Plus, Trash2, AlertCircle } from 'lucide-react';
-import { UserAccount } from '../../App';
+import { Printer, X, Phone, Mail, Download, Plus, Trash2, AlertCircle, Save } from 'lucide-react';
+import { UserAccount, UserFileRecord } from '../../App';
 
 interface QuoteRow {
   id: number;
@@ -31,6 +31,7 @@ interface QuotationData {
 
 interface CompanyQuotationProps {
   currentUser: UserAccount | null;
+  onAddFile: (file: UserFileRecord) => void;
 }
 
 const PORTS_HCM = [
@@ -58,13 +59,16 @@ const FOREIGN_PORTS = [
   'Tokyo (JPN)', 'Port Klang (MYS)', 'Dubai (ARE)', 'Bangkok (THA)', 'Laem Chabang (THA)'
 ];
 
-const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
+const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddFile }) => {
   const [rows, setRows] = useState<QuoteRow[]>([{ id: 1, cost: '', unit: 'Lô', qty: 1, price: 0, vat: 10, currency: 'USD' }]);
   const [units, setUnits] = useState(['Lô', 'Bill', 'Bộ', 'Cont', 'CBM', 'Kgs', 'Chuyến']);
   const [currencies, setCurrencies] = useState(['USD', 'VND', 'EUR']);
   const [showPDF, setShowPDF] = useState(false);
   const [quoteType, setQuoteType] = useState<'import' | 'export'>('import');
   
+  // Generated code for reference
+  const quoteCode = useMemo(() => `LH-QT-${Math.floor(Date.now() / 100000)}`, []);
+
   const [quoteData, setQuoteData] = useState<QuotationData>({
     region: 'Hồ Chí Minh',
     pickup: '',
@@ -144,9 +148,32 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
     </div>
   );
 
+  const handlePrint = () => {
+      // Create a record of this file generation
+      if (currentUser) {
+          const fileName = `Bao_Gia_${quoteCode}_${quoteData.commodity ? quoteData.commodity.replace(/\s+/g, '_') : 'General'}.pdf`;
+          
+          const newFileRecord: UserFileRecord = {
+              id: Date.now(),
+              userId: currentUser.id,
+              userName: currentUser.name,
+              fileName: fileName,
+              type: 'QUOTATION',
+              date: new Date().toLocaleDateString('vi-VN'),
+              customer: quoteData.term ? `${quoteData.term} - ${quoteData.aod}` : 'Khách hàng',
+              description: `Báo giá ${quoteType} - ${quoteData.commodity}`
+          };
+          
+          onAddFile(newFileRecord);
+      }
+      
+      // Trigger print
+      window.print();
+  };
+
   // --- DYNAMIC PAGINATION ALGORITHM ---
   const generatePages = () => {
-    const PAGE_HEIGHT = 960; // Safe height in pixels for A4 (excluding margins)
+    const PAGE_HEIGHT = 920; // Reduced from 960 to provide safer margins for print
     const HEADER_HEIGHT_PAGE1 = 420; // Logo + Title + Info Grid
     const HEADER_HEIGHT_SUBSEQUENT = 100; // Small header for next pages
     const TABLE_HEAD_HEIGHT = 45;
@@ -181,7 +208,7 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
           </div>
           <div className="text-center mb-8">
               <h2 className="text-[32px] font-black text-gray-900 uppercase tracking-[0.05em]">BẢNG BÁO GIÁ DỊCH VỤ</h2>
-              <p className="text-[12px] text-gray-400 mt-1 font-bold font-sans">Mã: LH-QT-{Math.floor(Date.now() / 100000)} | Ngày: {new Date().toLocaleDateString('vi-VN')}</p>
+              <p className="text-[12px] text-gray-400 mt-1 font-bold font-sans">Mã: {quoteCode} | Ngày: {new Date().toLocaleDateString('vi-VN')}</p>
           </div>
           
           {/* Info Grid */}
@@ -229,14 +256,14 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
     // --- 2. RENDER TABLE ROWS ---
     const renderTableHead = () => (
       <thead key="thead">
-         <tr className="bg-primary text-white text-[11px] font-bold uppercase tracking-wider">
-            <th className="p-3 text-center w-[5%] border border-primary">STT</th>
-            <th className="p-3 text-left w-[35%] border border-primary">CHI TIẾT DỊCH VỤ</th>
-            <th className="p-3 text-center w-[10%] border border-primary">ĐVT</th>
-            <th className="p-3 text-center w-[10%] border border-primary">SL</th>
-            <th className="p-3 text-right w-[15%] border border-primary">ĐƠN GIÁ</th>
-            <th className="p-3 text-center w-[10%] border border-primary">VAT</th>
-            <th className="p-3 text-right w-[15%] border border-primary">THÀNH TIỀN</th>
+         <tr className="bg-primary text-white text-[11px] font-bold uppercase tracking-wider print:bg-[#f97316]">
+            <th className="p-3 text-center w-[5%] border border-primary print:border-orange-600">STT</th>
+            <th className="p-3 text-left w-[35%] border border-primary print:border-orange-600">CHI TIẾT DỊCH VỤ</th>
+            <th className="p-3 text-center w-[10%] border border-primary print:border-orange-600">ĐVT</th>
+            <th className="p-3 text-center w-[10%] border border-primary print:border-orange-600">SL</th>
+            <th className="p-3 text-right w-[15%] border border-primary print:border-orange-600">ĐƠN GIÁ</th>
+            <th className="p-3 text-center w-[10%] border border-primary print:border-orange-600">VAT</th>
+            <th className="p-3 text-right w-[15%] border border-primary print:border-orange-600">THÀNH TIỀN</th>
           </tr>
       </thead>
     );
@@ -264,7 +291,7 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
                       <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" className="h-6 w-auto grayscale opacity-50" alt="logo" />
                       <span className="text-xs font-bold text-gray-400">BẢNG BÁO GIÁ (Tiếp theo)</span>
                    </div>
-                   <span className="text-xs text-gray-400 italic">Mã: LH-QT-{Math.floor(Date.now() / 100000)}</span>
+                   <span className="text-xs text-gray-400 italic">Mã: {quoteCode}</span>
                </div>
             );
             currentHeight += HEADER_HEIGHT_SUBSEQUENT;
@@ -303,7 +330,7 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
                     <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" className="h-6 w-auto grayscale opacity-50" alt="logo" />
                     <span className="text-xs font-bold text-gray-400">BẢNG BÁO GIÁ (Tiếp theo)</span>
                  </div>
-                 <span className="text-xs text-gray-400 italic">Mã: LH-QT-{Math.floor(Date.now() / 100000)}</span>
+                 <span className="text-xs text-gray-400 italic">Mã: {quoteCode}</span>
              </div>
          );
          currentHeight += HEADER_HEIGHT_SUBSEQUENT;
@@ -315,8 +342,8 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
     tableRowsBuffer.push(
        <tfoot key="total">
          <tr>
-            <td colSpan={6} className="p-4 text-right font-bold uppercase text-gray-400 text-[11px] tracking-[0.15em] border-t-2 border-primary">TỔNG CỘNG DỰ KIẾN:</td>
-            <td className="p-4 text-right font-black text-[18px] text-primary border-t-2 border-primary border-l border-gray-100 bg-orange-50">
+            <td colSpan={6} className="p-4 text-right font-bold uppercase text-gray-400 text-[11px] tracking-[0.15em] border-t-2 border-primary print:border-orange-600">TỔNG CỘNG DỰ KIẾN:</td>
+            <td className="p-4 text-right font-black text-[18px] text-primary border-t-2 border-primary border-l border-gray-100 bg-orange-50 print:bg-orange-50 print:text-orange-600 print:border-orange-600">
               {rows.reduce((acc, row) => acc + getRowTotalRaw(row), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
               <span className="text-[12px] ml-2 text-primary/70 font-normal">{rows[0]?.currency}</span>
             </td>
@@ -332,14 +359,14 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
     currentPageNodes.push(
         <div key="notes" className="mb-8">
             <div className="mb-4">
-            <h4 className="text-[12px] font-black uppercase tracking-widest text-gray-900 mb-2 border-l-4 border-primary pl-4">GHI CHÚ:</h4>
+            <h4 className="text-[12px] font-black uppercase tracking-widest text-gray-900 mb-2 border-l-4 border-primary pl-4 print:border-orange-600">GHI CHÚ:</h4>
             <div className="bg-gray-50/50 p-3 rounded text-[12px] leading-relaxed text-gray-600 italic border border-gray-100">
                 {quoteData.note || 'Không có ghi chú thêm.'}
             </div>
             </div>
             
             <div>
-            <h4 className="text-[12px] font-black uppercase tracking-widest text-gray-900 mb-2 border-l-4 border-primary pl-4">ĐIỀU KHOẢN:</h4>
+            <h4 className="text-[12px] font-black uppercase tracking-widest text-gray-900 mb-2 border-l-4 border-primary pl-4 print:border-orange-600">ĐIỀU KHOẢN:</h4>
             <div className="bg-gray-50/50 p-3 rounded text-[12px] leading-relaxed text-gray-600 border border-gray-100">
                 Báo giá có hiệu lực trong vòng 15 ngày kể từ ngày phát hành. Chưa bao gồm thuế VAT (nếu không được chỉ định).
             </div>
@@ -373,7 +400,7 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
   const quotePages = useMemo(() => {
      if (!showPDF) return [];
      return generatePages();
-  }, [showPDF, rows, quoteData, quoteType]);
+  }, [showPDF, rows, quoteData, quoteType, quoteCode]);
 
   const PDFPreview = () => (
     <div 
@@ -392,8 +419,19 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
               print-color-adjust: exact;
               background-color: white;
             }
+            /* Hide root app elements to prevent double scrollbars/backgrounds */
+            body > *:not(.print-container) {
+              display: none !important;
+            }
             .print-hidden {
               display: none !important;
+            }
+            .print-container {
+              display: block !important;
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
             }
             .quote-page {
               margin: 0 !important;
@@ -404,10 +442,13 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
               height: 297mm !important;
               overflow: hidden !important;
               padding: 0 !important;
+              position: relative;
             }
+            /* Reset any transforms or margins on the container wrapper */
             .scroll-container {
               overflow: visible !important;
               height: auto !important;
+              display: block !important;
             }
           }
         `}
@@ -419,10 +460,10 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
             <Printer className="mr-2" /> Xem trước Báo giá
          </div>
          <button 
-              onClick={() => window.print()} 
+              onClick={handlePrint} 
               className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition flex items-center text-xs font-bold shadow-lg"
           >
-              <Printer size={16} className="mr-2" /> In ngay
+              <Save size={16} className="mr-2" /> Lưu & Xuất File
           </button>
           <button 
               onClick={() => setShowPDF(false)} 
@@ -432,9 +473,9 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser }) => {
           </button>
       </div>
 
-      {/* Pages Container */}
-      <div className="flex-1 w-full overflow-y-auto scroll-container pb-20" onClick={(e) => e.stopPropagation()}>
-        <div className="flex flex-col items-center space-y-8 print:space-y-0">
+      {/* Pages Container - Added print-container class for CSS scoping */}
+      <div className="flex-1 w-full overflow-y-auto scroll-container print-container pb-20" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col items-center space-y-8 print:space-y-0 print:block">
            {quotePages.map((pageNodes, index) => (
               <div 
                  key={index}
