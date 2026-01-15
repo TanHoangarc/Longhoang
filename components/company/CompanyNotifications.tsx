@@ -171,14 +171,15 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
   };
 
   const handleViewFile = (fileName: string) => {
-      // In a real app, this would open the file URL
-      // For now, we simulate or try to open if it's a full URL, otherwise alert
+      if (!fileName) return;
+      
       if (fileName.startsWith('http')) {
           window.open(fileName, '_blank');
       } else {
-          // Assuming backend serves files from /uploads/THONGBAO/
-          // Since we don't have a real static file server mapped in this frontend code, we just show alert or try to open
-          alert(`Đang mở file: ${fileName}`);
+          // Construct URL pointing to server static file
+          // Files uploaded via notifications are stored in THONGBAO category
+          const url = `${API_BASE_URL}/files/THONGBAO/${fileName}`;
+          window.open(url, '_blank');
       }
   };
 

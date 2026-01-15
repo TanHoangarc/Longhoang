@@ -91,6 +91,7 @@ export interface Job {
 // Interface for Statement (Bảng kê)
 export interface StatementData {
   id: number;
+  title?: string; // Tên bảng kê tùy chỉnh
   month: string; // Format: YYYY-MM
   createdDate: string;
   senderName: string;
@@ -139,6 +140,29 @@ export interface GUQRecord {
   fileName: string; // Physical file name
   originalName?: string;
   path?: string; // Relative path on server
+}
+
+// Interfaces for Library
+export interface LibraryFile {
+  id: number;
+  name: string;
+  url: string;
+  uploadDate: string;
+}
+
+export interface LibraryFolder {
+  id: number;
+  name: string;
+  files: LibraryFile[];
+}
+
+// Interface for Gallery Album
+export interface GalleryAlbum {
+  id: number;
+  title: string;
+  cover: string;
+  images: string[];
+  date: string;
 }
 
 // Default data in case server is offline
@@ -198,6 +222,39 @@ const INITIAL_JOBS: Job[] = [
   { id: 4, title: "Nhân viên Ops", branch: "HPH", quantity: 1, type: "Toàn thời gian" }
 ];
 
+const INITIAL_GALLERY: GalleryAlbum[] = [
+  {
+    id: 1,
+    title: "Team Building 2023 - Phú Quốc",
+    date: "05/2023",
+    cover: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    id: 2,
+    title: "Văn phòng làm việc HCM",
+    date: "01/2024",
+    cover: "https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+    ]
+  },
+  {
+    id: 3,
+    title: "Kho bãi & Vận hành",
+    date: "2023",
+    cover: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+    images: [
+        "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1578575437130-527eed3abbec?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
+    ]
+  }
+];
+
 function App() {
   const [activePage, setActivePage] = useState<'finance' | 'company' | 'management' | 'settings' | 'account' | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
@@ -233,6 +290,33 @@ function App() {
   ]);
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
+  const [library, setLibrary] = useState<LibraryFolder[]>([
+    { 
+      id: 1, 
+      name: 'Hàng Nhập', 
+      files: [
+        { id: 101, name: 'Import_Checklist.pdf', url: '#', uploadDate: '2024-01-15' },
+        { id: 102, name: 'Manifest_Template.xlsx', url: '#', uploadDate: '2024-02-10' }
+      ] 
+    },
+    { 
+      id: 2, 
+      name: 'Hàng Xuất', 
+      files: [
+        { id: 201, name: 'Export_Process.doc', url: '#', uploadDate: '2024-03-01' },
+        { id: 202, name: 'SI_Template.pdf', url: '#', uploadDate: '2024-03-05' }
+      ] 
+    },
+    { 
+      id: 3, 
+      name: 'Hợp đồng & Biểu mẫu', 
+      files: [
+        { id: 301, name: 'Contract_2024.docx', url: '#', uploadDate: '2024-01-01' },
+        { id: 302, name: 'Power_of_Attorney.pdf', url: '#', uploadDate: '2024-01-20' }
+      ] 
+    }
+  ]);
+  const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbum[]>(INITIAL_GALLERY);
   
   // Server connection status
   const [isServerOnline, setIsServerOnline] = useState(true);
@@ -267,6 +351,8 @@ function App() {
       decrees,
       projects,
       jobs,
+      library,
+      galleryAlbums,
       ...overrides
     };
   };
@@ -289,6 +375,8 @@ function App() {
           if (db.decrees && db.decrees.length > 0) setDecrees(db.decrees);
           if (db.projects && db.projects.length > 0) setProjects(db.projects);
           if (db.jobs && db.jobs.length > 0) setJobs(db.jobs);
+          if (db.library && db.library.length > 0) setLibrary(db.library);
+          if (db.galleryAlbums && db.galleryAlbums.length > 0) setGalleryAlbums(db.galleryAlbums);
           setIsServerOnline(true);
         } else {
             console.warn("Server responded but with error. Using local defaults.");
@@ -367,6 +455,16 @@ function App() {
   const handleUpdateJobs = (newJobs: Job[]) => {
     setJobs(newJobs);
     syncToServer(getFullState({ jobs: newJobs }));
+  };
+
+  const handleUpdateLibrary = (newLib: LibraryFolder[]) => {
+    setLibrary(newLib);
+    syncToServer(getFullState({ library: newLib }));
+  };
+
+  const handleUpdateGallery = (newAlbums: GalleryAlbum[]) => {
+    setGalleryAlbums(newAlbums);
+    syncToServer(getFullState({ galleryAlbums: newAlbums }));
   };
 
   // --- AUTHENTICATION ---
@@ -452,6 +550,8 @@ function App() {
                 onUpdateNotifications={handleUpdateNotifications}
                 decrees={decrees} 
                 onUpdateDecrees={handleUpdateDecrees} 
+                library={library}
+                onUpdateLibrary={handleUpdateLibrary}
             />
         );
       case 'account':
@@ -502,7 +602,11 @@ function App() {
               userRole={userRole}
             />
             <WhyChooseUs />
-            <About />
+            <About 
+              galleryAlbums={galleryAlbums}
+              onUpdateGallery={handleUpdateGallery}
+              userRole={userRole}
+            />
             <Services />
             <SafetyFeatures />
             <Jobs 

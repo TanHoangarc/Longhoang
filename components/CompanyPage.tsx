@@ -10,7 +10,7 @@ import CompanyLibrary from './company/CompanyLibrary';
 import CompanyDecrees from './company/CompanyDecrees';
 import CompanyManifests from './company/CompanyManifests'; 
 import Timekeeping from './attendance/Timekeeping';
-import { StatementData, UserAccount, AttendanceRecord, SystemNotification, Decree } from '../App';
+import { StatementData, UserAccount, AttendanceRecord, SystemNotification, Decree, LibraryFolder } from '../App';
 
 interface CompanyPageProps {
   onClose: () => void;
@@ -23,13 +23,16 @@ interface CompanyPageProps {
   onUpdateNotifications: (notifs: SystemNotification[]) => void;
   decrees: Decree[];
   onUpdateDecrees: (decrees: Decree[]) => void;
+  library: LibraryFolder[];
+  onUpdateLibrary: (lib: LibraryFolder[]) => void;
 }
 
 type ViewType = 'dashboard' | 'notifications' | 'quotation' | 'reports' | 'library' | 'decrees' | 'manifests' | 'attendance';
 
 const CompanyPage: React.FC<CompanyPageProps> = ({ 
   onClose, statements, onUpdateStatements, currentUser, attendanceRecords, 
-  onUpdateAttendance, notifications, onUpdateNotifications, decrees, onUpdateDecrees
+  onUpdateAttendance, notifications, onUpdateNotifications, decrees, onUpdateDecrees,
+  library, onUpdateLibrary
 }) => {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
 
@@ -60,7 +63,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({
       case 'notifications': return <CompanyNotifications notifications={notifications} onUpdate={onUpdateNotifications} />;
       case 'quotation': return <CompanyQuotation currentUser={currentUser} />;
       case 'reports': return <CompanyReports currentUser={currentUser} />;
-      case 'library': return <CompanyLibrary />;
+      case 'library': return <CompanyLibrary currentUser={currentUser} folders={library} onUpdate={onUpdateLibrary} />;
       case 'decrees': return <CompanyDecrees decrees={decrees} onUpdate={onUpdateDecrees} />;
       case 'manifests': return <CompanyManifests statements={statements} onUpdateStatements={onUpdateStatements} currentUser={currentUser} />;
       case 'attendance': return <Timekeeping currentUser={currentUser} attendanceRecords={attendanceRecords} onUpdateAttendance={onUpdateAttendance} />;

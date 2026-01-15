@@ -417,7 +417,12 @@ const FinancePage: React.FC<FinancePageProps> = ({ onClose, guqRecords, onUpdate
                           </div>
                           <div>
                             <span className="text-xs font-bold text-gray-400 uppercase block">File đính kèm</span>
-                            <a href="#" className="text-blue-600 font-bold underline text-sm flex items-center hover:text-blue-800">
+                            <a 
+                                href={`${API_BASE_URL}/files/${foundGuq.path || `GUQ/${foundGuq.fileName}`}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 font-bold underline text-sm flex items-center hover:text-blue-800"
+                            >
                               <FileText size={14} className="mr-1" /> {foundGuq.fileName}
                             </a>
                           </div>

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Printer, Save, FileSpreadsheet, Calendar, ArrowLeft, Share2, Lock, CheckCircle, Unlock, RotateCcw } from 'lucide-react';
+import { Plus, Trash2, Printer, Save, FileSpreadsheet, Calendar, ArrowLeft, Share2, Lock, CheckCircle, Unlock, RotateCcw, Pencil } from 'lucide-react';
 import { Carrier } from './AccountData';
 import { StatementData } from '../../App';
 
@@ -33,6 +33,11 @@ const AccountStatement: React.FC<AccountStatementProps> = ({ carriers, initialDa
     receiver: 'CÔNG TY TNHH LONG HOÀNG',
     invoiceDate: new Date().toISOString().split('T')[0]
   });
+
+  // Manifest Title State
+  const [manifestName, setManifestName] = useState(
+      initialData?.title || (initialData ? `Bảng kê #${initialData.id.toString().slice(-4)}` : 'Bảng kê mới')
+  );
 
   // Initialize Rows
   const [rows, setRows] = useState<StatementRow[]>(initialData?.rows || [
@@ -83,6 +88,7 @@ const AccountStatement: React.FC<AccountStatementProps> = ({ carriers, initialDa
 
       const statementData: StatementData = {
           id: initialData?.id || Date.now(),
+          title: manifestName, // Save the title
           month: monthStr,
           createdDate: headerInfo.invoiceDate,
           senderName: headerInfo.sender,
@@ -117,12 +123,23 @@ const AccountStatement: React.FC<AccountStatementProps> = ({ carriers, initialDa
               <button onClick={onBack} className="text-gray-500 hover:text-gray-800 transition">
                   <ArrowLeft size={24} />
               </button>
-              <h3 className="font-bold text-gray-800 flex items-center">
-                <FileSpreadsheet className="mr-2 text-green-600" /> 
-                {initialData ? `Chỉnh sửa Bảng kê #${initialData.id.toString().slice(-4)}` : 'Tạo Bảng kê Mới'}
-              </h3>
               
-              {/* Status Badges */}
+              {/* EDITABLE MANIFEST NAME */}
+              <div className="flex items-center group">
+                <FileSpreadsheet className="mr-2 text-green-600" /> 
+                <div className="relative">
+                    <input 
+                        type="text" 
+                        className="font-bold text-gray-800 text-lg border-b border-transparent hover:border-gray-300 focus:border-green-500 outline-none px-1 transition bg-transparent"
+                        value={manifestName}
+                        onChange={(e) => setManifestName(e.target.value)}
+                        placeholder="Nhập tên bảng kê..."
+                    />
+                    <Pencil size={12} className="absolute -right-4 top-1.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                </div>
+              </div>
+              
+              {/* Status Badges - Removed Draft Badge */}
               {status === 'Shared' && (
                   <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold flex items-center">
                       <Share2 size={12} className="mr-1" /> Đang chia sẻ
@@ -131,11 +148,6 @@ const AccountStatement: React.FC<AccountStatementProps> = ({ carriers, initialDa
               {status === 'Locked' && (
                   <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center">
                       <Lock size={12} className="mr-1" /> Đã Khóa (Hoàn thành)
-                  </span>
-              )}
-              {status === 'Draft' && (
-                  <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold flex items-center">
-                      Bản nháp
                   </span>
               )}
           </div>

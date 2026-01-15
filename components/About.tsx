@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Award, Users, TrendingUp, Calendar } from 'lucide-react';
+import { X, Award, Users, TrendingUp, Calendar, ChevronLeft, ChevronRight, Play, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
+import { GalleryAlbum, UserRole } from '../App';
 
 const MILESTONES = [
   {
@@ -25,24 +26,98 @@ const MILESTONES = [
   }
 ];
 
-const GALLERIES = [
-  "https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Office
-  "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Meeting
-  "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80", // Warehouse
-  "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"  // Teamwork
-];
+interface AboutProps {
+  galleryAlbums?: GalleryAlbum[];
+  onUpdateGallery?: (albums: GalleryAlbum[]) => void;
+  userRole?: UserRole;
+}
 
-const About = () => {
+const About: React.FC<AboutProps> = ({ galleryAlbums = [], onUpdateGallery, userRole }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Gallery States
+  const [visibleStartIndex, setVisibleStartIndex] = useState(0);
+  const ITEMS_PER_PAGE = 4;
+  
+  // Preview Album Modal
+  const [selectedAlbum, setSelectedAlbum] = useState<GalleryAlbum | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Add Album Modal
+  const [isAddAlbumOpen, setIsAddAlbumOpen] = useState(false);
+  const [newAlbumData, setNewAlbumData] = useState({ title: '', cover: '', images: '' });
+
+  // Can Add?
+  const canEdit = userRole === 'admin' || userRole === 'manager';
 
   // Prevent scrolling when modal is open
   useEffect(() => {
-    if (isModalOpen) {
+    if (isModalOpen || selectedAlbum || isAddAlbumOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
-  }, [isModalOpen]);
+  }, [isModalOpen, selectedAlbum, isAddAlbumOpen]);
+
+  // Navigation Logic for Main Gallery
+  const handleNextAlbums = () => {
+    if (visibleStartIndex + ITEMS_PER_PAGE < galleryAlbums.length) {
+      setVisibleStartIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevAlbums = () => {
+    if (visibleStartIndex > 0) {
+      setVisibleStartIndex(prev => prev - 1);
+    }
+  };
+
+  // Logic for Preview Modal Navigation
+  const handleNextImage = () => {
+    if (selectedAlbum && currentImageIndex < selectedAlbum.images.length - 1) {
+      setCurrentImageIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (selectedAlbum && currentImageIndex > 0) {
+      setCurrentImageIndex(prev => prev - 1);
+    }
+  };
+
+  // Add Album Logic
+  const handleSaveAlbum = () => {
+    if (!newAlbumData.title || !newAlbumData.cover) return alert('Vui lòng nhập tiêu đề và ảnh bìa');
+    
+    // Process images textarea
+    const imagesArray = newAlbumData.images.split('\n').map(url => url.trim()).filter(url => url.length > 0);
+    // If no specific images added, use cover as the first image
+    if (imagesArray.length === 0) imagesArray.push(newAlbumData.cover);
+
+    const newAlbum: GalleryAlbum = {
+      id: Date.now(),
+      title: newAlbumData.title,
+      cover: newAlbumData.cover,
+      images: imagesArray,
+      date: new Date().toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })
+    };
+
+    if (onUpdateGallery) {
+      onUpdateGallery([newAlbum, ...galleryAlbums]);
+    }
+    
+    setIsAddAlbumOpen(false);
+    setNewAlbumData({ title: '', cover: '', images: '' });
+  };
+
+  const handleDeleteAlbum = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Bạn có chắc chắn muốn xóa Album này?')) {
+      if (onUpdateGallery) {
+        onUpdateGallery(galleryAlbums.filter(a => a.id !== id));
+      }
+    }
+  };
 
   return (
     <section id="about" className="py-20 bg-gray-50">
@@ -156,17 +231,83 @@ const About = () => {
                 </div>
               </div>
 
-              {/* Gallery */}
-              <div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-8">Hình ảnh hoạt động</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {GALLERIES.map((img, idx) => (
-                    <div key={idx} className="overflow-hidden rounded-lg h-48 group relative">
-                       <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover transition duration-700 group-hover:scale-110" />
-                       <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition"></div>
+              {/* Gallery with Album Navigation */}
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-8">
+                    <h3 className="text-2xl font-bold text-gray-800 flex items-center">
+                        <ImageIcon className="mr-3 text-primary" /> Hình ảnh hoạt động
+                    </h3>
+                    
+                    <div className="flex items-center gap-3">
+                        {canEdit && (
+                            <button 
+                                onClick={() => setIsAddAlbumOpen(true)}
+                                className="bg-primary hover:bg-primaryDark text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow transition mr-4"
+                            >
+                                <Plus size={16} className="mr-2" /> Thêm Album
+                            </button>
+                        )}
+                        <button 
+                            onClick={handlePrevAlbums} 
+                            disabled={visibleStartIndex === 0}
+                            className={`p-2 rounded-full border border-gray-200 transition ${visibleStartIndex === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100 hover:text-primary'}`}
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                        <button 
+                            onClick={handleNextAlbums}
+                            disabled={visibleStartIndex + ITEMS_PER_PAGE >= galleryAlbums.length}
+                            className={`p-2 rounded-full border border-gray-200 transition ${visibleStartIndex + ITEMS_PER_PAGE >= galleryAlbums.length ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100 hover:text-primary'}`}
+                        >
+                            <ChevronRight size={20} />
+                        </button>
                     </div>
-                  ))}
                 </div>
+
+                {galleryAlbums.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {galleryAlbums.slice(visibleStartIndex, visibleStartIndex + ITEMS_PER_PAGE).map((album) => (
+                        <div 
+                            key={album.id} 
+                            onClick={() => { setSelectedAlbum(album); setCurrentImageIndex(0); }}
+                            className="group relative cursor-pointer h-64 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100"
+                        >
+                            <img 
+                                src={album.cover} 
+                                alt={album.title} 
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-90 transition-opacity"></div>
+                            
+                            {/* Album Info */}
+                            <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                                <span className="text-[10px] font-bold text-primary bg-white/20 backdrop-blur-sm px-2 py-1 rounded uppercase tracking-wider mb-2 inline-block">
+                                    {album.date}
+                                </span>
+                                <h4 className="text-white font-bold text-lg leading-tight line-clamp-2">{album.title}</h4>
+                                <div className="flex items-center text-gray-300 text-xs mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <ImageIcon size={12} className="mr-1" /> {album.images.length} ảnh/video
+                                </div>
+                            </div>
+
+                            {/* Delete Button (Admin) */}
+                            {canEdit && (
+                                <button 
+                                    onClick={(e) => handleDeleteAlbum(album.id, e)}
+                                    className="absolute top-2 right-2 p-2 bg-white/90 text-red-500 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                                    title="Xóa Album"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-12 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl text-gray-400">
+                        Chưa có album nào.
+                    </div>
+                )}
               </div>
 
             </div>
@@ -178,6 +319,119 @@ const About = () => {
           </div>
         </div>
       )}
+
+      {/* ALBUM PREVIEW MODAL */}
+      {selectedAlbum && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-0 bg-black/95 backdrop-blur-md">
+              <button 
+                onClick={() => setSelectedAlbum(null)}
+                className="absolute top-4 right-4 text-white/50 hover:text-white p-2 rounded-full hover:bg-white/10 transition z-50"
+              >
+                  <X size={32} />
+              </button>
+
+              <div className="w-full h-full flex flex-col">
+                  {/* Main Display */}
+                  <div className="flex-1 flex items-center justify-center relative px-4 md:px-20">
+                      <button 
+                        onClick={handlePrevImage}
+                        disabled={currentImageIndex === 0}
+                        className={`absolute left-4 md:left-8 p-3 rounded-full transition ${currentImageIndex === 0 ? 'text-white/20 cursor-not-allowed' : 'text-white hover:bg-white/20'}`}
+                      >
+                          <ChevronLeft size={40} />
+                      </button>
+
+                      <div className="max-h-[80vh] max-w-full relative shadow-2xl">
+                          <img 
+                            src={selectedAlbum.images[currentImageIndex]} 
+                            alt={`Slide ${currentImageIndex}`} 
+                            className="max-h-[80vh] max-w-full object-contain rounded-lg"
+                          />
+                          <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">
+                              {currentImageIndex + 1} / {selectedAlbum.images.length}
+                          </div>
+                      </div>
+
+                      <button 
+                        onClick={handleNextImage}
+                        disabled={currentImageIndex === selectedAlbum.images.length - 1}
+                        className={`absolute right-4 md:right-8 p-3 rounded-full transition ${currentImageIndex === selectedAlbum.images.length - 1 ? 'text-white/20 cursor-not-allowed' : 'text-white hover:bg-white/20'}`}
+                      >
+                          <ChevronRight size={40} />
+                      </button>
+                  </div>
+
+                  {/* Thumbnails & Info */}
+                  <div className="h-32 bg-black/40 border-t border-white/10 flex flex-col p-4">
+                      <div className="flex justify-between items-center mb-4 px-4 text-white">
+                          <h3 className="font-bold text-lg">{selectedAlbum.title}</h3>
+                          <span className="text-sm opacity-70">{selectedAlbum.date}</span>
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto pb-2 px-4 scrollbar-hide">
+                          {selectedAlbum.images.map((img, idx) => (
+                              <div 
+                                key={idx} 
+                                onClick={() => setCurrentImageIndex(idx)}
+                                className={`h-16 w-24 flex-shrink-0 rounded-lg overflow-hidden cursor-pointer border-2 transition ${currentImageIndex === idx ? 'border-primary opacity-100' : 'border-transparent opacity-50 hover:opacity-80'}`}
+                              >
+                                  <img src={img} className="w-full h-full object-cover" alt="thumbnail" />
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* ADD ALBUM MODAL */}
+      {isAddAlbumOpen && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setIsAddAlbumOpen(false)}></div>
+              <div className="bg-white rounded-xl w-full max-w-lg relative z-20 overflow-hidden shadow-2xl animate-in zoom-in duration-200">
+                  <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                      <h3 className="text-lg font-bold text-gray-800">Thêm Album mới</h3>
+                      <button onClick={() => setIsAddAlbumOpen(false)}><X size={20} className="text-gray-400" /></button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                      <div>
+                          <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Tên Album</label>
+                          <input 
+                            type="text" 
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary font-bold"
+                            placeholder="VD: Tiệc tất niên 2024..."
+                            value={newAlbumData.title}
+                            onChange={(e) => setNewAlbumData({...newAlbumData, title: e.target.value})}
+                          />
+                      </div>
+                      <div>
+                          <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Ảnh bìa (URL)</label>
+                          <input 
+                            type="text" 
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary text-sm"
+                            placeholder="https://..."
+                            value={newAlbumData.cover}
+                            onChange={(e) => setNewAlbumData({...newAlbumData, cover: e.target.value})}
+                          />
+                      </div>
+                      <div>
+                          <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Danh sách ảnh/video (URL)</label>
+                          <textarea 
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary text-sm font-mono h-32"
+                            placeholder="Dán link ảnh tại đây, mỗi link một dòng..."
+                            value={newAlbumData.images}
+                            onChange={(e) => setNewAlbumData({...newAlbumData, images: e.target.value})}
+                          ></textarea>
+                          <p className="text-[10px] text-gray-400 mt-1">* Hỗ trợ link ảnh và video (chỉ hiển thị thumbnail nếu là ảnh)</p>
+                      </div>
+                  </div>
+                  <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                      <button onClick={() => setIsAddAlbumOpen(false)} className="px-4 py-2 text-gray-500 font-bold text-sm hover:bg-gray-200 rounded-lg transition">Hủy</button>
+                      <button onClick={handleSaveAlbum} className="px-6 py-2 bg-primary text-white font-bold text-sm rounded-lg hover:bg-primaryDark transition shadow-lg">Lưu Album</button>
+                  </div>
+              </div>
+          </div>
+      )}
+
     </section>
   );
 };

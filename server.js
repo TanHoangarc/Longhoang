@@ -13,260 +13,240 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 5000;
 
-// --- CONFIGURATION ---
-// Try to use the requested E:\ drive, but fallback to local folder if not available
-const PREFERRED_ROOT = 'E:\\ServerLH';
-const FALLBACK_ROOT = path.join(process.cwd(), 'ServerLH_Data');
+/* ================= STORAGE ================= */
 
-let ROOT_DIR = FALLBACK_ROOT;
+const PREFERRED_DRIVE = 'E:\\';
+const FOLDER_NAME = 'ServerLH';
+const EXTERNAL_ROOT = path.join(PREFERRED_DRIVE, FOLDER_NAME);
+const LOCAL_FALLBACK = path.join(process.cwd(), 'ServerLH_Data');
 
+let ROOT_DIR = LOCAL_FALLBACK;
+
+// Kiểm tra ổ đĩa E:
 try {
-    // Simple check if path starts with E:\ and we are on Windows (or environment that supports it)
-    if (fs.existsSync('E:\\')) {
-        if (!fs.existsSync(PREFERRED_ROOT)) {
-            fs.mkdirSync(PREFERRED_ROOT, { recursive: true });
-        }
-        // Test write
-        const testFile = path.join(PREFERRED_ROOT, '.test_write');
+    if (fs.existsSync(PREFERRED_DRIVE)) {
+        if (!fs.existsSync(EXTERNAL_ROOT)) fs.mkdirSync(EXTERNAL_ROOT, { recursive: true });
+        // Test write permission
+        const testFile = path.join(EXTERNAL_ROOT, '.test');
         fs.writeFileSync(testFile, 'ok');
         fs.unlinkSync(testFile);
-        ROOT_DIR = PREFERRED_ROOT;
-        console.log(`[STORAGE] Using Preferred Root: ${ROOT_DIR}`);
-    } else {
-        console.log(`[STORAGE] E: drive not found. Using Fallback: ${ROOT_DIR}`);
+        ROOT_DIR = EXTERNAL_ROOT;
     }
-} catch (err) {
-    console.warn(`[STORAGE] Warning: Cannot access ${PREFERRED_ROOT}. Error: ${err.message}`);
-    console.warn(`[STORAGE] Switching to local fallback: ${ROOT_DIR}`);
-    ROOT_DIR = FALLBACK_ROOT;
+} catch (e) {
+    console.warn(`[STORAGE] Drive E: not writable, using fallback. Error: ${e.message}`);
+    ROOT_DIR = LOCAL_FALLBACK;
 }
 
-// Define the specific subdirectories required by the system
+console.log(`[STORAGE] Root Directory = ${ROOT_DIR}`);
+
 const STORAGE_DIRS = [
-    'Database',     // JSON Data
-    'History',      // Backups
-    'GUQ',          // Giấy ủy quyền
-    'CVHC',         // Công văn hoàn cược
-    'CVHT',         // Công văn hoàn tiền
-    'BBDC',         // Biên bản điều chỉnh
-    'SALARY',       // Đơn xin nghỉ phép / Lương
-    'THONGBAO',     // File đính kèm thông báo
-    'NGHIDINH',     // Văn bản luật/Nghị định
-    'LIBRARY'       // Thư viện mẫu
+    'Database','History','GUQ','CVHC','CVHT','BBDC',
+    'SALARY','THONGBAO','NGHIDINH','LIBRARY','UPLOADS','CV'
 ];
 
-const MASTER_FILE = path.join(ROOT_DIR, 'Database', 'master_data.json');
+const DB_DIR = path.join(ROOT_DIR, 'Database');
+const MASTER_FILE = path.join(DB_DIR, 'master_data.json');
 
-// --- MULTER STORAGE CONFIG ---
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Determine folder based on 'category' in QUERY param (safe for multer)
-    const category = req.query.category || 'GUQ'; 
-    
-    // Sanitize category to prevent directory traversal
-    const safeCategory = category.toString().replace(/[^a-zA-Z0-9_]/g, '');
-    const targetDir = path.join(ROOT_DIR, safeCategory);
-    
-    if (!fs.existsSync(targetDir)){
-        fs.mkdirSync(targetDir, { recursive: true });
-    }
-    cb(null, targetDir);
-  },
-  filename: (req, file, cb) => {
-    // Prevent filename collisions and keep extension
-    // Format: YYYYMMDD_OriginalName
-    // Sanitize original name
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const datePrefix = new Date().toISOString().split('T')[0].replace(/-/g, '');
-    cb(null, `${datePrefix}_${safeName}`);
-  }
-});
-
-const upload = multer({ storage: storage });
-
-// --- MIDDLEWARE ---
-app.use(cors({
-    origin: '*', // Allow all origins for development
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-app.use(bodyParser.json({ limit: '50mb' }));
-
-// Request Logger
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    next();
-});
-
-// --- UTILS ---
 const ensureDirectories = () => {
-    STORAGE_DIRS.forEach(dirName => {
-        const dirPath = path.join(ROOT_DIR, dirName);
-        if (!fs.existsSync(dirPath)) {
-            try {
-                fs.mkdirSync(dirPath, { recursive: true });
-                console.log(`[INIT] Created directory: ${dirPath}`);
-            } catch (e) {
-                console.error(`[ERROR] Failed to create ${dirPath}:`, e);
-            }
-        }
+    if (!fs.existsSync(ROOT_DIR)) fs.mkdirSync(ROOT_DIR, { recursive: true });
+    STORAGE_DIRS.forEach(d => {
+        const p = path.join(ROOT_DIR, d);
+        if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
     });
 };
 
-const getTimestamp = () => {
-  const now = new Date();
-  return now.toISOString().replace(/T/, '_').replace(/:/g, '-').split('.')[0];
-};
+/* ================= MIDDLEWARE ================= */
 
-// Initial Data Structure
-const INITIAL_DB = {
-  users: [
-    { id: 1, name: 'Nguyễn Văn A', englishName: 'Mr. A', role: 'Sales', email: 'sales1@longhoanglogistics.com', password: '123', status: 'Active', failedAttempts: 0, department: 'Sales', position: 'Nhân viên kinh doanh' },
-    { id: 7, name: 'Administrator', englishName: 'Admin', role: 'Admin', email: 'admin@longhoanglogistics.com', password: 'admin', status: 'Active', failedAttempts: 0, department: 'Board', position: 'Admin' }
-  ],
-  statements: [],
-  attendanceRecords: [],
-  notifications: [],
-  carriers: [],
-  guq: []
-};
+app.use(cors({ origin: '*', methods: ['GET','POST'] }));
+app.use(bodyParser.json({ limit: '50mb' }));
 
-// Helper: Read Master Data
-const readMasterData = () => {
-  ensureDirectories();
-  if (!fs.existsSync(MASTER_FILE)) {
-    // Create fresh DB if not exists
-    fs.writeFileSync(MASTER_FILE, JSON.stringify(INITIAL_DB, null, 2));
-    return INITIAL_DB;
-  }
-  try {
-    const data = fs.readFileSync(MASTER_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (err) {
-    console.error("Error reading master file:", err);
-    return INITIAL_DB;
-  }
-};
+// Serve static files from ROOT_DIR
+app.use('/files', express.static(ROOT_DIR));
 
-// Helper: Write Master Data & Create Backup
-const writeData = (newData, changeType, userChanged) => {
-  ensureDirectories();
-  
-  // 1. Save to Master
-  fs.writeFileSync(MASTER_FILE, JSON.stringify(newData, null, 2));
-
-  // 2. Create Backup
-  const dateFolder = new Date().toISOString().split('T')[0];
-  const targetBackupDir = path.join(ROOT_DIR, 'History', dateFolder);
-  if (!fs.existsSync(targetBackupDir)) fs.mkdirSync(targetBackupDir, { recursive: true });
-
-  const safeUser = userChanged ? userChanged.replace(/[^a-z0-9]/gi, '_') : 'SYSTEM';
-  const backupFileName = `${getTimestamp()}_${changeType}_by_${safeUser}.json`;
-  
-  fs.writeFileSync(path.join(targetBackupDir, backupFileName), JSON.stringify(newData, null, 2));
-  
-  console.log(`[SAVED] ${changeType} updated by ${userChanged}. Backup: ${backupFileName}`);
-};
-
-// --- ENDPOINTS ---
-
-// Health Check
-app.get('/', (req, res) => {
-    res.send('Long Hoang Logistics Server is Running');
+app.use((req, res, next) => {
+    console.log(`[REQ] ${req.method} ${req.url}`);
+    next();
 });
 
-// 1. GET INITIAL DATA
-app.get('/api/data', (req, res) => {
-  try {
-    const data = readMasterData();
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Failed to read data' });
-  }
-});
+/* ================= DATA HANDLERS ================= */
 
-// 2. GENERIC SYNC ENDPOINT
-app.post('/api/sync', (req, res) => {
-  const { type, data, user } = req.body;
+const INITIAL_DB = { 
+    users: [], 
+    statements: [], 
+    guq: [], 
+    notifications: [], 
+    attendanceRecords: [],
+    decrees: [],
+    carriers: []
+};
 
-  if (!type || !data) {
-    return res.status(400).json({ error: 'Missing type or data' });
-  }
-
-  try {
-    const currentDb = readMasterData();
-    currentDb[type] = data;
-    writeData(currentDb, type.toUpperCase(), user || 'Unknown');
-    res.json({ success: true, message: 'Synced successfully' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server Write Error' });
-  }
-});
-
-// 3. FILE UPLOAD
-// Accepts 'file' and query 'category'. Metadata in 'metadata' body field.
-app.post('/api/upload', upload.single('file'), (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
-        }
-
-        const category = req.query.category || 'GUQ';
-        const user = req.body.user || 'Unknown';
-        
-        let metadata = {};
-        if (req.body.metadata) {
+const readDB = () => {
+    ensureDirectories();
+    
+    // Helper to safely read JSON
+    const tryReadFile = (filePath) => {
+        if (fs.existsSync(filePath)) {
             try {
-                metadata = JSON.parse(req.body.metadata);
+                const raw = fs.readFileSync(filePath, 'utf8');
+                // Ensure it's not empty
+                if (!raw || raw.trim() === '') return null;
+                return JSON.parse(raw);
             } catch (e) {
-                console.warn("Invalid metadata JSON");
+                console.error(`[READ ERROR] Failed to read ${filePath}:`, e.message);
+                return null;
             }
         }
+        return null;
+    };
 
-        const newRecord = {
-            id: Date.now(),
-            ...metadata,
-            fileName: req.file.filename,
-            originalName: req.file.originalname,
-            path: `${category}/${req.file.filename}`,
-            uploadDate: new Date().toISOString().split('T')[0]
-        };
+    // 1. Try reading Master File
+    let data = tryReadFile(MASTER_FILE);
+    if (data) {
+        console.log(`[READ] Loaded data from ${MASTER_FILE}`);
+        return data;
+    }
 
-        const db = readMasterData();
-        
-        if (category === 'GUQ') {
-            if (!db.guq) db.guq = [];
-            db.guq.push(newRecord);
-            writeData(db, 'UPLOAD_GUQ', user);
+    console.warn("[WARN] Master file missing or corrupt. Attempting restore from Backup...");
+
+    // 2. Try reading Backup File
+    const backupFile = path.join(DB_DIR, 'backup.json');
+    data = tryReadFile(backupFile);
+    if (data) {
+        console.log(`[RECOVERY] Recovered data from ${backupFile}`);
+        // Optionally restore master file immediately
+        try {
+            fs.writeFileSync(MASTER_FILE, JSON.stringify(data, null, 2));
+            console.log("[RECOVERY] Restored master_data.json from backup.");
+        } catch (e) {
+            console.error("[RECOVERY WARN] Could not write restored data to master file.");
         }
+        return data;
+    }
 
-        res.json({ success: true, record: newRecord });
+    // 3. Fallback to Initial
+    console.warn("[WARN] No valid data found. Returning Initial Defaults.");
+    // Create new master file if it doesn't exist
+    if (!fs.existsSync(MASTER_FILE)) {
+        fs.writeFileSync(MASTER_FILE, JSON.stringify(INITIAL_DB, null, 2));
+    }
+    return INITIAL_DB;
+};
 
+const writeDB = (data, label = 'AUTO', user = 'System') => {
+    ensureDirectories();
+    const jsonStr = JSON.stringify(data, null, 2);
+    
+    // 1. Write to Master File
+    try {
+        fs.writeFileSync(MASTER_FILE, jsonStr);
     } catch (e) {
-        console.error("Upload Error:", e);
-        res.status(500).json({ error: 'Upload failed' });
+        console.error("[WRITE ERROR] Could not write to master file:", e);
+    }
+    
+    // 2. Write to Backup File (Quick Restore)
+    try {
+        fs.writeFileSync(path.join(DB_DIR, 'backup.json'), jsonStr);
+    } catch (e) {
+        console.error("[WRITE ERROR] Could not write to backup file:", e);
+    }
+
+    // 3. Write to History File (Timeline)
+    try {
+        const dateObj = new Date();
+        const dateStr = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD
+        // Format time for filename safe string: HH-MM-SS
+        const timeStr = dateObj.toTimeString().split(' ')[0].replace(/:/g, '-');
+        
+        const historyDir = path.join(ROOT_DIR, 'History', dateStr);
+        if (!fs.existsSync(historyDir)) fs.mkdirSync(historyDir, { recursive: true });
+        
+        // Clean user name for filename
+        const safeUser = user.replace(/[^a-zA-Z0-9]/g, '');
+        const historyFile = path.join(historyDir, `${dateStr}_${timeStr}_${label}_by_${safeUser}.json`);
+        
+        fs.writeFileSync(historyFile, jsonStr);
+    } catch (histError) {
+        console.error("Error writing history:", histError);
+    }
+    
+    console.log(`[SAVE] Data saved to ${MASTER_FILE} & History | Trigger: ${label}`);
+};
+
+/* ================= UPLOAD CONFIG ================= */
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const cat = req.query.category || 'UPLOADS';
+        const dir = path.join(ROOT_DIR, cat);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        // Safe filename with timestamp
+        const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+        cb(null, `${Date.now()}_${safe}`);
+    }
+});
+const upload = multer({ storage });
+
+/* ================= ROUTES ================= */
+
+app.get('/', (req, res) => {
+    res.send(`Server Running. Data Location: ${ROOT_DIR}`);
+});
+
+// Status check
+app.get('/api/status', (req, res) => {
+    res.json({ port: PORT, root: ROOT_DIR, time: new Date() });
+});
+
+// Load Data (Read)
+app.get('/api/data', (req, res) => {
+    const data = readDB();
+    res.json(data);
+});
+
+// Save Data (Write) - Using standard /api/save
+app.post('/api/save', (req, res) => {
+    try {
+        if (!req.body) return res.status(400).json({ error: 'No data' });
+        
+        ensureDirectories();
+        // Extract user info if available in request (optional optimization)
+        const user = req.body.currentUser?.name || 'WebUser';
+        writeDB(req.body, 'SYNC', user);
+        
+        res.json({ success: true, savedAt: new Date() });
+    } catch (e) {
+        console.error("Save Error:", e);
+        res.status(500).json({ error: e.message });
     }
 });
 
-// 4. MANUAL BACKUP
-app.post('/api/backup/manual', (req, res) => {
-  const { user, label } = req.body;
-  try {
-    const currentDb = readMasterData();
-    writeData(currentDb, `MANUAL_${label}`, user);
-    res.json({ success: true, fileName: `Manual Backup created` });
-  } catch (e) {
-    res.status(500).json({ error: 'Backup failed' });
-  }
+// Upload File
+app.post('/api/upload', upload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file' });
+    
+    console.log(`[UPLOAD] Saved ${req.file.filename} to ${req.file.destination}`);
+    
+    // Return record structure needed by frontend
+    const newRecord = {
+        id: Date.now(),
+        fileName: req.file.filename,
+        originalName: req.file.originalname,
+        path: `${req.query.category || 'UPLOADS'}/${req.file.filename}`,
+        uploadDate: new Date().toISOString().split('T')[0],
+        // Parse metadata if sent
+        ...(req.body.metadata ? JSON.parse(req.body.metadata) : {})
+    };
+
+    res.json({ success: true, record: newRecord });
 });
 
-// Start Server
+/* ================= START ================= */
+
+ensureDirectories();
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`==================================================`);
-  console.log(` LOGISTICS SERVER RUNNING ON PORT ${PORT}`);
-  console.log(` Storage Root: ${ROOT_DIR}`);
-  console.log(`==================================================`);
-  ensureDirectories();
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Active Storage Root: ${ROOT_DIR}`);
 });

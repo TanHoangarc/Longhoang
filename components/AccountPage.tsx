@@ -106,7 +106,7 @@ const AccountPage: React.FC<AccountPageProps> = ({
                                                  </div>
                                             )}
                                         </div>
-                                        <h5 className="font-bold text-gray-800 line-clamp-1 group-hover:text-green-600 transition">{stmt.senderName}</h5>
+                                        <h5 className="font-bold text-gray-800 line-clamp-1 group-hover:text-green-600 transition">{stmt.title || stmt.senderName}</h5>
                                         <p className="text-xs text-gray-500 mb-3">Ngày tạo: {stmt.createdDate}</p>
                                         <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
                                             <span className="font-black text-gray-800">{stmt.totalAmount.toLocaleString()} đ</span>
