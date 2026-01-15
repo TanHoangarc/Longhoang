@@ -1,38 +1,23 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Award, Users, TrendingUp, Calendar, ChevronLeft, ChevronRight, Play, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
-import { GalleryAlbum, UserRole } from '../App';
-
-const MILESTONES = [
-  {
-    year: '1993',
-    title: 'Thành lập công ty',
-    desc: 'Khởi đầu với một văn phòng nhỏ tại TP.HCM và đội ngũ 10 nhân sự đầy nhiệt huyết, tập trung vào vận tải nội địa.'
-  },
-  {
-    year: '2005',
-    title: 'Mở rộng quy mô',
-    desc: 'Khai trương chi nhánh Hải Phòng và Đà Nẵng, chính thức sở hữu đội xe container riêng gồm 50 đầu kéo.'
-  },
-  {
-    year: '2015',
-    title: 'Vươn ra biển lớn',
-    desc: 'Thiết lập mạng lưới đại lý tại 120 quốc gia. Trở thành đối tác chiến lược của các hãng tàu lớn như Maersk, CMA CGM.'
-  },
-  {
-    year: '2023',
-    title: 'Chuyển đổi số toàn diện',
-    desc: 'Áp dụng hệ thống quản lý logistics thông minh (LMS), tối ưu hóa quy trình và cam kết giảm phát thải carbon.'
-  }
-];
+import { X, Award, Users, TrendingUp, Calendar, ChevronLeft, ChevronRight, Play, Image as ImageIcon, Plus, Trash2, Edit, Save } from 'lucide-react';
+import { GalleryAlbum, UserRole, Milestone } from '../App';
 
 interface AboutProps {
   galleryAlbums?: GalleryAlbum[];
   onUpdateGallery?: (albums: GalleryAlbum[]) => void;
+  milestones?: Milestone[];
+  onUpdateMilestones?: (milestones: Milestone[]) => void;
   userRole?: UserRole;
 }
 
-const About: React.FC<AboutProps> = ({ galleryAlbums = [], onUpdateGallery, userRole }) => {
+const About: React.FC<AboutProps> = ({ 
+  galleryAlbums = [], 
+  onUpdateGallery, 
+  milestones = [], 
+  onUpdateMilestones, 
+  userRole 
+}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Gallery States
@@ -45,19 +30,29 @@ const About: React.FC<AboutProps> = ({ galleryAlbums = [], onUpdateGallery, user
 
   // Add Album Modal
   const [isAddAlbumOpen, setIsAddAlbumOpen] = useState(false);
-  const [newAlbumData, setNewAlbumData] = useState({ title: '', cover: '', images: '' });
+  const [newAlbumData, setNewAlbumData] = useState({ title: '', cover: '', images: '', date: '' });
 
-  // Can Add?
+  // Milestone Management Modal
+  const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
+  const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
+  const [newMilestoneData, setNewMilestoneData] = useState<Milestone>({
+    id: 0,
+    year: '',
+    title: '',
+    desc: ''
+  });
+
+  // Can Edit?
   const canEdit = userRole === 'admin' || userRole === 'manager';
 
   // Prevent scrolling when modal is open
   useEffect(() => {
-    if (isModalOpen || selectedAlbum || isAddAlbumOpen) {
+    if (isModalOpen || selectedAlbum || isAddAlbumOpen || isMilestoneModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
-  }, [isModalOpen, selectedAlbum, isAddAlbumOpen]);
+  }, [isModalOpen, selectedAlbum, isAddAlbumOpen, isMilestoneModalOpen]);
 
   // Navigation Logic for Main Gallery
   const handleNextAlbums = () => {
@@ -99,7 +94,7 @@ const About: React.FC<AboutProps> = ({ galleryAlbums = [], onUpdateGallery, user
       title: newAlbumData.title,
       cover: newAlbumData.cover,
       images: imagesArray,
-      date: new Date().toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })
+      date: newAlbumData.date || new Date().toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })
     };
 
     if (onUpdateGallery) {
@@ -107,7 +102,7 @@ const About: React.FC<AboutProps> = ({ galleryAlbums = [], onUpdateGallery, user
     }
     
     setIsAddAlbumOpen(false);
-    setNewAlbumData({ title: '', cover: '', images: '' });
+    setNewAlbumData({ title: '', cover: '', images: '', date: '' });
   };
 
   const handleDeleteAlbum = (id: number, e: React.MouseEvent) => {
@@ -118,6 +113,49 @@ const About: React.FC<AboutProps> = ({ galleryAlbums = [], onUpdateGallery, user
       }
     }
   };
+
+  // --- MILESTONE HANDLERS ---
+  const handleAddMilestone = () => {
+    setEditingMilestone(null);
+    setNewMilestoneData({ id: 0, year: '', title: '', desc: '' });
+    // Keep modal open, just clear form
+  };
+
+  const handleSaveMilestone = () => {
+    if (!newMilestoneData.year || !newMilestoneData.title) return alert('Vui lòng nhập năm và tiêu đề!');
+    
+    if (onUpdateMilestones) {
+        if (editingMilestone) {
+            onUpdateMilestones(milestones.map(m => m.id === editingMilestone.id ? { ...newMilestoneData, id: editingMilestone.id } : m));
+        } else {
+            onUpdateMilestones([...milestones, { ...newMilestoneData, id: Date.now() }]);
+        }
+    }
+    
+    // Reset form
+    setEditingMilestone(null);
+    setNewMilestoneData({ id: 0, year: '', title: '', desc: '' });
+  };
+
+  const handleEditMilestone = (m: Milestone) => {
+    setEditingMilestone(m);
+    setNewMilestoneData({ ...m });
+  };
+
+  const handleDeleteMilestone = (id: number) => {
+    if (confirm('Bạn có chắc chắn muốn xóa mốc này?')) {
+        if (onUpdateMilestones) {
+            onUpdateMilestones(milestones.filter(m => m.id !== id));
+        }
+        if (editingMilestone?.id === id) {
+            setEditingMilestone(null);
+            setNewMilestoneData({ id: 0, year: '', title: '', desc: '' });
+        }
+    }
+  };
+
+  // Sort milestones by year
+  const sortedMilestones = [...milestones].sort((a, b) => parseInt(a.year) - parseInt(b.year));
 
   return (
     <section id="about" className="py-20 bg-gray-50">
@@ -212,12 +250,23 @@ const About: React.FC<AboutProps> = ({ galleryAlbums = [], onUpdateGallery, user
 
               {/* Timeline */}
               <div className="mb-16">
-                <h3 className="text-2xl font-bold text-gray-800 mb-8 flex items-center">
-                  <Calendar className="mr-3 text-primary" /> Lịch sử hình thành
-                </h3>
+                <div className="flex justify-between items-center mb-8">
+                    <h3 className="text-2xl font-bold text-gray-800 flex items-center">
+                        <Calendar className="mr-3 text-primary" /> Lịch sử hình thành
+                    </h3>
+                    {canEdit && (
+                        <button 
+                            onClick={() => setIsMilestoneModalOpen(true)}
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center transition"
+                        >
+                            <Edit size={14} className="mr-2" /> Quản lý lịch sử
+                        </button>
+                    )}
+                </div>
+                
                 <div className="relative border-l-2 border-gray-200 ml-4 md:ml-6 space-y-12">
-                  {MILESTONES.map((milestone, idx) => (
-                    <div key={idx} className="relative pl-8 md:pl-12">
+                  {sortedMilestones.map((milestone) => (
+                    <div key={milestone.id} className="relative pl-8 md:pl-12">
                       <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-4 border-primary"></div>
                       <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-8">
                          <span className="text-primary font-extrabold text-xl md:w-24 flex-shrink-0">{milestone.year}</span>
@@ -320,6 +369,106 @@ const About: React.FC<AboutProps> = ({ galleryAlbums = [], onUpdateGallery, user
         </div>
       )}
 
+      {/* MILESTONE MANAGEMENT MODAL */}
+      {isMilestoneModalOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsMilestoneModalOpen(false)}></div>
+              <div className="bg-white rounded-2xl w-full max-w-4xl relative z-20 flex flex-col max-h-[90vh] animate-in zoom-in duration-200 shadow-2xl">
+                  <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                      <h3 className="text-lg font-bold text-gray-800 flex items-center">
+                          <Calendar size={20} className="mr-2 text-primary" /> Quản lý Lịch sử hình thành
+                      </h3>
+                      <button onClick={() => setIsMilestoneModalOpen(false)} className="text-gray-400 hover:text-red-500 transition"><X size={20} /></button>
+                  </div>
+                  
+                  <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                      {/* Left: Form */}
+                      <div className="w-full md:w-1/3 p-6 border-b md:border-b-0 md:border-r border-gray-100 bg-gray-50/50">
+                          <h4 className="font-bold text-gray-700 mb-4">{editingMilestone ? 'Chỉnh sửa mốc' : 'Thêm mốc mới'}</h4>
+                          <div className="space-y-4">
+                              <div>
+                                  <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Năm</label>
+                                  <input 
+                                    type="text" 
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary font-bold"
+                                    placeholder="2024"
+                                    value={newMilestoneData.year}
+                                    onChange={(e) => setNewMilestoneData({...newMilestoneData, year: e.target.value})}
+                                  />
+                              </div>
+                              <div>
+                                  <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Tiêu đề</label>
+                                  <input 
+                                    type="text" 
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary"
+                                    placeholder="Thành lập chi nhánh..."
+                                    value={newMilestoneData.title}
+                                    onChange={(e) => setNewMilestoneData({...newMilestoneData, title: e.target.value})}
+                                  />
+                              </div>
+                              <div>
+                                  <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Mô tả</label>
+                                  <textarea 
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary h-24 text-sm"
+                                    placeholder="Mô tả chi tiết..."
+                                    value={newMilestoneData.desc}
+                                    onChange={(e) => setNewMilestoneData({...newMilestoneData, desc: e.target.value})}
+                                  ></textarea>
+                              </div>
+                              <div className="flex gap-2">
+                                  {editingMilestone && (
+                                      <button 
+                                        onClick={handleAddMilestone}
+                                        className="flex-1 py-2 bg-gray-200 text-gray-600 rounded-lg font-bold text-sm hover:bg-gray-300 transition"
+                                      >
+                                          Hủy sửa
+                                      </button>
+                                  )}
+                                  <button 
+                                    onClick={handleSaveMilestone}
+                                    className="flex-1 py-2 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primaryDark transition flex items-center justify-center shadow-lg"
+                                  >
+                                      {editingMilestone ? <Save size={16} className="mr-2" /> : <Plus size={16} className="mr-2" />}
+                                      {editingMilestone ? 'Cập nhật' : 'Thêm mới'}
+                                  </button>
+                              </div>
+                          </div>
+                      </div>
+
+                      {/* Right: List */}
+                      <div className="w-full md:w-2/3 p-6 overflow-y-auto bg-white">
+                          <h4 className="font-bold text-gray-700 mb-4 flex justify-between items-center">
+                              <span>Danh sách mốc thời gian</span>
+                              <span className="text-xs font-normal text-gray-400">{milestones.length} mốc</span>
+                          </h4>
+                          <div className="space-y-3">
+                              {sortedMilestones.map((m) => (
+                                  <div key={m.id} className={`p-4 rounded-xl border transition flex justify-between items-start group ${editingMilestone?.id === m.id ? 'bg-orange-50 border-primary' : 'bg-white border-gray-100 hover:border-gray-300'}`}>
+                                      <div>
+                                          <div className="flex items-center gap-2 mb-1">
+                                              <span className="bg-primary text-white text-xs font-bold px-2 py-0.5 rounded">{m.year}</span>
+                                              <span className="font-bold text-gray-800">{m.title}</span>
+                                          </div>
+                                          <p className="text-sm text-gray-500 line-clamp-2">{m.desc}</p>
+                                      </div>
+                                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button onClick={() => handleEditMilestone(m)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={16} /></button>
+                                          <button onClick={() => handleDeleteMilestone(m.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                                      </div>
+                                  </div>
+                              ))}
+                              {milestones.length === 0 && (
+                                  <div className="text-center py-12 text-gray-400 border-2 border-dashed border-gray-100 rounded-xl">
+                                      Chưa có dữ liệu.
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* ALBUM PREVIEW MODAL */}
       {selectedAlbum && (
           <div className="fixed inset-0 z-[70] flex items-center justify-center p-0 bg-black/95 backdrop-blur-md">
@@ -403,15 +552,27 @@ const About: React.FC<AboutProps> = ({ galleryAlbums = [], onUpdateGallery, user
                             onChange={(e) => setNewAlbumData({...newAlbumData, title: e.target.value})}
                           />
                       </div>
-                      <div>
-                          <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Ảnh bìa (URL)</label>
-                          <input 
-                            type="text" 
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary text-sm"
-                            placeholder="https://..."
-                            value={newAlbumData.cover}
-                            onChange={(e) => setNewAlbumData({...newAlbumData, cover: e.target.value})}
-                          />
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div>
+                              <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Thời gian</label>
+                              <input 
+                                type="text" 
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary text-sm"
+                                placeholder="VD: 05/2024"
+                                value={newAlbumData.date}
+                                onChange={(e) => setNewAlbumData({...newAlbumData, date: e.target.value})}
+                              />
+                          </div>
+                          <div className="sm:col-span-2">
+                              <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Ảnh bìa (URL)</label>
+                              <input 
+                                type="text" 
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary text-sm"
+                                placeholder="https://..."
+                                value={newAlbumData.cover}
+                                onChange={(e) => setNewAlbumData({...newAlbumData, cover: e.target.value})}
+                              />
+                          </div>
                       </div>
                       <div>
                           <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Danh sách ảnh/video (URL)</label>

@@ -36,6 +36,17 @@ const CompanyLibrary: React.FC<CompanyLibraryProps> = ({ currentUser, folders, o
     setIsAddFolderModal(false);
   };
 
+  const handleDeleteFolder = (folderId: number) => {
+    if (!currentUser || currentUser.role !== 'Admin') {
+        alert('Chỉ Admin mới có quyền xóa thư mục!');
+        return;
+    }
+    
+    if (confirm('Bạn có chắc chắn muốn xóa thư mục này và toàn bộ tài liệu bên trong không?')) {
+        onUpdate(folders.filter(f => f.id !== folderId));
+    }
+  };
+
   const openUploadModal = (folderId: number | null = null) => {
     setTargetFolderId(folderId || (folders.length > 0 ? folders[0].id : null));
     setFileToUpload(null);
@@ -109,7 +120,7 @@ const CompanyLibrary: React.FC<CompanyLibraryProps> = ({ currentUser, folders, o
       {/* Header Controls */}
       <div className="flex justify-between items-center">
         <div>
-            <h3 className="text-2xl font-black text-gray-800 tracking-tight">Thư viện mẫu chuẩn</h3>
+            <h3 className="text-2xl font-black text-gray-800 tracking-tight">Thư viện mẫu</h3>
             <p className="text-sm text-gray-500 font-medium">Lưu trữ và chia sẻ tài liệu nội bộ</p>
         </div>
         <div className="flex space-x-3">
@@ -143,13 +154,25 @@ const CompanyLibrary: React.FC<CompanyLibraryProps> = ({ currentUser, folders, o
                     <span className="text-[10px] text-gray-400 font-bold uppercase">{folder.files.length} tài liệu</span>
                 </div>
               </div>
-              <button 
-                onClick={() => openUploadModal(folder.id)}
-                className="p-2 bg-white text-gray-400 hover:text-primary rounded-lg border border-gray-100 hover:border-primary transition shadow-sm"
-                title="Load tài liệu vào thư mục này"
-              >
-                  <Upload size={16} />
-              </button>
+              <div className="flex items-center space-x-1">
+                  <button 
+                    onClick={() => openUploadModal(folder.id)}
+                    className="p-2 bg-white text-gray-400 hover:text-primary rounded-lg border border-gray-100 hover:border-primary transition shadow-sm"
+                    title="Load tài liệu vào thư mục này"
+                  >
+                      <Upload size={16} />
+                  </button>
+                  
+                  {currentUser?.role === 'Admin' && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder.id); }}
+                        className="p-2 bg-white text-gray-400 hover:text-red-500 rounded-lg border border-gray-100 hover:border-red-200 transition shadow-sm"
+                        title="Xóa thư mục"
+                      >
+                          <Trash2 size={16} />
+                      </button>
+                  )}
+              </div>
             </div>
 
             {/* File List */}

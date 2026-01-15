@@ -165,6 +165,14 @@ export interface GalleryAlbum {
   date: string;
 }
 
+// Interface for History Milestone
+export interface Milestone {
+  id: number;
+  year: string;
+  title: string;
+  desc: string;
+}
+
 // Default data in case server is offline
 const INITIAL_USERS: UserAccount[] = [
   { id: 1, name: 'Nguyễn Văn A', englishName: 'Mr. A', role: 'Sales', email: 'sales1@longhoanglogistics.com', password: '123', status: 'Active', failedAttempts: 0, department: 'Sales', position: 'Nhân viên kinh doanh' },
@@ -255,6 +263,33 @@ const INITIAL_GALLERY: GalleryAlbum[] = [
   }
 ];
 
+const INITIAL_MILESTONES: Milestone[] = [
+  {
+    id: 1,
+    year: '1993',
+    title: 'Thành lập công ty',
+    desc: 'Khởi đầu với một văn phòng nhỏ tại TP.HCM và đội ngũ 10 nhân sự đầy nhiệt huyết, tập trung vào vận tải nội địa.'
+  },
+  {
+    id: 2,
+    year: '2005',
+    title: 'Mở rộng quy mô',
+    desc: 'Khai trương chi nhánh Hải Phòng và Đà Nẵng, chính thức sở hữu đội xe container riêng gồm 50 đầu kéo.'
+  },
+  {
+    id: 3,
+    year: '2015',
+    title: 'Vươn ra biển lớn',
+    desc: 'Thiết lập mạng lưới đại lý tại 120 quốc gia. Trở thành đối tác chiến lược của các hãng tàu lớn như Maersk, CMA CGM.'
+  },
+  {
+    id: 4,
+    year: '2023',
+    title: 'Chuyển đổi số toàn diện',
+    desc: 'Áp dụng hệ thống quản lý logistics thông minh (LMS), tối ưu hóa quy trình và cam kết giảm phát thải carbon.'
+  }
+];
+
 function App() {
   const [activePage, setActivePage] = useState<'finance' | 'company' | 'management' | 'settings' | 'account' | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
@@ -317,10 +352,10 @@ function App() {
     }
   ]);
   const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbum[]>(INITIAL_GALLERY);
+  const [milestones, setMilestones] = useState<Milestone[]>(INITIAL_MILESTONES);
   
   // Server connection status
   const [isServerOnline, setIsServerOnline] = useState(true);
-  const [serverInfo, setServerInfo] = useState({ rootDir: '', eDriveAvailable: false, isUsingEDrive: false });
 
   // --- API HELPER ---
   // Sends the FULL state to the backend to be backed up
@@ -353,6 +388,7 @@ function App() {
       jobs,
       library,
       galleryAlbums,
+      milestones,
       ...overrides
     };
   };
@@ -377,17 +413,11 @@ function App() {
           if (db.jobs && db.jobs.length > 0) setJobs(db.jobs);
           if (db.library && db.library.length > 0) setLibrary(db.library);
           if (db.galleryAlbums && db.galleryAlbums.length > 0) setGalleryAlbums(db.galleryAlbums);
+          if (db.milestones && db.milestones.length > 0) setMilestones(db.milestones);
           setIsServerOnline(true);
         } else {
             console.warn("Server responded but with error. Using local defaults.");
             setIsServerOnline(false);
-        }
-
-        // Fetch Server Status (Storage Path)
-        const statusRes = await fetch(`${API_BASE_URL}/api/status`);
-        if (statusRes.ok) {
-            const info = await statusRes.json();
-            setServerInfo(info);
         }
 
       } catch (e) {
@@ -465,6 +495,11 @@ function App() {
   const handleUpdateGallery = (newAlbums: GalleryAlbum[]) => {
     setGalleryAlbums(newAlbums);
     syncToServer(getFullState({ galleryAlbums: newAlbums }));
+  };
+
+  const handleUpdateMilestones = (newMilestones: Milestone[]) => {
+    setMilestones(newMilestones);
+    syncToServer(getFullState({ milestones: newMilestones }));
   };
 
   // --- AUTHENTICATION ---
@@ -590,7 +625,6 @@ function App() {
             onUpdateUser={handleUpdateUserSingle}
             onDeleteUser={handleDeleteUser}
             currentUser={currentUser}
-            serverInfo={serverInfo}
           />
         );
       default:
@@ -605,6 +639,8 @@ function App() {
             <About 
               galleryAlbums={galleryAlbums}
               onUpdateGallery={handleUpdateGallery}
+              milestones={milestones}
+              onUpdateMilestones={handleUpdateMilestones}
               userRole={userRole}
             />
             <Services />

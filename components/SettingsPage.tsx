@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Settings, Users, ShieldAlert, Edit, Trash2, Check, AlertCircle, Plus, Save, Lock, Unlock, Key, Mail, User, Clock, Activity, AlertTriangle, ShieldCheck, Database, HardDrive, DownloadCloud, FolderCheck, XCircle, RefreshCw } from 'lucide-react';
+import { X, Settings, Users, ShieldAlert, Edit, Trash2, Check, AlertCircle, Plus, Save, Lock, Unlock, Key, Mail, User, Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { UserAccount } from '../App';
 
 interface SettingsPageProps {
@@ -13,15 +13,14 @@ interface SettingsPageProps {
   onUpdateUser: (user: UserAccount) => void;
   onDeleteUser: (id: number) => void;
   currentUser: UserAccount | null;
-  serverInfo: { rootDir: string, eDriveAvailable: boolean, isUsingEDrive: boolean };
 }
 
-type SettingsTab = 'users' | 'security' | 'config' | 'backup';
+type SettingsTab = 'users' | 'security' | 'config';
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ 
   onClose, isAuthenticated, onLoginSuccess, onLogout,
   users, onAddUser, onUpdateUser, onDeleteUser,
-  currentUser, serverInfo
+  currentUser
 }) => {
   // Admin Login State
   const [username, setUsername] = useState('');
@@ -191,13 +190,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 >
                     <ShieldAlert size={20} />
                     <span>Nhật ký bảo mật</span>
-                </button>
-                <button 
-                  onClick={() => setActiveTab('backup')}
-                  className={`w-full flex items-center space-x-3 p-4 font-bold rounded-lg transition ${activeTab === 'backup' ? 'bg-orange-50 text-primary border border-orange-100 shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
-                >
-                    <HardDrive size={20} />
-                    <span>Sao lưu dữ liệu</span>
                 </button>
                 <button 
                   onClick={() => setActiveTab('config')}
@@ -375,82 +367,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                           </table>
                       </div>
                   </div>
-                )}
-
-                {/* BACKUP TAB */}
-                {activeTab === 'backup' && (
-                   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                      
-                      {/* Storage Status Card */}
-                      <div className="bg-gray-900 text-white rounded-xl p-6 shadow-lg border border-gray-800">
-                          <div className="flex justify-between items-start">
-                              <div>
-                                  <h4 className="font-bold text-lg flex items-center text-gray-100">
-                                      <HardDrive size={20} className="mr-2 text-primary" /> Trạng thái Lưu trữ
-                                  </h4>
-                                  <div className="mt-4 space-y-2 text-sm text-gray-400">
-                                      <p className="flex items-center">
-                                          <span className="w-24 font-bold text-gray-500">ROOT DIR:</span> 
-                                          <span className="font-mono bg-gray-800 px-2 py-1 rounded text-green-400">{serverInfo.rootDir}</span>
-                                      </p>
-                                      <p className="flex items-center">
-                                          <span className="w-24 font-bold text-gray-500">MIRROR E:\:</span> 
-                                          {serverInfo.eDriveAvailable ? (
-                                              <span className="text-green-400 font-bold flex items-center">
-                                                  <FolderCheck size={16} className="mr-1" /> Đang hoạt động (E:\ServerLH)
-                                              </span>
-                                          ) : (
-                                              <span className="text-red-400 font-bold flex items-center">
-                                                  <XCircle size={16} className="mr-1" /> Không tìm thấy ổ E:
-                                              </span>
-                                          )}
-                                      </p>
-                                  </div>
-                              </div>
-                              <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
-                                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Chế độ</p>
-                                  <p className={`text-sm font-black ${serverInfo.isUsingEDrive ? 'text-green-400' : 'text-yellow-400'}`}>
-                                      {serverInfo.isUsingEDrive ? 'PRIMARY STORAGE' : 'LOCAL FALLBACK'}
-                                  </p>
-                              </div>
-                          </div>
-                          {!serverInfo.eDriveAvailable && (
-                              <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-300">
-                                  Cảnh báo: Ổ đĩa E: không khả dụng. Server đang lưu dữ liệu vào thư mục local. Vui lòng kiểm tra kết nối ổ đĩa.
-                              </div>
-                          )}
-                          {serverInfo.eDriveAvailable && !serverInfo.isUsingEDrive && (
-                              <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded text-xs text-green-300">
-                                  Thông báo: Server đang chạy Local nhưng đã phát hiện ổ E:. Hệ thống sẽ tự động sao lưu dự phòng (Mirror) sang E:\ServerLH\History mỗi khi có thay đổi.
-                              </div>
-                          )}
-                      </div>
-
-                      {/* Auto Backup Info */}
-                      <div className="bg-white border border-green-200 bg-green-50 rounded-xl p-8 text-center shadow-sm">
-                          <div className="w-16 h-16 bg-white text-green-600 rounded-full flex items-center justify-center mb-4 mx-auto shadow-md">
-                              <RefreshCw size={32} className="animate-spin-slow" />
-                          </div>
-                          <h3 className="text-xl font-bold text-gray-800">Chế độ Sao lưu Tự động</h3>
-                          <p className="text-gray-600 mt-2 max-w-lg mx-auto leading-relaxed">
-                              Hệ thống hiện đang tự động sao lưu dữ liệu theo thời gian thực mỗi khi có thay đổi.
-                          </p>
-                          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                              <div className="bg-white p-3 rounded-lg border border-green-100">
-                                  <span className="font-bold text-gray-800 block">Admin/System</span>
-                                  <span className="text-xs text-gray-500">Lưu vào backup.json</span>
-                              </div>
-                              <div className="bg-white p-3 rounded-lg border border-green-100">
-                                  <span className="font-bold text-gray-800 block">Finance/Account</span>
-                                  <span className="text-xs text-gray-500">Lưu vào account.json</span>
-                              </div>
-                              <div className="bg-white p-3 rounded-lg border border-green-100">
-                                  <span className="font-bold text-gray-800 block">Nhân viên</span>
-                                  <span className="text-xs text-gray-500">Lưu vào [Tên].json</span>
-                              </div>
-                          </div>
-                      </div>
-                   </div>
                 )}
                 
                 {/* CONFIG TAB (Placeholder) */}
