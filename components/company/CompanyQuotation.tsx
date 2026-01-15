@@ -404,7 +404,7 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddF
 
   const PDFPreview = () => (
     <div 
-      className="fixed inset-0 z-[100] bg-gray-800/95 backdrop-blur-sm flex flex-col items-center pt-4"
+      className="fixed inset-0 z-[100] bg-gray-800/95 backdrop-blur-sm flex flex-col items-center pt-4 pdf-modal-wrapper"
       onClick={() => setShowPDF(false)}
     >
       <style>
@@ -414,41 +414,55 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddF
               size: A4;
               margin: 0;
             }
+            
+            /* Hide everything initially */
             body {
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-              background-color: white;
+              visibility: hidden;
             }
-            /* Hide root app elements to prevent double scrollbars/backgrounds */
-            body > *:not(.print-container) {
-              display: none !important;
+
+            /* Show only the print container and its children */
+            .print-container, .print-container * {
+              visibility: visible;
             }
-            .print-hidden {
-              display: none !important;
-            }
+
+            /* Position the print container to top-left of viewport/page */
             .print-container {
-              display: block !important;
               position: absolute;
-              top: 0;
               left: 0;
+              top: 0;
               width: 100%;
+              margin: 0;
+              padding: 0;
             }
+
+            /* Reset modal wrapper behavior for print */
+            .pdf-modal-wrapper {
+              position: absolute !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 100% !important;
+              height: auto !important;
+              background: none !important;
+              overflow: visible !important;
+              display: block !important;
+            }
+
+            /* Ensure pages break correctly */
             .quote-page {
-              margin: 0 !important;
-              box-shadow: none !important;
-              page-break-after: always;
-              break-after: page;
               width: 210mm !important;
               height: 297mm !important;
-              overflow: hidden !important;
-              padding: 0 !important;
-              position: relative;
+              margin: 0 !important;
+              page-break-after: always;
+              break-after: page;
+              overflow: hidden;
+              background: white;
+              /* Ensure padding is respected in print */
+              box-sizing: border-box; 
             }
-            /* Reset any transforms or margins on the container wrapper */
-            .scroll-container {
-              overflow: visible !important;
-              height: auto !important;
-              display: block !important;
+
+            /* Hide UI elements explicitly */
+            .print-hidden {
+              display: none !important;
             }
           }
         `}
