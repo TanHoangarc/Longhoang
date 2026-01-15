@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { 
   X, FileText, Search, Download, Users, FileCheck, CreditCard, 
   ArrowLeft, Eye, ShieldCheck, Filter, ChevronRight, Package, 
-  Ship, Truck, BarChart2, Briefcase
+  Ship, Truck, BarChart2, Briefcase, FileOutput, FolderOpen, Calendar
 } from 'lucide-react';
 import { UserRole, UserAccount, GUQRecord } from '../App';
 
@@ -44,6 +44,16 @@ const getMockEmployeeDetails = (user: UserAccount) => {
     reports: [
       { week: 'W19 (May)', fileName: `Report_W19_${user.name.split(' ').pop()}.pdf` },
       { week: 'W18 (May)', fileName: `Report_W18_${user.name.split(' ').pop()}.pdf` }
+    ],
+    // New: Quotations saved as PDF
+    quotations: [
+        { id: 101, fileName: `BG_LOGISTICS_ABC_CORP.pdf`, date: '15/05/2024', customer: 'ABC Corp' },
+        { id: 102, fileName: `QUOTE_SEA_FREIGHT_US.pdf`, date: '10/05/2024', customer: 'Global Trading' }
+    ],
+    // New: Other files including Leave Requests
+    otherFiles: [
+        { id: 201, fileName: `DON_XIN_NGHI_PHEP_${user.name.toUpperCase()}.pdf`, date: '01/05/2024', type: 'LEAVE', desc: 'Nghỉ phép năm (Du lịch)' },
+        { id: 202, fileName: `BB_BAN_GIAO_TS.docx`, date: '01/01/2024', type: 'ASSET', desc: 'Bàn giao Laptop Dell' }
     ]
   };
 };
@@ -287,6 +297,56 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                         ))}
                     </div>
                   </div>
+
+                  {/* NEW: Quotation Files (PDF) */}
+                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200">
+                    <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-sm text-gray-700 flex items-center"><FileOutput size={16} className="mr-2" /> Lịch sử Báo giá (PDF)</div>
+                    <div className="p-0 overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-white border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase">
+                                <tr><th className="px-6 py-3">File Báo giá</th><th className="px-6 py-3">Khách hàng</th><th className="px-6 py-3">Ngày tạo</th><th className="px-6 py-3 text-right">Tải về</th></tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {selectedEmployee.quotations.map((q, idx) => (
+                                    <tr key={idx} className="hover:bg-gray-50/30">
+                                        <td className="px-6 py-4 font-mono text-xs font-bold text-blue-600 flex items-center">
+                                            <FileText size={14} className="mr-2 text-red-500" />
+                                            {q.fileName}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-600 font-bold">{q.customer}</td>
+                                        <td className="px-6 py-4 text-xs text-gray-500">{q.date}</td>
+                                        <td className="px-6 py-4 text-right"><button className="text-gray-400 hover:text-green-600"><Download size={16} /></button></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                  </div>
+
+                  {/* NEW: Other Files (Leave Requests) */}
+                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200">
+                    <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-sm text-gray-700 flex items-center"><FolderOpen size={16} className="mr-2" /> Hồ sơ khác & Đơn từ</div>
+                    <div className="grid grid-cols-1 gap-3 p-6">
+                        {selectedEmployee.otherFiles.map((f, idx) => (
+                            <div key={idx} className="border border-gray-100 p-3 rounded-lg hover:bg-gray-50 transition flex items-center justify-between group">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg ${f.type === 'LEAVE' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
+                                        {f.type === 'LEAVE' ? <Calendar size={18} /> : <FileText size={18} />}
+                                    </div>
+                                    <div>
+                                        <span className="block text-xs font-bold text-gray-800">{f.type === 'LEAVE' ? 'ĐƠN XIN NGHỈ PHÉP' : f.type}</span>
+                                        <span className="text-[10px] text-gray-500">{f.desc} - {f.date}</span>
+                                        <p className="text-[10px] text-blue-500 underline mt-0.5">{f.fileName}</p>
+                                    </div>
+                                </div>
+                                <button className="p-2 bg-white border border-gray-200 rounded text-gray-400 hover:text-primary hover:border-primary transition shadow-sm">
+                                    <Eye size={16} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                  </div>
+
                 </>
               ) : (
                 <div className="h-full flex items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl py-20">
