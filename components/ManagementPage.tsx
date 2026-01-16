@@ -91,6 +91,18 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
       setPreviewFile({ url, name });
   };
 
+  // --- DOWNLOAD HANDLER ---
+  const handleDownload = (fileName: string, category: string) => {
+      const url = `${API_BASE_URL}/files/${category}/${fileName}`;
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      link.setAttribute('target', '_blank'); // Open in new tab if browser prefers or direct download fails
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
+
   const handleDeleteFile = (id: number) => {
       if (confirm('Bạn có chắc chắn muốn xóa file này?')) {
           onUpdateUserFiles(userFiles.filter(f => f.id !== id));
@@ -171,7 +183,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                       <div onClick={() => handlePreview(item.fileEir, 'CVHC')} className="text-[10px] font-bold text-orange-500 flex items-center cursor-pointer hover:underline"><Package size={12} className="mr-1" /> {item.fileEir}</div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                        <button onClick={() => handlePreview(item.fileCvhc, 'CVHC')} className="p-2 text-gray-400 hover:text-primary transition" title="Xem/Tải xuống">
+                        <button onClick={() => handleDownload(item.fileCvhc, 'CVHC')} className="p-2 text-gray-400 hover:text-primary transition" title="Tải xuống">
                             <Download size={18} />
                         </button>
                     </td>
@@ -237,7 +249,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                                     <button onClick={() => handlePreview(item.fileName, 'BBDC')} className="text-gray-400 hover:text-primary transition" title="Xem trước">
                                         <Eye size={18} />
                                     </button>
-                                    <button onClick={() => handlePreview(item.fileName, 'BBDC')} className="text-gray-400 hover:text-blue-500 transition" title="Tải xuống">
+                                    <button onClick={() => handleDownload(item.fileName, 'BBDC')} className="text-gray-400 hover:text-blue-500 transition" title="Tải xuống">
                                         <Download size={18} />
                                     </button>
                                     {userRole === 'admin' && (
@@ -385,7 +397,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                                         <td className="px-6 py-4 text-sm text-gray-600 font-bold">{q.customer || 'Unknown'}</td>
                                         <td className="px-6 py-4 text-xs text-gray-500">{q.date}</td>
                                         <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                            <button onClick={() => handlePreview(q.fileName, 'QUOTATION')} className="text-gray-400 hover:text-green-600 transition" title="Tải xuống">
+                                            <button onClick={() => handleDownload(q.fileName, 'QUOTATION')} className="text-gray-400 hover:text-green-600 transition" title="Tải xuống">
                                                 <Download size={16} />
                                             </button>
                                             <button onClick={() => handleDeleteFile(q.id)} className="text-gray-400 hover:text-red-500 transition" title="Xóa file">
