@@ -1,7 +1,15 @@
 
 import React, { useState } from 'react';
 import { Search, Printer, Download, Save, X, PenTool, Eye, RefreshCcw, CheckSquare, Square, Stamp, FileSignature } from 'lucide-react';
-import { AdjustmentRecord } from '../../App';
+
+// Define locally to avoid Circular Dependency with App.tsx
+interface AdjustmentRecord {
+  id: number;
+  bl: string;
+  date: string;
+  status: 'Signed' | 'Unsigned';
+  fileName: string;
+}
 
 interface AdjustFormData {
     companyB: string;

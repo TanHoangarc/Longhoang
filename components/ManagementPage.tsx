@@ -5,7 +5,8 @@ import {
   ArrowLeft, Eye, ShieldCheck, Filter, ChevronRight, Package, 
   Ship, Truck, BarChart2, Briefcase, FileOutput, FolderOpen, Calendar, Trash2
 } from 'lucide-react';
-import { UserRole, UserAccount, GUQRecord, UserFileRecord, AdjustmentRecord } from '../App';
+// Use type import to avoid circular dependency
+import type { UserRole, UserAccount, GUQRecord, UserFileRecord, AdjustmentRecord } from '../App';
 import { API_BASE_URL } from '../constants';
 
 interface ManagementPageProps {
@@ -16,6 +17,7 @@ interface ManagementPageProps {
   userFiles: UserFileRecord[]; // Receive real user files
   onUpdateUserFiles: (files: UserFileRecord[]) => void;
   adjustments: AdjustmentRecord[]; // Receive real adjustments
+  onUpdateAdjustments: (records: AdjustmentRecord[]) => void;
 }
 
 type ManagementSection = 'GUQ' | 'CVHC' | 'CVHT' | 'ADJUST' | 'EMPLOYEES';
@@ -42,7 +44,7 @@ const getMockEmployeeDetails = (user: UserAccount) => {
   };
 };
 
-const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, users, guqRecords, userFiles, onUpdateUserFiles, adjustments }) => {
+const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, users, guqRecords, userFiles, onUpdateUserFiles, adjustments, onUpdateAdjustments }) => {
   const [activeSection, setActiveSection] = useState<ManagementSection>('EMPLOYEES');
   const [adjustFilter, setAdjustFilter] = useState<'All' | 'Signed' | 'Unsigned'>('All');
   const [selectedEmployee, setSelectedEmployee] = useState<ReturnType<typeof getMockEmployeeDetails> | null>(null);
@@ -92,6 +94,12 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
   const handleDeleteFile = (id: number) => {
       if (confirm('Bạn có chắc chắn muốn xóa file này?')) {
           onUpdateUserFiles(userFiles.filter(f => f.id !== id));
+      }
+  };
+
+  const handleDeleteAdjustment = (id: number) => {
+      if (confirm('Bạn có chắc chắn muốn xóa biên bản này? Hành động này không thể hoàn tác.')) {
+          onUpdateAdjustments(adjustments.filter(a => a.id !== id));
       }
   };
 
@@ -232,6 +240,11 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                                     <button onClick={() => handlePreview(item.fileName, 'BBDC')} className="text-gray-400 hover:text-blue-500 transition" title="Tải xuống">
                                         <Download size={18} />
                                     </button>
+                                    {userRole === 'admin' && (
+                                      <button onClick={() => handleDeleteAdjustment(item.id)} className="text-gray-400 hover:text-red-500 transition" title="Xóa">
+                                          <Trash2 size={18} />
+                                      </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}

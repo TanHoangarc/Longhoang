@@ -547,6 +547,11 @@ function App() {
     syncToServer(getFullState({ adjustments: newAdjustments }));
   };
 
+  const handleUpdateAdjustments = (newAdjustments: AdjustmentRecord[]) => {
+    setAdjustments(newAdjustments);
+    syncToServer(getFullState({ adjustments: newAdjustments }));
+  };
+
   // --- AUTHENTICATION ---
   const handleLogin = (role: UserRole, user?: UserAccount, remember: boolean = false) => {
     setUserRole(role);
@@ -683,6 +688,7 @@ function App() {
             userFiles={userFiles}
             onUpdateUserFiles={handleUpdateUserFiles}
             adjustments={adjustments}
+            onUpdateAdjustments={handleUpdateAdjustments}
           />
         );
       case 'settings':

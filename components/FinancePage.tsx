@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { X, RefreshCw, CreditCard, ClipboardEdit, FileSignature, ArrowRight, Phone, Landmark } from 'lucide-react';
-import { GUQRecord, UserAccount, AdjustmentRecord } from '../App';
+// Use type import to avoid circular dependency
+import type { GUQRecord, UserAccount, AdjustmentRecord } from '../App';
 import FinanceGuq from './finance/FinanceGuq';
 import FinanceCvhc from './finance/FinanceCvhc';
 import FinanceCvht from './finance/FinanceCvht';
