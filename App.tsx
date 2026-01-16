@@ -582,6 +582,26 @@ function App() {
     syncToServer(getFullState({ users: newUsers }));
   };
 
+  // --- REGISTRATION LOGIC ---
+  const handleRegisterUser = (newUser: UserAccount): boolean => {
+    // Check if email already exists
+    if (users.some(u => u.email.toLowerCase() === newUser.email.toLowerCase())) {
+        return false;
+    }
+
+    const userWithId: UserAccount = {
+        ...newUser,
+        id: Date.now(),
+        role: 'Customer', // Enforce Customer role for registration
+        status: 'Active',
+        failedAttempts: 0
+    };
+
+    handleUpdateUsers([...users, userWithId]);
+    handleLogin('customer', userWithId, true); // Auto login new user
+    return true;
+  };
+
   const renderActivePage = () => {
     switch (activePage) {
       case 'finance':
@@ -693,7 +713,8 @@ function App() {
         onLogout={handleLogout} 
         onOpenPage={setActivePage}
         users={users} 
-        onLoginAttempt={handleLoginAttempt} 
+        onLoginAttempt={handleLoginAttempt}
+        onRegister={handleRegisterUser}
       />
       <main>
         {renderActivePage()}

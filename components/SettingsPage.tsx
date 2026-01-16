@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Settings, Users, ShieldAlert, Edit, Trash2, Check, AlertCircle, Plus, Save, Lock, Unlock, Key, Mail, User, Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { X, Settings, Users, ShieldAlert, Edit, Trash2, Check, AlertCircle, Plus, Save, Lock, Unlock, Key, Mail, User, Clock, AlertTriangle, ShieldCheck, Briefcase } from 'lucide-react';
 import { UserAccount } from '../App';
 
 interface SettingsPageProps {
@@ -15,7 +15,7 @@ interface SettingsPageProps {
   currentUser: UserAccount | null;
 }
 
-type SettingsTab = 'users' | 'security' | 'config';
+type SettingsTab = 'users' | 'customers' | 'security' | 'config';
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ 
   onClose, isAuthenticated, onLoginSuccess, onLogout,
@@ -58,14 +58,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
   // --- CRUD ACTIONS ---
 
-  const handleAddNew = () => {
+  const handleAddNew = (role: string = 'Sales') => {
     setEditingUser(null);
     setFormData({
       id: Date.now(),
       name: '',
       englishName: '',
-      role: 'Sales',
-      email: '@longhoanglogistics.com',
+      role: role,
+      email: role === 'Customer' ? '@gmail.com' : '@longhoanglogistics.com',
       password: 'Jwckim@',
       status: 'Active',
       failedAttempts: 0
@@ -153,6 +153,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     );
   }
 
+  // Filter lists
+  const staffList = users.filter(u => u.role !== 'Customer');
+  const customerList = users.filter(u => u.role === 'Customer');
+
   return (
     <div className="min-h-[80vh] bg-white p-8 md:p-16 animate-in fade-in duration-500">
       <div className="container mx-auto max-w-6xl">
@@ -182,7 +186,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                   className={`w-full flex items-center space-x-3 p-4 font-bold rounded-lg transition ${activeTab === 'users' ? 'bg-orange-50 text-primary border border-orange-100 shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
                 >
                     <Users size={20} />
-                    <span>Quản lý tài khoản</span>
+                    <span>Quản lý nhân sự</span>
+                </button>
+                <button 
+                  onClick={() => setActiveTab('customers')}
+                  className={`w-full flex items-center space-x-3 p-4 font-bold rounded-lg transition ${activeTab === 'customers' ? 'bg-orange-50 text-primary border border-orange-100 shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                    <Briefcase size={20} />
+                    <span>Quản lý khách hàng</span>
                 </button>
                 <button 
                   onClick={() => setActiveTab('security')}
@@ -203,16 +214,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             {/* Content Area */}
             <div className="lg:col-span-3">
                 
-                {/* USERS TAB */}
+                {/* USERS TAB (STAFF) */}
                 {activeTab === 'users' && (
                   <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2">
                       <div className="p-6 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                           <h3 className="font-bold text-gray-800">Danh sách nhân sự & Phân quyền</h3>
                           <button 
-                            onClick={handleAddNew}
+                            onClick={() => handleAddNew('Sales')}
                             className="text-sm bg-primary hover:bg-primaryDark text-white px-4 py-2 rounded font-bold flex items-center transition shadow-lg shadow-orange-100"
                           >
-                            <Plus size={16} className="mr-1" /> Thêm mới
+                            <Plus size={16} className="mr-1" /> Thêm nhân viên
                           </button>
                       </div>
                       <div className="overflow-x-auto">
@@ -227,7 +238,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                   </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-100">
-                                  {users.map(user => (
+                                  {staffList.map(user => (
                                       <tr key={user.id} className="hover:bg-gray-50/50 transition group">
                                           <td className="px-6 py-4">
                                               <div className="font-bold text-gray-800">{user.name}</div>
@@ -280,6 +291,77 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                   </div>
                 )}
 
+                {/* CUSTOMERS TAB */}
+                {activeTab === 'customers' && (
+                  <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                      <div className="p-6 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                          <h3 className="font-bold text-gray-800 flex items-center">
+                              <Briefcase size={20} className="mr-2 text-primary" /> Danh sách Khách hàng đăng ký
+                          </h3>
+                          <div className="text-xs font-bold text-gray-500 bg-white px-3 py-1 rounded border border-gray-200">
+                              Tổng: {customerList.length} khách hàng
+                          </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                          <table className="w-full text-left">
+                              <thead className="text-xs font-bold text-gray-400 uppercase bg-white border-b border-gray-100">
+                                  <tr>
+                                      <th className="px-6 py-4">Tên Khách hàng</th>
+                                      <th className="px-6 py-4">Email đăng nhập</th>
+                                      <th className="px-6 py-4">Trạng thái</th>
+                                      <th className="px-6 py-4 text-right">Thao tác</th>
+                                  </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100">
+                                  {customerList.map(user => (
+                                      <tr key={user.id} className="hover:bg-gray-50/50 transition group">
+                                          <td className="px-6 py-4">
+                                              <div className="font-bold text-gray-800">{user.name}</div>
+                                              <div className="text-xs text-gray-400">ID: {user.id}</div>
+                                          </td>
+                                          <td className="px-6 py-4">
+                                              <div className="text-sm text-gray-600 font-medium">{user.email}</div>
+                                          </td>
+                                          <td className="px-6 py-4">
+                                              <span className={`flex items-center text-xs font-bold ${user.status === 'Active' ? 'text-green-500' : 'text-red-500'}`}>
+                                                  {user.status === 'Active' ? <Check size={14} className="mr-1" /> : <Lock size={14} className="mr-1" />}
+                                                  {user.status}
+                                              </span>
+                                              {user.failedAttempts > 0 && <span className="text-[10px] text-orange-500 block mt-1">{user.failedAttempts} lần sai pass</span>}
+                                          </td>
+                                          <td className="px-6 py-4 text-right">
+                                              <div className="flex justify-end space-x-2">
+                                                  <button 
+                                                    onClick={() => handleEdit(user)}
+                                                    className="p-2 text-gray-400 hover:text-primary hover:bg-orange-50 rounded-lg transition" 
+                                                    title="Chỉnh sửa / Đặt lại mật khẩu"
+                                                  >
+                                                    <Edit size={16} />
+                                                  </button>
+                                                  <button 
+                                                    onClick={() => handleDelete(user.id)}
+                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition" 
+                                                    title="Xóa tài khoản"
+                                                  >
+                                                    <Trash2 size={16} />
+                                                  </button>
+                                              </div>
+                                          </td>
+                                      </tr>
+                                  ))}
+                                  {customerList.length === 0 && (
+                                      <tr>
+                                          <td colSpan={4} className="px-6 py-8 text-center text-gray-400 text-sm italic">
+                                              Chưa có khách hàng nào đăng ký.
+                                          </td>
+                                      </tr>
+                                  )}
+                              </tbody>
+                          </table>
+                      </div>
+                  </div>
+                )}
+
                 {/* SECURITY LOG TAB */}
                 {activeTab === 'security' && (
                   <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2">
@@ -313,6 +395,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                                             <td className="px-6 py-4">
                                                 <div className="font-bold text-gray-800">{user.name}</div>
                                                 <div className="text-xs text-gray-400 font-mono">{user.email}</div>
+                                                <span className="text-[10px] bg-gray-100 px-1 rounded text-gray-500">{user.role}</span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <span className={`inline-block w-8 h-8 leading-8 rounded-full text-xs font-bold ${
@@ -388,7 +471,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               <div className="bg-gray-50 border-b border-gray-100 p-6 flex justify-between items-center">
                  <h3 className="font-bold text-lg text-gray-800 flex items-center">
                     {editingUser ? <Edit className="mr-2 text-primary" size={20} /> : <Plus className="mr-2 text-primary" size={20} />}
-                    {editingUser ? 'Chỉnh sửa nhân sự' : 'Thêm nhân sự mới'}
+                    {editingUser ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản mới'}
                  </h3>
                  <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-red-500 transition"><X size={20} /></button>
               </div>
@@ -397,7 +480,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 {/* Names */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tên nhân sự <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tên người dùng <span className="text-red-500">*</span></label>
                         <div className="relative">
                             <User className="absolute left-3 top-3 text-gray-300" size={18} />
                             <input 
@@ -410,7 +493,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                         </div>
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tên tiếng anh (Alias)</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Alias / Tiếng Anh</label>
                         <div className="relative">
                             <User className="absolute left-3 top-3 text-gray-300" size={18} />
                             <input 
@@ -469,6 +552,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                           <option value="Document">Document (Chứng từ)</option>
                           <option value="Manager">Manager</option>
                           <option value="Admin">Admin</option>
+                          <option value="Customer">Customer (Khách hàng)</option>
                        </select>
                     </div>
 
