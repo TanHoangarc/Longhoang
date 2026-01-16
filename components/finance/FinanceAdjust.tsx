@@ -29,6 +29,7 @@ const FinanceAdjust: React.FC = () => {
   const [signType, setSignType] = useState<'digital' | 'wet'>('digital'); // Trạng thái hình thức ký
   const [isSigning, setIsSigning] = useState(false); // Trạng thái đang ký (loading)
   const [generatedReportNo, setGeneratedReportNo] = useState(''); // Store report number to prevent re-render flickering
+  const [sequenceNumber, setSequenceNumber] = useState(1); // Counter for sequential report numbers
   
   const [formData, setFormData] = useState<AdjustFormData>({
       companyB: '',
@@ -57,10 +58,10 @@ const FinanceAdjust: React.FC = () => {
   };
 
   const handleCreate = () => {
-      // Generate unique report number for this session: BBDC00001/2026 format
-      const randomNum = Math.floor(Math.random() * 100000); // 0 to 99999
-      const reportId = `BBDC${randomNum.toString().padStart(5, '0')}/2026`;
+      // Generate sequential report number: BBDC00001/2026
+      const reportId = `BBDC${sequenceNumber.toString().padStart(5, '0')}/2026`;
       setGeneratedReportNo(reportId);
+      setSequenceNumber(prev => prev + 1); // Increment for the next report
       setStatus('create');
   };
 
@@ -195,7 +196,7 @@ const FinanceAdjust: React.FC = () => {
                                 </div>
                                 <div className="flex flex-1">
                                     <span className="w-[100px] shrink-0">Chức vụ:</span>
-                                    <span className="border-b border-dotted border-gray-400 w-full inline-block"></span>
+                                    <span className="font-bold uppercase">GIÁM ĐỐC</span>
                                 </div>
                             </div>
                         </div>
@@ -330,7 +331,19 @@ const FinanceAdjust: React.FC = () => {
                         </div>
                         <div className="space-y-1">
                             <label className="text-[10px] font-black text-gray-400 uppercase">Chức vụ</label>
-                            <input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm focus:border-primary transition" value={formData.position} onChange={(e) => setFormData({...formData, position: e.target.value})} />
+                            <input 
+                                type="text" 
+                                list="position-list"
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm focus:border-primary transition" 
+                                value={formData.position} 
+                                onChange={(e) => setFormData({...formData, position: e.target.value})} 
+                                placeholder="Chọn hoặc nhập..."
+                            />
+                            <datalist id="position-list">
+                                <option value="Tổng giám đốc" />
+                                <option value="Giám Đốc" />
+                                <option value="Phó Giám Đốc" />
+                            </datalist>
                         </div>
                         
                         <div className="h-px bg-gray-100 my-2"></div>
