@@ -28,6 +28,7 @@ const FinanceAdjust: React.FC = () => {
   const [foundAdjustments, setFoundAdjustments] = useState<typeof MOCK_ADJUSTMENTS>([]);
   const [signType, setSignType] = useState<'digital' | 'wet'>('digital'); // Trạng thái hình thức ký
   const [isSigning, setIsSigning] = useState(false); // Trạng thái đang ký (loading)
+  const [generatedReportNo, setGeneratedReportNo] = useState(''); // Store report number to prevent re-render flickering
   
   const [formData, setFormData] = useState<AdjustFormData>({
       companyB: '',
@@ -56,6 +57,10 @@ const FinanceAdjust: React.FC = () => {
   };
 
   const handleCreate = () => {
+      // Generate unique report number for this session: BBDC00001/2026 format
+      const randomNum = Math.floor(Math.random() * 100000); // 0 to 99999
+      const reportId = `BBDC${randomNum.toString().padStart(5, '0')}/2026`;
+      setGeneratedReportNo(reportId);
       setStatus('create');
   };
 
@@ -147,7 +152,7 @@ const FinanceAdjust: React.FC = () => {
                         {/* Header Title */}
                         <div className="text-center mb-6">
                             <h1 className="text-[18px] font-bold uppercase mb-2">BIÊN BẢN ĐIỀU CHỈNH HÓA ĐƠN</h1>
-                            <p className="text-[14px] italic border-b border-dotted border-gray-400 inline-block px-12">Số biên bản: BBDC{new Date().getFullYear().toString().slice(-2)}{Math.floor(Math.random() * 1000).toString().padStart(3, '0')}</p>
+                            <p className="text-[14px] italic border-b border-dotted border-gray-400 inline-block px-12">Số biên bản: {generatedReportNo}</p>
                         </div>
 
                         {/* Legal Bases - Italic */}
