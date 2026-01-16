@@ -213,7 +213,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <table className="w-full text-left">
                     <thead className="text-[10px] font-bold text-gray-400 uppercase bg-gray-50/50 border-b border-gray-100">
-                        <tr><th className="px-6 py-4">Số BL / Số BB</th><th className="px-6 py-4">Ngày lập</th><th className="px-6 py-4">Trạng thái</th><th className="px-6 py-4 text-right">Thao tác</th></tr>
+                        <tr><th className="px-6 py-4">Số Biên Bản</th><th className="px-6 py-4">Ngày lập</th><th className="px-6 py-4">Trạng thái</th><th className="px-6 py-4 text-right">Thao tác</th></tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                         {filteredAdjust.map(item => (
