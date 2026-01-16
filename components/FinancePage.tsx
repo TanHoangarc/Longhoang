@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { X, RefreshCw, CreditCard, ClipboardEdit, FileSignature, ArrowRight, Phone, Landmark } from 'lucide-react';
-import { GUQRecord, UserAccount } from '../App';
+import { GUQRecord, UserAccount, AdjustmentRecord } from '../App';
 import FinanceGuq from './finance/FinanceGuq';
 import FinanceCvhc from './finance/FinanceCvhc';
 import FinanceCvht from './finance/FinanceCvht';
@@ -12,11 +12,13 @@ interface FinancePageProps {
   guqRecords: GUQRecord[];
   onUpdateGuq: (records: GUQRecord[]) => void;
   currentUser: UserAccount | null;
+  adjustments?: AdjustmentRecord[];
+  onAddAdjustment?: (record: AdjustmentRecord) => void;
 }
 
 type ModalType = 'GUQ' | 'CVHC' | 'CVHT' | 'ADJUST' | null;
 
-const FinancePage: React.FC<FinancePageProps> = ({ onClose, guqRecords, onUpdateGuq, currentUser }) => {
+const FinancePage: React.FC<FinancePageProps> = ({ onClose, guqRecords, onUpdateGuq, currentUser, adjustments, onAddAdjustment }) => {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
 
   const renderModal = () => {
@@ -54,7 +56,7 @@ const FinancePage: React.FC<FinancePageProps> = ({ onClose, guqRecords, onUpdate
             {activeModal === 'GUQ' && <FinanceGuq guqRecords={guqRecords} onUpdateGuq={onUpdateGuq} currentUser={currentUser} />}
             {activeModal === 'CVHC' && <FinanceCvhc />}
             {activeModal === 'CVHT' && <FinanceCvht />}
-            {activeModal === 'ADJUST' && <FinanceAdjust />}
+            {activeModal === 'ADJUST' && <FinanceAdjust adjustments={adjustments || []} onAddAdjustment={onAddAdjustment} />}
           </div>
         </div>
       </div>

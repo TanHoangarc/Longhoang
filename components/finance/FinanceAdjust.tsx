@@ -1,12 +1,7 @@
 
 import React, { useState } from 'react';
 import { Search, Printer, Download, Save, X, PenTool, Eye, RefreshCcw, CheckSquare, Square, Stamp, FileSignature } from 'lucide-react';
-
-const MOCK_ADJUSTMENTS = [
-  { id: 1, bl: 'LH-BL-5521', date: '12/05/2024', status: 'Signed', fileName: 'BB_Adjust_5521_Signed.pdf' },
-  { id: 2, bl: 'LH-BL-6632', date: '11/05/2024', status: 'Unsigned', fileName: 'BB_Adjust_6632.pdf' },
-  { id: 3, bl: 'LH-BL-7711', date: '09/05/2024', status: 'Signed', fileName: 'BB_Adjust_7711_Signed.pdf' },
-];
+import { AdjustmentRecord } from '../../App';
 
 interface AdjustFormData {
     companyB: string;
@@ -22,10 +17,15 @@ interface AdjustFormData {
     symbol?: string;
 }
 
-const FinanceAdjust: React.FC = () => {
+interface FinanceAdjustProps {
+    adjustments?: AdjustmentRecord[];
+    onAddAdjustment?: (record: AdjustmentRecord) => void;
+}
+
+const FinanceAdjust: React.FC<FinanceAdjustProps> = ({ adjustments = [], onAddAdjustment }) => {
   const [blSearch, setBlSearch] = useState('');
   const [status, setStatus] = useState<'idle' | 'found' | 'not_found' | 'create'>('idle');
-  const [foundAdjustments, setFoundAdjustments] = useState<typeof MOCK_ADJUSTMENTS>([]);
+  const [foundAdjustments, setFoundAdjustments] = useState<AdjustmentRecord[]>([]);
   const [signType, setSignType] = useState<'digital' | 'wet'>('digital'); // Trạng thái hình thức ký
   const [isSigning, setIsSigning] = useState(false); // Trạng thái đang ký (loading)
   const [generatedReportNo, setGeneratedReportNo] = useState(''); // Store report number to prevent re-render flickering
@@ -48,7 +48,7 @@ const FinanceAdjust: React.FC = () => {
       e.preventDefault();
       if (!blSearch.trim()) return;
       
-      const results = MOCK_ADJUSTMENTS.filter(a => a.bl.toLowerCase().includes(blSearch.toLowerCase()));
+      const results = adjustments.filter(a => a.bl.toLowerCase().includes(blSearch.toLowerCase()));
       if (results.length > 0) {
           setFoundAdjustments(results);
           setStatus('found');
@@ -80,6 +80,21 @@ const FinanceAdjust: React.FC = () => {
           setIsSigning(false);
           alert('Hệ thống đang mở Plugin ký số (USB Token)...\nVui lòng chọn chứng thư số để ký.');
       }, 1500);
+  };
+
+  const handleSaveAndPrint = () => {
+      if (onAddAdjustment) {
+          const newRecord: AdjustmentRecord = {
+              id: Date.now(),
+              bl: formData.invoiceNo || generatedReportNo,
+              date: new Date().toLocaleDateString('en-GB'),
+              status: signType === 'digital' ? 'Signed' : 'Unsigned',
+              fileName: `BB_Adjust_${generatedReportNo.replace(/\//g, '-')}.pdf`
+          };
+          onAddAdjustment(newRecord);
+          alert('Biên bản đã được lưu vào hệ thống quản lý.');
+      }
+      window.print();
   };
 
   return (
@@ -251,7 +266,7 @@ const FinanceAdjust: React.FC = () => {
                         {/* Reason Box */}
                         <div className="flex mb-4 text-[13px]">
                             <span className="font-bold w-[120px] shrink-0 pt-2">Lý do điều chỉnh:</span>
-                            <div className="border border-gray-300 w-full h-[60px] p-2">
+                            <div className="w-full h-[60px] p-2">
                                 {formData.reason}
                             </div>
                         </div>
@@ -393,7 +408,7 @@ const FinanceAdjust: React.FC = () => {
                         </div>
                     </div>
                     <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-                        <button onClick={() => window.print()} className="w-full bg-primary hover:bg-primaryDark text-white py-3 rounded-lg font-bold shadow-lg transition-all uppercase tracking-wider flex items-center justify-center">
+                        <button onClick={handleSaveAndPrint} className="w-full bg-primary hover:bg-primaryDark text-white py-3 rounded-lg font-bold shadow-lg transition-all uppercase tracking-wider flex items-center justify-center">
                             <Printer size={18} className="mr-2" /> Lưu & In Biên Bản
                         </button>
                     </div>

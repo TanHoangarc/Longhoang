@@ -186,6 +186,15 @@ export interface Milestone {
   desc: string;
 }
 
+// Interface for Adjustment Record (Biên bản)
+export interface AdjustmentRecord {
+  id: number;
+  bl: string;
+  date: string;
+  status: 'Signed' | 'Unsigned';
+  fileName: string;
+}
+
 // Default data in case server is offline
 const INITIAL_USERS: UserAccount[] = [
   { id: 1, name: 'Nguyễn Văn A', englishName: 'Mr. A', role: 'Sales', email: 'sales1@longhoanglogistics.com', password: '123', status: 'Active', failedAttempts: 0, department: 'Sales', position: 'Nhân viên kinh doanh' },
@@ -303,6 +312,12 @@ const INITIAL_MILESTONES: Milestone[] = [
   }
 ];
 
+const INITIAL_ADJUSTMENTS: AdjustmentRecord[] = [
+  { id: 1, bl: 'LH-BL-5521', date: '12/05/2024', status: 'Signed', fileName: 'BB_Adjust_5521_Signed.pdf' },
+  { id: 2, bl: 'LH-BL-6632', date: '11/05/2024', status: 'Unsigned', fileName: 'BB_Adjust_6632.pdf' },
+  { id: 3, bl: 'LH-BL-7711', date: '09/05/2024', status: 'Signed', fileName: 'BB_Adjust_7711_Signed.pdf' },
+];
+
 function App() {
   const [activePage, setActivePage] = useState<'finance' | 'company' | 'management' | 'settings' | 'account' | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
@@ -367,6 +382,7 @@ function App() {
   ]);
   const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbum[]>(INITIAL_GALLERY);
   const [milestones, setMilestones] = useState<Milestone[]>(INITIAL_MILESTONES);
+  const [adjustments, setAdjustments] = useState<AdjustmentRecord[]>(INITIAL_ADJUSTMENTS);
   
   // Server connection status
   const [isServerOnline, setIsServerOnline] = useState(true);
@@ -404,6 +420,7 @@ function App() {
       library,
       galleryAlbums,
       milestones,
+      adjustments,
       ...overrides
     };
   };
@@ -430,6 +447,7 @@ function App() {
           if (db.library && db.library.length > 0) setLibrary(db.library);
           if (db.galleryAlbums && db.galleryAlbums.length > 0) setGalleryAlbums(db.galleryAlbums);
           if (db.milestones && db.milestones.length > 0) setMilestones(db.milestones);
+          if (db.adjustments && db.adjustments.length > 0) setAdjustments(db.adjustments);
           setIsServerOnline(true);
         } else {
             console.warn("Server responded but with error. Using local defaults.");
@@ -523,6 +541,12 @@ function App() {
     syncToServer(getFullState({ milestones: newMilestones }));
   };
 
+  const handleAddAdjustment = (record: AdjustmentRecord) => {
+    const newAdjustments = [record, ...adjustments];
+    setAdjustments(newAdjustments);
+    syncToServer(getFullState({ adjustments: newAdjustments }));
+  };
+
   // --- AUTHENTICATION ---
   const handleLogin = (role: UserRole, user?: UserAccount, remember: boolean = false) => {
     setUserRole(role);
@@ -611,6 +635,8 @@ function App() {
                 guqRecords={guqRecords}
                 onUpdateGuq={handleUpdateGuq}
                 currentUser={currentUser}
+                adjustments={adjustments}
+                onAddAdjustment={handleAddAdjustment}
             />
         );
       case 'company':
@@ -656,6 +682,7 @@ function App() {
             guqRecords={guqRecords}
             userFiles={userFiles}
             onUpdateUserFiles={handleUpdateUserFiles}
+            adjustments={adjustments}
           />
         );
       case 'settings':

@@ -5,7 +5,7 @@ import {
   ArrowLeft, Eye, ShieldCheck, Filter, ChevronRight, Package, 
   Ship, Truck, BarChart2, Briefcase, FileOutput, FolderOpen, Calendar, Trash2
 } from 'lucide-react';
-import { UserRole, UserAccount, GUQRecord, UserFileRecord } from '../App';
+import { UserRole, UserAccount, GUQRecord, UserFileRecord, AdjustmentRecord } from '../App';
 import { API_BASE_URL } from '../constants';
 
 interface ManagementPageProps {
@@ -15,11 +15,12 @@ interface ManagementPageProps {
   guqRecords: GUQRecord[]; // Receive real records
   userFiles: UserFileRecord[]; // Receive real user files
   onUpdateUserFiles: (files: UserFileRecord[]) => void;
+  adjustments: AdjustmentRecord[]; // Receive real adjustments
 }
 
 type ManagementSection = 'GUQ' | 'CVHC' | 'CVHT' | 'ADJUST' | 'EMPLOYEES';
 
-// Mock Data for other sections (CVHC, CVHT, Adjustments) preserved
+// Mock Data for other sections (CVHC, CVHT) preserved
 const MOCK_CVHC = [
   { id: 1, company: 'Công ty Samsung Vina', bl: 'LH-HBL-20240987', date: '11/05/2024', fileCvhc: 'CVHC_Samsung.pdf', fileEir: 'EIR_Samsung_01.jpg' },
   { id: 2, company: 'VinFast Hải Phòng', bl: 'LH-HBL-20241022', date: '09/05/2024', fileCvhc: 'CVHC_Vinfast.pdf', fileEir: 'EIR_Vinfast_VF8.pdf' },
@@ -28,12 +29,6 @@ const MOCK_CVHC = [
 const MOCK_CVHT = [
   { id: 1, company: 'Dệt may Thắng Lợi', bl: 'LH-HBL-99283', amount: '2,500,000', date: '14/05/2024', fileName: 'CVHT_ThangLoi.pdf' },
   { id: 2, company: 'Thực phẩm An Gia', bl: 'LH-HBL-88172', amount: '1,200,000', date: '13/05/2024', fileName: 'CVHT_AnGia.pdf' },
-];
-
-const MOCK_ADJUSTMENTS = [
-  { id: 1, bl: 'LH-BL-5521', date: '12/05/2024', status: 'Signed', fileName: 'BB_Adjust_5521_Signed.pdf' },
-  { id: 2, bl: 'LH-BL-6632', date: '11/05/2024', status: 'Unsigned', fileName: 'BB_Adjust_6632.pdf' },
-  { id: 3, bl: 'LH-BL-7711', date: '09/05/2024', status: 'Signed', fileName: 'BB_Adjust_7711_Signed.pdf' },
 ];
 
 // Helper to generate mock details for any user (Shipments only now)
@@ -47,7 +42,7 @@ const getMockEmployeeDetails = (user: UserAccount) => {
   };
 };
 
-const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, users, guqRecords, userFiles, onUpdateUserFiles }) => {
+const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, users, guqRecords, userFiles, onUpdateUserFiles, adjustments }) => {
   const [activeSection, setActiveSection] = useState<ManagementSection>('EMPLOYEES');
   const [adjustFilter, setAdjustFilter] = useState<'All' | 'Signed' | 'Unsigned'>('All');
   const [selectedEmployee, setSelectedEmployee] = useState<ReturnType<typeof getMockEmployeeDetails> | null>(null);
@@ -205,7 +200,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
           </div>
         );
       case 'ADJUST':
-        const filteredAdjust = MOCK_ADJUSTMENTS.filter(a => adjustFilter === 'All' || a.status === adjustFilter);
+        const filteredAdjust = adjustments.filter(a => adjustFilter === 'All' || a.status === adjustFilter);
         return (
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="flex bg-gray-100 p-1 rounded-lg w-fit">
@@ -218,7 +213,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <table className="w-full text-left">
                     <thead className="text-[10px] font-bold text-gray-400 uppercase bg-gray-50/50 border-b border-gray-100">
-                        <tr><th className="px-6 py-4">Số BL</th><th className="px-6 py-4">Ngày lập</th><th className="px-6 py-4">Trạng thái</th><th className="px-6 py-4 text-right">Thao tác</th></tr>
+                        <tr><th className="px-6 py-4">Số BL / Số BB</th><th className="px-6 py-4">Ngày lập</th><th className="px-6 py-4">Trạng thái</th><th className="px-6 py-4 text-right">Thao tác</th></tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                         {filteredAdjust.map(item => (
@@ -240,6 +235,9 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                                 </td>
                             </tr>
                         ))}
+                        {filteredAdjust.length === 0 && (
+                            <tr><td colSpan={4} className="text-center py-8 text-gray-400 italic">Chưa có biên bản nào.</td></tr>
+                        )}
                     </tbody>
                 </table>
             </div>
