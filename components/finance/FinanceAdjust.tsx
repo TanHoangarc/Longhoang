@@ -86,7 +86,7 @@ const FinanceAdjust: React.FC<FinanceAdjustProps> = ({ adjustments = [], onAddAd
       if (onAddAdjustment) {
           const newRecord: AdjustmentRecord = {
               id: Date.now(),
-              bl: generatedReportNo, // Use generatedReportNo as the identifier
+              bl: formData.invoiceNo || generatedReportNo,
               date: new Date().toLocaleDateString('en-GB'),
               status: signType === 'digital' ? 'Signed' : 'Unsigned',
               fileName: `BB_Adjust_${generatedReportNo.replace(/\//g, '-')}.pdf`
@@ -97,15 +97,6 @@ const FinanceAdjust: React.FC<FinanceAdjustProps> = ({ adjustments = [], onAddAd
       window.print();
   };
 
-  const formatPreviewDate = (dateStr: string) => {
-      if (!dateStr) return '.../.../......';
-      const parts = dateStr.split('-'); // Expects YYYY-MM-DD
-      if (parts.length === 3) {
-          return `${parts[2]}/${parts[1]}/${parts[0]}`;
-      }
-      return dateStr;
-  };
-
   return (
     <div className="space-y-6 h-full flex flex-col">
         {status !== 'create' && (
@@ -114,7 +105,7 @@ const FinanceAdjust: React.FC<FinanceAdjustProps> = ({ adjustments = [], onAddAd
                     <input 
                         type="text" 
                         className="w-full pl-4 pr-32 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-primary transition" 
-                        placeholder="Nhập số biên bản..." 
+                        placeholder="Nhập số BL..." 
                         value={blSearch} 
                         onChange={(e) => { setBlSearch(e.target.value); setStatus('idle'); }} 
                     />
@@ -125,7 +116,7 @@ const FinanceAdjust: React.FC<FinanceAdjustProps> = ({ adjustments = [], onAddAd
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                         <table className="w-full text-left">
                             <thead className="text-[10px] font-bold text-gray-400 uppercase bg-gray-50/50 border-b border-gray-100">
-                                <tr><th className="px-6 py-4">Số Biên Bản</th><th className="px-6 py-4">Ngày lập</th><th className="px-6 py-4">Trạng thái</th><th className="px-6 py-4 text-right">Thao tác</th></tr>
+                                <tr><th className="px-6 py-4">Số BL</th><th className="px-6 py-4">Ngày lập</th><th className="px-6 py-4">Trạng thái</th><th className="px-6 py-4 text-right">Thao tác</th></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
                                 {foundAdjustments.map(item => (
@@ -154,7 +145,7 @@ const FinanceAdjust: React.FC<FinanceAdjustProps> = ({ adjustments = [], onAddAd
 
                 {status === 'not_found' && (
                     <div className="flex flex-col items-center justify-center py-10 bg-gray-50 rounded-2xl border border-gray-100">
-                        <p className="text-gray-500 font-bold mb-4">Không tìm thấy biên bản nào.</p>
+                        <p className="text-gray-500 font-bold mb-4">Không tìm thấy biên bản nào cho số BL này.</p>
                         <button 
                             onClick={handleCreate}
                             className="px-6 py-3 bg-primary text-white rounded-xl font-bold shadow-lg hover:bg-primaryDark transition flex items-center"
@@ -269,7 +260,7 @@ const FinanceAdjust: React.FC<FinanceAdjustProps> = ({ adjustments = [], onAddAd
                             <span className="mx-1">số</span>
                             <span className="font-bold text-blue-600 mr-2">{formData.invoiceNo || '00000000'}</span>, 
                             <span className="mx-1">ngày</span>
-                            <span className="font-bold">{formatPreviewDate(formData.invoiceDate)}</span>
+                            <span className="font-bold">{formData.invoiceDate ? new Date(formData.invoiceDate).toLocaleDateString('en-GB') : '.../.../......'}</span>
                         </div>
 
                         {/* Reason Box */}
