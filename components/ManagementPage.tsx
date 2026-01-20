@@ -3,10 +3,10 @@ import React, { useState } from 'react';
 import { 
   X, FileText, Search, Download, Users, FileCheck, CreditCard, 
   ArrowLeft, Eye, ShieldCheck, Filter, ChevronRight, Package, 
-  Ship, Truck, BarChart2, Briefcase, FileOutput, FolderOpen, Calendar, Trash2
+  Ship, Truck, BarChart2, Briefcase, FileOutput, FolderOpen, Calendar, Trash2, Upload
 } from 'lucide-react';
 // Use type import to avoid circular dependency
-import type { UserRole, UserAccount, GUQRecord, UserFileRecord, AdjustmentRecord } from '../App';
+import type { UserRole, UserAccount, GUQRecord, UserFileRecord, AdjustmentRecord, CVHCRecord, CVHTRecord } from '../App';
 import { API_BASE_URL } from '../constants';
 
 interface ManagementPageProps {
@@ -14,6 +14,11 @@ interface ManagementPageProps {
   userRole: UserRole;
   users: UserAccount[];
   guqRecords: GUQRecord[]; // Receive real records
+  onUpdateGuq: (records: GUQRecord[]) => void;
+  cvhcRecords: CVHCRecord[];
+  onUpdateCvhc: (records: CVHCRecord[]) => void;
+  cvhtRecords: CVHTRecord[];
+  onUpdateCvht: (records: CVHTRecord[]) => void;
   userFiles: UserFileRecord[]; // Receive real user files
   onUpdateUserFiles: (files: UserFileRecord[]) => void;
   adjustments: AdjustmentRecord[]; // Receive real adjustments
@@ -21,17 +26,6 @@ interface ManagementPageProps {
 }
 
 type ManagementSection = 'GUQ' | 'CVHC' | 'CVHT' | 'ADJUST' | 'EMPLOYEES';
-
-// Mock Data for other sections (CVHC, CVHT) preserved
-const MOCK_CVHC = [
-  { id: 1, company: 'Công ty Samsung Vina', bl: 'LH-HBL-20240987', date: '11/05/2024', fileCvhc: 'CVHC_Samsung.pdf', fileEir: 'EIR_Samsung_01.jpg' },
-  { id: 2, company: 'VinFast Hải Phòng', bl: 'LH-HBL-20241022', date: '09/05/2024', fileCvhc: 'CVHC_Vinfast.pdf', fileEir: 'EIR_Vinfast_VF8.pdf' },
-];
-
-const MOCK_CVHT = [
-  { id: 1, company: 'Dệt may Thắng Lợi', bl: 'LH-HBL-99283', amount: '2,500,000', date: '14/05/2024', fileName: 'CVHT_ThangLoi.pdf' },
-  { id: 2, company: 'Thực phẩm An Gia', bl: 'LH-HBL-88172', amount: '1,200,000', date: '13/05/2024', fileName: 'CVHT_AnGia.pdf' },
-];
 
 // Helper to generate mock details for any user (Shipments only now)
 const getMockEmployeeDetails = (user: UserAccount) => {
@@ -44,7 +38,11 @@ const getMockEmployeeDetails = (user: UserAccount) => {
   };
 };
 
-const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, users, guqRecords, userFiles, onUpdateUserFiles, adjustments, onUpdateAdjustments }) => {
+const ManagementPage: React.FC<ManagementPageProps> = ({ 
+  onClose, userRole, users, guqRecords, onUpdateGuq, 
+  cvhcRecords, onUpdateCvhc, cvhtRecords, onUpdateCvht,
+  userFiles, onUpdateUserFiles, adjustments, onUpdateAdjustments 
+}) => {
   const [activeSection, setActiveSection] = useState<ManagementSection>('EMPLOYEES');
   const [adjustFilter, setAdjustFilter] = useState<'All' | 'Signed' | 'Unsigned'>('All');
   const [selectedEmployee, setSelectedEmployee] = useState<ReturnType<typeof getMockEmployeeDetails> | null>(null);
@@ -92,15 +90,54 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
   };
 
   // --- DOWNLOAD HANDLER ---
-  const handleDownload = (fileName: string, category: string) => {
-      const url = `${API_BASE_URL}/files/${category}/${fileName}`;
+  const handleDownload = (fileData: string | { fileName: string, path?: string }, defaultCategory: string = 'UPLOADS') => {
+      let url = '';
+      let fileName = '';
+
+      if (typeof fileData === 'string') {
+          fileName = fileData;
+          url = `${API_BASE_URL}/files/${defaultCategory}/${fileData}`;
+      } else {
+          fileName = fileData.fileName;
+          if (fileData.path) {
+               url = `${API_BASE_URL}/files/${fileData.path}`;
+          } else {
+               url = `${API_BASE_URL}/files/${defaultCategory}/${fileData.fileName}`;
+          }
+      }
+
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', fileName);
-      link.setAttribute('target', '_blank'); // Open in new tab if browser prefers or direct download fails
+      link.setAttribute('target', '_blank'); 
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+  };
+
+  // --- DELETE HANDLERS ---
+  const handleDeleteGuq = (id: number) => {
+      if (confirm('Bạn có chắc chắn muốn xóa Giấy ủy quyền này?')) {
+          onUpdateGuq(guqRecords.filter(r => r.id !== id));
+      }
+  };
+
+  const handleDeleteCvhc = (id: number) => {
+      if (confirm('Bạn có chắc chắn muốn xóa hồ sơ Hoàn cược này?')) {
+          onUpdateCvhc(cvhcRecords.filter(item => item.id !== id));
+      }
+  };
+
+  const handleDeleteCvht = (id: number) => {
+      if (confirm('Bạn có chắc chắn muốn xóa hồ sơ Hoàn tiền này?')) {
+          onUpdateCvht(cvhtRecords.filter(item => item.id !== id));
+      }
+  };
+
+  const handleDeleteAdjustment = (id: number) => {
+      if (confirm('Bạn có chắc chắn muốn xóa biên bản này? Hành động này không thể hoàn tác.')) {
+          onUpdateAdjustments(adjustments.filter(a => a.id !== id));
+      }
   };
 
   const handleDeleteFile = (id: number) => {
@@ -109,9 +146,35 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
       }
   };
 
-  const handleDeleteAdjustment = (id: number) => {
-      if (confirm('Bạn có chắc chắn muốn xóa biên bản này? Hành động này không thể hoàn tác.')) {
-          onUpdateAdjustments(adjustments.filter(a => a.id !== id));
+  // --- UPLOAD HANDLER FOR UNC (PROOF OF PAYMENT) ---
+  const handleUploadUNC = async (file: File, recordId: number, type: 'CVHC' | 'CVHT') => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      try {
+          // Use 'CVHC' category for both, or separate if needed. Keeping simple.
+          const category = type === 'CVHC' ? 'CVHC' : 'CVHT';
+          const res = await fetch(`${API_BASE_URL}/api/upload?category=${category}`, {
+              method: 'POST',
+              body: formData
+          });
+
+          if (res.ok) {
+              const data = await res.json();
+              const fileName = data.record.fileName;
+
+              if (type === 'CVHC') {
+                  onUpdateCvhc(cvhcRecords.map(r => r.id === recordId ? { ...r, status: 'Completed', uncFile: fileName } : r));
+              } else {
+                  onUpdateCvht(cvhtRecords.map(r => r.id === recordId ? { ...r, status: 'Completed', uncFile: fileName } : r));
+              }
+              alert('Đã tải lên UNC và cập nhật trạng thái thành công!');
+          } else {
+              alert('Lỗi tải file.');
+          }
+      } catch (e) {
+          console.error(e);
+          alert('Lỗi kết nối server.');
       }
   };
 
@@ -151,9 +214,19 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                             </span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                            <button onClick={() => handlePreview(item, 'GUQ')} className="p-2 text-gray-400 hover:text-primary transition" title="Xem trước">
-                                <Eye size={18} />
-                            </button>
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => handlePreview(item, 'GUQ')} className="p-2 text-gray-400 hover:text-primary transition" title="Xem">
+                                    <Eye size={18} />
+                                </button>
+                                <button onClick={() => handleDownload(item, 'GUQ')} className="p-2 text-gray-400 hover:text-blue-500 transition" title="Tải xuống">
+                                    <Download size={18} />
+                                </button>
+                                {userRole === 'admin' && (
+                                    <button onClick={() => handleDeleteGuq(item.id)} className="p-2 text-gray-400 hover:text-red-500 transition" title="Xóa">
+                                        <Trash2 size={18} />
+                                    </button>
+                                )}
+                            </div>
                         </td>
                     </tr>
                     ))}
@@ -171,24 +244,81 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
             <div className="p-6 border-b border-gray-50 bg-gray-50/50"><h3 className="font-bold text-gray-800 flex items-center"><FileCheck className="mr-2 text-green-500" size={20} /> Công văn Hoàn cược</h3></div>
             <table className="w-full text-left">
               <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white border-b border-gray-100">
-                <tr><th className="px-6 py-4">Tên công ty</th><th className="px-6 py-4">Số Bill (BL)</th><th className="px-6 py-4">Hồ sơ</th><th className="px-6 py-4 text-right">Thao tác</th></tr>
+                <tr>
+                    <th className="px-6 py-4">Tên công ty</th>
+                    <th className="px-6 py-4">Số Bill (BL)</th>
+                    <th className="px-6 py-4">Hồ sơ gốc</th>
+                    <th className="px-6 py-4">Tình trạng</th>
+                    <th className="px-6 py-4 text-right">Thao tác</th>
+                </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {MOCK_CVHC.map(item => (
+                {cvhcRecords.map(item => (
                   <tr key={item.id} className="hover:bg-gray-50/50 transition">
-                    <td className="px-6 py-4 font-bold text-gray-800">{item.company}</td>
+                    <td className="px-6 py-4 font-bold text-gray-800">{item.companyName}</td>
                     <td className="px-6 py-4 font-mono text-xs font-bold text-gray-500">{item.bl}</td>
                     <td className="px-6 py-4 space-y-1">
-                      <div onClick={() => handlePreview(item.fileCvhc, 'CVHC')} className="text-[10px] font-bold text-blue-500 flex items-center cursor-pointer hover:underline"><FileText size={12} className="mr-1" /> {item.fileCvhc}</div>
-                      <div onClick={() => handlePreview(item.fileEir, 'CVHC')} className="text-[10px] font-bold text-orange-500 flex items-center cursor-pointer hover:underline"><Package size={12} className="mr-1" /> {item.fileEir}</div>
+                      <div className="text-[10px] font-bold text-blue-500 flex items-center cursor-pointer hover:underline" onClick={() => handlePreview(item.fileCvhc, 'CVHC')}>
+                          <FileText size={12} className="mr-1" /> {item.fileCvhc}
+                      </div>
+                      {item.fileEir && (
+                          <div className="text-[10px] font-bold text-orange-500 flex items-center cursor-pointer hover:underline" onClick={() => handlePreview(item.fileEir!, 'CVHC')}>
+                              <Package size={12} className="mr-1" /> {item.fileEir}
+                          </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                        {item.status === 'Completed' ? (
+                            <div className="flex flex-col">
+                                <span className="inline-flex items-center text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded w-fit mb-1">
+                                    <FileCheck size={12} className="mr-1" /> Đã hoàn
+                                </span>
+                                {item.uncFile && (
+                                    <span 
+                                        className="text-[10px] text-blue-500 underline cursor-pointer hover:text-blue-700"
+                                        onClick={() => handlePreview(item.uncFile!, 'CVHC')}
+                                    >
+                                        Xem UNC
+                                    </span>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex items-center space-x-2">
+                                <span className="inline-flex items-center text-xs font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded">
+                                    Chưa hoàn
+                                </span>
+                                <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded shadow transition" title="Xác nhận hoàn & Tải UNC">
+                                    <Upload size={14} />
+                                    <input 
+                                        type="file" 
+                                        className="hidden" 
+                                        onChange={(e) => {
+                                            if (e.target.files?.[0]) handleUploadUNC(e.target.files[0], item.id, 'CVHC');
+                                        }}
+                                    />
+                                </label>
+                            </div>
+                        )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                        <button onClick={() => handleDownload(item.fileCvhc, 'CVHC')} className="p-2 text-gray-400 hover:text-primary transition" title="Tải xuống">
-                            <Download size={18} />
-                        </button>
+                        <div className="flex justify-end gap-2">
+                            {item.status === 'Completed' && item.uncFile && (
+                                <button onClick={() => handleDownload(item.uncFile!, 'CVHC')} className="p-2 text-green-600 hover:bg-green-50 rounded transition" title="Tải UNC">
+                                    <Download size={18} />
+                                </button>
+                            )}
+                            {userRole === 'admin' && (
+                                <button onClick={() => handleDeleteCvhc(item.id)} className="p-2 text-gray-400 hover:text-red-500 transition" title="Xóa">
+                                    <Trash2 size={18} />
+                                </button>
+                            )}
+                        </div>
                     </td>
                   </tr>
                 ))}
+                {cvhcRecords.length === 0 && (
+                    <tr><td colSpan={5} className="text-center py-8 text-gray-400 italic">Chưa có dữ liệu</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -199,22 +329,75 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
             <div className="p-6 border-b border-gray-50 bg-gray-50/50"><h3 className="font-bold text-gray-800 flex items-center"><CreditCard className="mr-2 text-blue-500" size={20} /> Công văn Hoàn tiền</h3></div>
             <table className="w-full text-left">
               <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white border-b border-gray-100">
-                <tr><th className="px-6 py-4">Tên công ty</th><th className="px-6 py-4">Số Bill (BL)</th><th className="px-6 py-4">Số tiền</th><th className="px-6 py-4">Ngày</th><th className="px-6 py-4 text-right">Thao tác</th></tr>
+                <tr>
+                    <th className="px-6 py-4">Tên công ty</th>
+                    <th className="px-6 py-4">Số Bill (BL)</th>
+                    <th className="px-6 py-4">Số tiền</th>
+                    <th className="px-6 py-4">Tình trạng</th>
+                    <th className="px-6 py-4 text-right">Thao tác</th>
+                </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {MOCK_CVHT.map(item => (
+                {cvhtRecords.map(item => (
                   <tr key={item.id} className="hover:bg-gray-50/50 transition">
-                    <td className="px-6 py-4 font-bold text-gray-800">{item.company}</td>
+                    <td className="px-6 py-4 font-bold text-gray-800">{item.companyName}</td>
                     <td className="px-6 py-4 font-mono text-xs">{item.bl}</td>
                     <td className="px-6 py-4 font-black text-primary">{item.amount} VNĐ</td>
-                    <td className="px-6 py-4 text-gray-500 text-sm">{item.date}</td>
+                    <td className="px-6 py-4">
+                        {item.status === 'Completed' ? (
+                            <div className="flex flex-col">
+                                <span className="inline-flex items-center text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded w-fit mb-1">
+                                    <FileCheck size={12} className="mr-1" /> Đã hoàn
+                                </span>
+                                {item.uncFile && (
+                                    <span 
+                                        className="text-[10px] text-blue-500 underline cursor-pointer hover:text-blue-700"
+                                        onClick={() => handlePreview(item.uncFile!, 'CVHT')}
+                                    >
+                                        Xem UNC
+                                    </span>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex items-center space-x-2">
+                                <span className="inline-flex items-center text-xs font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded">
+                                    Chưa hoàn
+                                </span>
+                                <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded shadow transition" title="Xác nhận hoàn & Tải UNC">
+                                    <Upload size={14} />
+                                    <input 
+                                        type="file" 
+                                        className="hidden" 
+                                        onChange={(e) => {
+                                            if (e.target.files?.[0]) handleUploadUNC(e.target.files[0], item.id, 'CVHT');
+                                        }}
+                                    />
+                                </label>
+                            </div>
+                        )}
+                    </td>
                     <td className="px-6 py-4 text-right">
-                        <button onClick={() => handlePreview(item.fileName, 'CVHT')} className="bg-gray-100 p-2 rounded hover:bg-primary hover:text-white transition" title="Xem trước">
-                            <Eye size={18} />
-                        </button>
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => handlePreview(item.fileName, 'CVHT')} className="p-2 text-gray-400 hover:text-primary transition" title="Xem CVHT">
+                                <Eye size={18} />
+                            </button>
+                            {item.status === 'Completed' && item.uncFile && (
+                                <button onClick={() => handleDownload(item.uncFile!, 'CVHT')} className="p-2 text-green-600 hover:bg-green-50 rounded transition" title="Tải UNC">
+                                    <Download size={18} />
+                                </button>
+                            )}
+                            {userRole === 'admin' && (
+                                <button onClick={() => handleDeleteCvht(item.id)} className="p-2 text-gray-400 hover:text-red-500 transition" title="Xóa">
+                                    <Trash2 size={18} />
+                                </button>
+                            )}
+                        </div>
                     </td>
                   </tr>
                 ))}
+                {cvhtRecords.length === 0 && (
+                    <tr><td colSpan={5} className="text-center py-8 text-gray-400 italic">Chưa có dữ liệu</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -245,18 +428,20 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                                         {item.status === 'Signed' ? 'Đã ký điện tử' : 'Chưa ký'}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                    <button onClick={() => handlePreview(item.fileName, 'BBDC')} className="text-gray-400 hover:text-primary transition" title="Xem trước">
-                                        <Eye size={18} />
-                                    </button>
-                                    <button onClick={() => handleDownload(item.fileName, 'BBDC')} className="text-gray-400 hover:text-blue-500 transition" title="Tải xuống">
-                                        <Download size={18} />
-                                    </button>
-                                    {userRole === 'admin' && (
-                                      <button onClick={() => handleDeleteAdjustment(item.id)} className="text-gray-400 hover:text-red-500 transition" title="Xóa">
-                                          <Trash2 size={18} />
-                                      </button>
-                                    )}
+                                <td className="px-6 py-4 text-right">
+                                    <div className="flex justify-end gap-2">
+                                        <button onClick={() => handlePreview(item.fileName, 'BBDC')} className="text-gray-400 hover:text-primary transition" title="Xem trước">
+                                            <Eye size={18} />
+                                        </button>
+                                        <button onClick={() => handleDownload(item.fileName, 'BBDC')} className="text-gray-400 hover:text-blue-500 transition" title="Tải xuống">
+                                            <Download size={18} />
+                                        </button>
+                                        {userRole === 'admin' && (
+                                          <button onClick={() => handleDeleteAdjustment(item.id)} className="text-gray-400 hover:text-red-500 transition" title="Xóa">
+                                              <Trash2 size={18} />
+                                          </button>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -389,7 +574,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({ onClose, userRole, user
                                     <tr key={q.id} className="hover:bg-gray-50/30">
                                         <td 
                                             className="px-6 py-4 font-mono text-xs font-bold text-blue-600 flex items-center cursor-pointer hover:underline"
-                                            onClick={() => handlePreview(q.fileName, 'QUOTATION')} // Assuming mock uses default path logic for now if not real upload
+                                            onClick={() => handlePreview(q.fileName, 'QUOTATION')} 
                                         >
                                             <FileText size={14} className="mr-2 text-red-500" />
                                             {q.fileName}

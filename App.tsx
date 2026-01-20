@@ -142,6 +142,30 @@ export interface GUQRecord {
   path?: string; // Relative path on server
 }
 
+// Interface for CVHC Record (Hoàn cược)
+export interface CVHCRecord {
+  id: number;
+  companyName: string;
+  bl: string;
+  date: string;
+  status: 'Pending' | 'Completed'; 
+  fileCvhc: string; 
+  fileEir?: string;
+  uncFile?: string; // Ủy nhiệm chi (Proof of payment)
+}
+
+// Interface for CVHT Record (Hoàn tiền)
+export interface CVHTRecord {
+  id: number;
+  companyName: string;
+  bl: string;
+  amount: string;
+  date: string;
+  fileName: string; // File CVHT
+  status: 'Pending' | 'Completed';
+  uncFile?: string; // Ủy nhiệm chi (Proof of payment)
+}
+
 // Interface for User Files (Quotations, Reports, Leave Forms saved)
 export interface UserFileRecord {
   id: number;
@@ -199,6 +223,16 @@ export interface AdjustmentRecord {
 const INITIAL_USERS: UserAccount[] = [
   { id: 1, name: 'Nguyễn Văn A', englishName: 'Mr. A', role: 'Sales', email: 'sales1@longhoanglogistics.com', password: '123', status: 'Active', failedAttempts: 0, department: 'Sales', position: 'Nhân viên kinh doanh' },
   { id: 7, name: 'Administrator', englishName: 'Admin', role: 'Admin', email: 'admin@longhoanglogistics.com', password: 'admin', status: 'Active', failedAttempts: 0, department: 'Board', position: 'Admin' },
+];
+
+const INITIAL_CVHC: CVHCRecord[] = [
+  { id: 1, companyName: 'Công ty Samsung Vina', bl: 'LH-HBL-20240987', date: '11/05/2024', status: 'Pending', fileCvhc: 'CVHC_Samsung.pdf', fileEir: 'EIR_Samsung_01.jpg' },
+  { id: 2, companyName: 'VinFast Hải Phòng', bl: 'LH-HBL-20241022', date: '09/05/2024', status: 'Completed', fileCvhc: 'CVHC_Vinfast.pdf', fileEir: 'EIR_Vinfast_VF8.pdf', uncFile: 'UNC_VF_Refund.pdf' },
+];
+
+const INITIAL_CVHT: CVHTRecord[] = [
+  { id: 1, companyName: 'Dệt may Thắng Lợi', bl: 'LH-HBL-99283', amount: '2,500,000', date: '14/05/2024', status: 'Completed', fileName: 'CVHT_ThangLoi.pdf', uncFile: 'UNC_ThangLoi.pdf' },
+  { id: 2, companyName: 'Thực phẩm An Gia', bl: 'LH-HBL-88172', amount: '1,200,000', date: '13/05/2024', status: 'Pending', fileName: 'CVHT_AnGia.pdf' },
 ];
 
 const STOCK_IMAGES = [
@@ -329,6 +363,8 @@ function App() {
   const [statements, setStatements] = useState<StatementData[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [guqRecords, setGuqRecords] = useState<GUQRecord[]>([]);
+  const [cvhcRecords, setCvhcRecords] = useState<CVHCRecord[]>(INITIAL_CVHC);
+  const [cvhtRecords, setCvhtRecords] = useState<CVHTRecord[]>(INITIAL_CVHT);
   const [userFiles, setUserFiles] = useState<UserFileRecord[]>([]); // New: Track all user files
   const [carriers, setCarriers] = useState<Carrier[]>([
     {
@@ -412,6 +448,8 @@ function App() {
       statements,
       attendanceRecords,
       guqRecords,
+      cvhcRecords,
+      cvhtRecords,
       userFiles,
       carriers,
       decrees,
@@ -439,6 +477,8 @@ function App() {
           if (db.statements) setStatements(db.statements);
           if (db.attendanceRecords) setAttendanceRecords(db.attendanceRecords);
           if (db.guq) setGuqRecords(db.guq);
+          if (db.cvhcRecords && db.cvhcRecords.length > 0) setCvhcRecords(db.cvhcRecords);
+          if (db.cvhtRecords && db.cvhtRecords.length > 0) setCvhtRecords(db.cvhtRecords);
           if (db.userFiles) setUserFiles(db.userFiles);
           if (db.carriers && db.carriers.length > 0) setCarriers(db.carriers);
           if (db.decrees && db.decrees.length > 0) setDecrees(db.decrees);
@@ -499,6 +539,16 @@ function App() {
   const handleUpdateGuq = (newGuq: GUQRecord[]) => {
     setGuqRecords(newGuq);
     syncToServer(getFullState({ guq: newGuq }));
+  };
+
+  const handleUpdateCvhc = (newRecords: CVHCRecord[]) => {
+    setCvhcRecords(newRecords);
+    syncToServer(getFullState({ cvhcRecords: newRecords }));
+  };
+
+  const handleUpdateCvht = (newRecords: CVHTRecord[]) => {
+    setCvhtRecords(newRecords);
+    syncToServer(getFullState({ cvhtRecords: newRecords }));
   };
 
   const handleUpdateUserFiles = (newFiles: UserFileRecord[]) => {
@@ -639,6 +689,8 @@ function App() {
                 onClose={() => setActivePage(null)} 
                 guqRecords={guqRecords}
                 onUpdateGuq={handleUpdateGuq}
+                cvhcRecords={cvhcRecords}
+                cvhtRecords={cvhtRecords}
                 currentUser={currentUser}
                 adjustments={adjustments}
                 onAddAdjustment={handleAddAdjustment}
@@ -685,6 +737,11 @@ function App() {
             userRole={userRole} 
             users={users} 
             guqRecords={guqRecords}
+            onUpdateGuq={handleUpdateGuq} 
+            cvhcRecords={cvhcRecords}
+            onUpdateCvhc={handleUpdateCvhc}
+            cvhtRecords={cvhtRecords}
+            onUpdateCvht={handleUpdateCvht}
             userFiles={userFiles}
             onUpdateUserFiles={handleUpdateUserFiles}
             adjustments={adjustments}

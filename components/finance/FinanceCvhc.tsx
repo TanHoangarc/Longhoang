@@ -1,13 +1,9 @@
 
-import React, { useState } from 'react';
-import { Search, CheckCircle, RefreshCw, Info, Upload, PenTool, FileCheck, FileText, Printer } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, CheckCircle, RefreshCw, Info, Upload, PenTool, FileCheck, FileText, Printer, AlertTriangle, Download } from 'lucide-react';
 import { docTienBangChu } from './utils';
-
-// Mock database for CVHC
-const MOCK_CVHC_DB = [
-  { id: 1, companyName: 'Công ty Samsung Vina', bl: 'LH-HBL-20240987', date: '11/05/2024', status: 'Pending' },
-  { id: 2, companyName: 'VinFast Hải Phòng', bl: 'LH-HBL-20241022', date: '09/05/2024', status: 'Processing' },
-];
+import { API_BASE_URL } from '../../constants';
+import { CVHCRecord } from '../../App';
 
 type CvhcStatus = 'idle' | 'found' | 'not_found';
 
@@ -23,25 +19,45 @@ interface CvhcCreationData {
   bank: string;
 }
 
-const FinanceCvhc: React.FC = () => {
+interface FinanceCvhcProps {
+    mode?: 'lookup' | 'create';
+    records: CVHCRecord[];
+}
+
+const FinanceCvhc: React.FC<FinanceCvhcProps> = ({ mode = 'lookup', records = [] }) => {
+  // Lookup State
   const [cvhcSearchTerm, setCvhcSearchTerm] = useState('');
   const [cvhcStatus, setCvhcStatus] = useState<CvhcStatus>('idle');
-  const [foundCvhc, setFoundCvhc] = useState<typeof MOCK_CVHC_DB[0] | null>(null);
-  const [cvhcMode, setCvhcMode] = useState<'upload' | 'create'>('upload'); 
+  const [foundCvhc, setFoundCvhc] = useState<CVHCRecord | null>(null);
   
-  const [cvhcUploadData, setCvhcUploadData] = useState({ companyName: '', hbl: '', fileCvhc: null as File | null, fileEir: null as File | null });
-  
+  // Upload State (For Lookup Not Found)
+  const [uploadCompanyName, setUploadCompanyName] = useState('');
+  const [fileCvhc, setFileCvhc] = useState<File | null>(null);
+  const [fileEir, setFileEir] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Create Form State
   const [cvhcCreateData, setCvhcCreateData] = useState<CvhcCreationData>({
     companyName: '',
     paymentDate: '', amount: '', amountInWords: '', hbl: '', containerNo: '',
     beneficiary: '', accountNumber: '', bank: ''
   });
 
+  useEffect(() => {
+      if (mode === 'lookup') {
+          setCvhcStatus('idle');
+          setCvhcSearchTerm('');
+          setUploadCompanyName('');
+          setFileCvhc(null);
+          setFileEir(null);
+      }
+  }, [mode]);
+
   const handleCvhcSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!cvhcSearchTerm.trim()) return;
 
-    const result = MOCK_CVHC_DB.find(item => item.bl.toLowerCase().trim() === cvhcSearchTerm.toLowerCase().trim());
+    const result = records.find(item => item.bl.toLowerCase().trim() === cvhcSearchTerm.toLowerCase().trim());
 
     if (result) {
       setCvhcStatus('found');
@@ -49,24 +65,34 @@ const FinanceCvhc: React.FC = () => {
     } else {
       setCvhcStatus('not_found');
       setFoundCvhc(null);
-      setCvhcUploadData(prev => ({ ...prev, hbl: cvhcSearchTerm }));
-      setCvhcCreateData(prev => ({ ...prev, hbl: cvhcSearchTerm }));
+      setUploadCompanyName(''); // Reset for new entry
     }
   };
 
-  const handleCvhcUploadSubmit = () => {
-    if (!cvhcUploadData.companyName || !cvhcUploadData.hbl) return alert('Vui lòng nhập đủ thông tin!');
-    if (!cvhcUploadData.fileCvhc || !cvhcUploadData.fileEir) return alert('Vui lòng đính kèm đủ 2 file: CVHC và EIR!');
-    
-    alert(`Đã tiếp nhận hồ sơ hoàn cược cho BL: ${cvhcUploadData.hbl}`);
-    setCvhcStatus('found');
-    setFoundCvhc({
-        id: Date.now(),
-        companyName: cvhcUploadData.companyName,
-        bl: cvhcUploadData.hbl,
-        date: new Date().toLocaleDateString('en-GB'),
-        status: 'New'
-    });
+  const handleQuickUpload = async () => {
+      if (!uploadCompanyName || !cvhcSearchTerm) return alert('Vui lòng nhập tên công ty!');
+      if (!fileCvhc || !fileEir) return alert('Vui lòng tải đủ 2 file (CVHC và EIR)!');
+
+      setIsUploading(true);
+      
+      // Simulate API call
+      setTimeout(() => {
+          setIsUploading(false);
+          alert(`Đã cập nhật hồ sơ hoàn cược cho HBL: ${cvhcSearchTerm}`);
+          // Mock success
+          setCvhcStatus('found');
+          setFoundCvhc({
+              id: Date.now(),
+              companyName: uploadCompanyName,
+              bl: cvhcSearchTerm,
+              date: new Date().toLocaleDateString('en-GB'),
+              status: 'Pending',
+              fileCvhc: fileCvhc.name,
+              fileEir: fileEir.name
+          });
+          setFileCvhc(null);
+          setFileEir(null);
+      }, 1500);
   };
 
   const handleCvhcAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,262 +108,325 @@ const FinanceCvhc: React.FC = () => {
     });
   };
 
-  return (
-    <div className="space-y-6 h-full flex flex-col">
-        {cvhcMode !== 'create' && (
-            <form onSubmit={handleCvhcSearch} className="relative mb-6">
-            <div className="relative">
-                <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
-                <input 
-                type="text" 
-                placeholder="Nhập số HBL để kiểm tra (VD: LH-HBL-20240987)..." 
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-primary transition font-bold text-gray-700"
-                value={cvhcSearchTerm}
-                onChange={(e) => { setCvhcSearchTerm(e.target.value); setCvhcStatus('idle'); }}
-                />
+  const handleDownloadFile = (fileName: string) => {
+      const url = `${API_BASE_URL}/files/CVHC/${fileName}`;
+      window.open(url, '_blank');
+  };
+
+  // RENDER LOOKUP VIEW (Styled like FinanceGuq)
+  if (mode === 'lookup') {
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 h-full">
+            
+            {/* LEFT COLUMN: Inputs */}
+            <div className="flex flex-col space-y-6 pt-4">
+                <form onSubmit={handleCvhcSearch} className="w-full">
+                    <div className="relative">
+                        <input 
+                            type="text" 
+                            placeholder="Nhập số HBL để kiểm tra..." 
+                            className="w-full px-8 py-5 bg-[#dce5eb] rounded-[2rem] outline-none font-bold text-slate-700 placeholder:text-slate-400 placeholder:font-medium focus:ring-2 focus:ring-slate-300 transition-all uppercase"
+                            value={cvhcSearchTerm}
+                            onChange={(e) => { setCvhcSearchTerm(e.target.value); setCvhcStatus('idle'); }}
+                        />
+                    </div>
+                </form>
+
                 <button 
-                type="submit"
-                className="absolute right-2 top-2 bottom-2 bg-primary hover:bg-primaryDark text-white px-4 rounded-xl font-bold transition shadow-md"
+                    onClick={handleCvhcSearch}
+                    className="w-full sm:w-auto px-10 py-4 bg-[#5f8087] hover:bg-[#4a6b74] text-white rounded-[2rem] font-bold text-sm uppercase tracking-wider transition-all shadow-lg shadow-slate-300 self-start"
                 >
-                Kiểm tra
+                    Kiểm tra
                 </button>
-            </div>
-            <p className="text-[10px] text-gray-400 mt-2 ml-4 italic">* Hệ thống sẽ tra cứu dữ liệu từ bộ phận Management</p>
-            </form>
-        )}
 
-        {cvhcStatus === 'idle' && cvhcMode !== 'create' && (
-            <div className="flex flex-col items-center justify-center py-10 text-gray-300">
-                <RefreshCw size={48} className="mb-4 opacity-20" />
-                <p className="text-sm font-bold">Vui lòng nhập số HBL để kiểm tra tình trạng hoàn cược</p>
-            </div>
-        )}
+                {/* Conditional Upload Inputs when Not Found */}
+                {cvhcStatus === 'not_found' && (
+                    <div className="space-y-4 pt-6 border-t border-slate-100 animate-in fade-in slide-in-from-top-4">
+                        <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Nộp hồ sơ mới</p>
+                        
+                        <input 
+                            type="text" 
+                            placeholder="Tên công ty..." 
+                            className="w-full px-8 py-5 bg-[#dce5eb] rounded-[2rem] outline-none font-bold text-slate-700 placeholder:text-slate-400 placeholder:font-medium focus:ring-2 focus:ring-slate-300 transition-all"
+                            value={uploadCompanyName}
+                            onChange={(e) => setUploadCompanyName(e.target.value)}
+                        />
 
-        {cvhcStatus === 'found' && foundCvhc && (
-            <div className="bg-green-50 border border-green-200 rounded-2xl p-6 animate-in slide-in-from-bottom-4">
-                <div className="flex items-center text-green-700 font-bold mb-4 text-lg">
-                    <CheckCircle size={28} className="mr-3" />
-                    <span>Đã nhận Công văn hoàn cược</span>
-                </div>
-                <div className="space-y-3 pl-10 text-sm text-gray-600">
-                    <p>Chúng tôi đã nhận được hồ sơ CVHC của <strong>{foundCvhc.companyName}</strong> cho lô hàng <strong>{foundCvhc.bl}</strong>.</p>
-                    <div className="flex items-center gap-2 mt-4 bg-white/50 p-3 rounded-lg border border-green-100">
-                        <span className="font-bold text-green-700">Thời gian hoàn tiền dự kiến: 1-2 tuần làm việc.</span>
-                    </div>
-                    <p className="text-xs italic mt-2">Vui lòng chờ Long Hoang kiểm tra và xử lý.</p>
-                </div>
-            </div>
-        )}
-
-        {(cvhcStatus === 'not_found' || cvhcMode === 'create') && (
-            <div className={`animate-in slide-in-from-bottom-4 space-y-6 flex-grow flex flex-col ${cvhcMode === 'create' ? 'h-full' : ''}`}>
-                {cvhcMode !== 'create' && (
-                    <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 flex items-start gap-4">
-                        <div className="p-2 rounded-full bg-orange-100 text-orange-500">
-                            <Info size={24} />
-                        </div>
-                        <div>
-                            <h4 className="text-lg font-bold text-orange-700">Chưa nhận được hồ sơ</h4>
-                            <p className="text-sm mt-1 text-orange-600">
-                                Hệ thống chưa ghi nhận CVHC cho số HBL này. Vui lòng nộp hồ sơ mới.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                <div className="flex bg-gray-100 p-1 rounded-xl print:hidden flex-shrink-0">
-                    <button 
-                        onClick={() => setCvhcMode('upload')}
-                        className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center ${cvhcMode === 'upload' ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                        <Upload size={16} className="mr-2" /> Tải file có sẵn
-                    </button>
-                    <button 
-                        onClick={() => setCvhcMode('create')}
-                        className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center ${cvhcMode === 'create' ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                        <PenTool size={16} className="mr-2" /> Soạn thảo trực tuyến
-                    </button>
-                </div>
-
-                {cvhcMode === 'upload' && (
-                    <div className="space-y-4 pt-2 border-t border-gray-100 animate-in fade-in zoom-in duration-300">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-gray-400 uppercase">Tên công ty</label>
-                                <input type="text" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary transition" placeholder="..." value={cvhcUploadData.companyName} onChange={(e) => setCvhcUploadData({...cvhcUploadData, companyName: e.target.value})} />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-gray-400 uppercase">Số HBL</label>
-                                <input type="text" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-primary transition font-bold text-gray-700" placeholder="LH-HBL..." value={cvhcUploadData.hbl} onChange={(e) => setCvhcUploadData({...cvhcUploadData, hbl: e.target.value})} />
-                            </div>
-                        </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div 
-                                className={`border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer ${cvhcUploadData.fileCvhc ? 'border-primary bg-orange-50' : 'border-gray-200 hover:bg-gray-50'}`}
-                                onClick={() => document.getElementById('cvhc-upload')?.click()}
+                                className="px-6 py-5 bg-[#dce5eb] rounded-[2rem] flex flex-col items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => document.getElementById('cvhc-file')?.click()}
                             >
-                                <FileCheck size={24} className={`mx-auto mb-2 ${cvhcUploadData.fileCvhc ? 'text-primary' : 'text-gray-400'}`} />
-                                <span className="text-xs font-bold text-gray-600 block">{cvhcUploadData.fileCvhc ? cvhcUploadData.fileCvhc.name : 'Tải file CVHC'}</span>
-                                <input type="file" id="cvhc-upload" className="hidden" onChange={(e) => setCvhcUploadData({...cvhcUploadData, fileCvhc: e.target.files?.[0] || null})} />
+                                <input type="file" id="cvhc-file" className="hidden" onChange={(e) => setFileCvhc(e.target.files?.[0] || null)} />
+                                {fileCvhc ? <FileCheck className="text-green-600 mb-2" /> : <Upload className="text-slate-400 mb-2" />}
+                                <span className="text-xs font-bold text-slate-600 text-center">{fileCvhc ? fileCvhc.name : 'File CVHC'}</span>
                             </div>
+
                             <div 
-                                className={`border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer ${cvhcUploadData.fileEir ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
-                                onClick={() => document.getElementById('eir-upload')?.click()}
+                                className="px-6 py-5 bg-[#dce5eb] rounded-[2rem] flex flex-col items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => document.getElementById('eir-file')?.click()}
                             >
-                                <FileText size={24} className={`mx-auto mb-2 ${cvhcUploadData.fileEir ? 'text-blue-500' : 'text-gray-400'}`} />
-                                <span className="text-xs font-bold text-gray-600 block">{cvhcUploadData.fileEir ? cvhcUploadData.fileEir.name : 'Tải file EIR'}</span>
-                                <input type="file" id="eir-upload" className="hidden" onChange={(e) => setCvhcUploadData({...cvhcUploadData, fileEir: e.target.files?.[0] || null})} />
+                                <input type="file" id="eir-file" className="hidden" onChange={(e) => setFileEir(e.target.files?.[0] || null)} />
+                                {fileEir ? <FileCheck className="text-green-600 mb-2" /> : <Upload className="text-slate-400 mb-2" />}
+                                <span className="text-xs font-bold text-slate-600 text-center">{fileEir ? fileEir.name : 'File EIR'}</span>
                             </div>
                         </div>
-                        <button onClick={handleCvhcUploadSubmit} className="w-full bg-[#1e2a3b] text-white py-4 rounded-xl font-bold shadow-lg hover:bg-black transition-all uppercase tracking-wider mt-4">Xác nhận nộp hồ sơ</button>
+
+                        <button 
+                            onClick={handleQuickUpload}
+                            disabled={isUploading}
+                            className="w-full px-10 py-4 bg-slate-800 hover:bg-slate-900 text-white rounded-[2rem] font-bold text-sm uppercase tracking-wider transition-all shadow-lg mt-2"
+                        >
+                            {isUploading ? 'Đang tải lên...' : 'Gửi hồ sơ'}
+                        </button>
                     </div>
                 )}
-
-                {cvhcMode === 'create' && (
-                        <div className="flex flex-col lg:flex-row gap-6 h-full min-h-0 pt-4">
-                        {/* LEFT: LIVE PREVIEW */}
-                        <div className="flex-1 bg-gray-200/50 rounded-xl p-8 overflow-y-auto border border-gray-200 shadow-inner flex justify-center print:bg-white print:p-0 print:border-none print:shadow-none print:w-full print:block">
-                            <div 
-                                className="bg-white w-full max-w-[210mm] shadow-xl p-12 min-h-[297mm] text-gray-900 relative print:shadow-none print:w-full print:max-w-none print:p-0"
-                                style={{ fontFamily: '"Times New Roman", Times, serif' }}
-                            >
-                                <div className="text-center mb-8 mt-4">
-                                    <h3 className="text-[16px] font-bold uppercase mb-1">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</h3>
-                                    <h4 className="text-[15px] font-bold underline underline-offset-4">Độc lập – Tự do – Hạnh Phúc</h4>
-                                </div>
-
-                                <div className="text-center mb-10">
-                                    <h1 className="text-[24px] font-bold uppercase mb-2">CÔNG VĂN HOÀN CƯỢC</h1>
-                                </div>
-
-                                <div className="space-y-4 text-[15px] leading-relaxed text-justify">
-                                    <div className="absolute top-12 left-12 text-left print:static print:mb-4">
-                                        <p className="font-bold uppercase text-[13px]">{cvhcCreateData.companyName || '....................'}</p>
-                                        <p className="text-[11px] italic mt-1">V/v: chuyển trả lại tiền cược vỏ</p>
-                                    </div>
-
-                                    <div className="space-y-1 mt-12">
-                                        <p className="indent-8">
-                                            <span className="font-bold">Kính gửi : </span> 
-                                            <span className="uppercase font-bold">CÔNG TY TNHH TIẾP VẬN VÀ VẬN TẢI QUỐC TẾ LONG HOÀNG</span>
-                                        </p>
-                                        <p className="indent-8">
-                                            <span className="font-bold">Kính gửi : </span> 
-                                            <span className="uppercase font-bold">KIMBERRY MERCHANT LINE</span>
-                                        </p>
-                                    </div>
-
-                                    <div className="indent-8">
-                                        Lời đầu tiên xin gửi tới quý Công ty lời chào trân trọng nhất và cảm ơn quý công ty đã giúp đỡ chúng tôi trong thời gian qua.
-                                    </div>
-
-                                    <div className="mt-4 indent-8">
-                                        Ngày {cvhcCreateData.paymentDate ? new Date(cvhcCreateData.paymentDate).toLocaleDateString('vi-VN') : '.../.../202...'}, Công ty chúng tôi có làm thủ tục cược vỏ cho lô hàng dưới đây qua quý công ty:
-                                    </div>
-
-                                    <div className="pl-8 space-y-1 font-bold">
-                                        <p>- Số bill (B/L No): {cvhcCreateData.hbl || '................'}</p>
-                                        <p>- Số container (Cont No): {cvhcCreateData.containerNo || '................'}</p>
-                                        <p>- Số tiền: {Number(cvhcCreateData.amount || 0).toLocaleString()} VNĐ (Bằng chữ: {cvhcCreateData.amountInWords || '................'})</p>
-                                    </div>
-
-                                    <p className="mt-4 indent-8">
-                                        Sau khi rút hàng xong, công ty chúng tôi đã hoàn trả vỏ container về đúng bãi quy định theo yêu cầu của hãng tàu.
-                                    </p>
-
-                                    <p className="mt-4 indent-8">
-                                        Bằng công văn này, Công ty chúng tôi xin được rút lại tiền cược và đề nghị quý hãng chuyển tiền vào:
-                                    </p>
-
-                                    <div className="pl-8 space-y-2 font-bold mt-4">
-                                        <p>- Người thụ hưởng: {cvhcCreateData.beneficiary || '................................................'}</p>
-                                        <p>- Số TK: {cvhcCreateData.accountNumber || '................................................'}</p>
-                                        <p>- Ngân hàng: {cvhcCreateData.bank || '................................................'}</p>
-                                    </div>
-
-                                    <p className="mt-2 text-[14px] italic text-justify pl-8 uppercase">
-                                        Yêu cầu Khách hàng cung cấp tên đăng ký giao dịch E-Bank với ngân hàng chính xác nhất (Khi cung cấp sai, chậm trễ trong việc hoàn cược chúng tôi <span className="font-bold">không chịu trách nhiệm</span>)
-                                    </p>
-                                </div>
-
-                                <div className="flex justify-between mt-16 px-4">
-                                    <div className="text-left italic">
-                                        <p>Xin chân thành cảm ơn.</p>
-                                        <p>Trân trọng kính chào.</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="italic mb-4">Tp. Hồ Chí Minh, Ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}</p>
-                                        <p className="font-bold uppercase">ĐẠI DIỆN THEO PHÁP LUẬT</p>
-                                        <p className="text-[12px] italic text-gray-400 mt-12">(Ký, đóng dấu, ghi rõ họ tên)</p>
-                                    </div>
-                                </div>
-                                
-                                <div className="absolute bottom-10 left-12 right-12 border-t border-gray-300 pt-2 print:relative print:mt-12">
-                                    <p className="text-[11px] italic text-justify text-gray-600">
-                                        <span className="font-bold underline">Lưu ý:</span> Công văn xin hoàn cược phải do người đại diện pháp luật (Giám đốc hoặc Tổng Giám đốc) ký, trường hợp uỷ quyền cho cá nhân khác ký, Khách hàng phải có giấy uỷ quyền của Giám đốc cho cá nhân này.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* RIGHT: INPUTS */}
-                        <div className="w-full lg:w-[400px] flex flex-col bg-white rounded-xl border border-gray-200 shadow-xl print:hidden">
-                            <div className="p-4 border-b border-gray-100 bg-gray-50 rounded-t-xl flex justify-between items-center">
-                                <h4 className="font-bold text-gray-800 flex items-center"><PenTool size={16} className="mr-2" /> Nhập thông tin</h4>
-                            </div>
-                            <div className="p-6 overflow-y-auto space-y-4 flex-1">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase">Tên công ty (*)</label>
-                                    <input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm focus:border-primary transition" value={cvhcCreateData.companyName} onChange={(e) => setCvhcCreateData({...cvhcCreateData, companyName: e.target.value})} placeholder="Công ty..." />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase">Ngày thanh toán</label>
-                                    <input type="date" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm focus:border-primary transition" value={cvhcCreateData.paymentDate} onChange={(e) => setCvhcCreateData({...cvhcCreateData, paymentDate: e.target.value})} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase">Số tiền hoàn (VNĐ) (*)</label>
-                                    <input type="number" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm font-bold focus:border-primary transition" value={cvhcCreateData.amount} onChange={handleCvhcAmountChange} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase">Bằng chữ</label>
-                                    <div className="w-full px-3 py-2 bg-gray-100 border border-gray-100 rounded-lg text-xs italic text-gray-500 min-h-[38px]">{cvhcCreateData.amountInWords || '...'}</div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase">Số HBL</label>
-                                    <input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm font-bold uppercase focus:border-primary transition" value={cvhcCreateData.hbl} onChange={(e) => setCvhcCreateData({...cvhcCreateData, hbl: e.target.value})} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase">Số Container</label>
-                                    <input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm font-bold uppercase focus:border-primary transition" placeholder="TCLU..." value={cvhcCreateData.containerNo} onChange={(e) => setCvhcCreateData({...cvhcCreateData, containerNo: e.target.value})} />
-                                </div>
-                                
-                                <div className="border-t border-gray-100 pt-3 mt-1 space-y-4">
-                                    <label className="text-[10px] font-black text-primary uppercase block">Thông tin thụ hưởng</label>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase">Người thụ hưởng (*)</label>
-                                        <input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm uppercase focus:border-primary transition" value={cvhcCreateData.beneficiary} onChange={(e) => setCvhcCreateData({...cvhcCreateData, beneficiary: e.target.value})} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase">Số tài khoản (*)</label>
-                                        <input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm font-mono focus:border-primary transition" value={cvhcCreateData.accountNumber} onChange={(e) => setCvhcCreateData({...cvhcCreateData, accountNumber: e.target.value})} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase">Tại ngân hàng</label>
-                                        <input type="text" className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg outline-none text-sm focus:border-primary transition" value={cvhcCreateData.bank} onChange={(e) => setCvhcCreateData({...cvhcCreateData, bank: e.target.value})} />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-                                <button onClick={() => window.print()} className="w-full bg-primary hover:bg-primaryDark text-white py-3 rounded-lg font-bold shadow-lg transition-all uppercase tracking-wider flex items-center justify-center">
-                                    <Printer size={18} className="mr-2" /> In & Tải xuống
-                                </button>
-                            </div>
-                        </div>
-                        </div>
-                )}
             </div>
-        )}
+
+            {/* RIGHT COLUMN: Result Card */}
+            <div className="relative">
+                <div className="bg-[#5f8087] rounded-[2.5rem] p-10 h-full min-h-[450px] flex flex-col text-white relative overflow-hidden shadow-2xl">
+                    <h2 className="text-2xl font-bold mb-4">Kết quả tra cứu</h2>
+                    
+                    <div className="flex-1 flex flex-col justify-center space-y-6">
+                        {cvhcStatus === 'idle' && (
+                            <div className="text-white/60">
+                                <p className="text-sm leading-relaxed mb-4">
+                                    Nhập số HBL vào ô bên trái để kiểm tra tình trạng Hoàn cược trong hệ thống.
+                                </p>
+                                <p className="text-sm leading-relaxed">
+                                    Dữ liệu được cập nhật từ bộ phận chứng từ & kế toán.
+                                </p>
+                            </div>
+                        )}
+
+                        {cvhcStatus === 'found' && foundCvhc && (
+                            <div className="animate-in zoom-in duration-300">
+                                <div className="mb-6">
+                                    <div className="flex items-center mb-2">
+                                        <CheckCircle className="text-white mr-2" size={24} />
+                                        <h3 className="text-xl font-bold">Đã Nhận Hồ Sơ</h3>
+                                    </div>
+                                    <p className="text-white/80 text-sm">
+                                        {foundCvhc.status === 'Completed' ? 'Hồ sơ đã hoàn tất.' : 'Hồ sơ đang được xử lý.'}
+                                    </p>
+                                </div>
+                                
+                                <div className="space-y-4 text-sm text-white/90">
+                                    <div className="bg-white/10 p-4 rounded-2xl">
+                                        <span className="block text-[10px] uppercase opacity-60 mb-1">Số HBL</span>
+                                        <span className="font-bold text-lg">{foundCvhc.bl}</span>
+                                    </div>
+                                    <div className="bg-white/10 p-4 rounded-2xl">
+                                        <span className="block text-[10px] uppercase opacity-60 mb-1">Doanh nghiệp</span>
+                                        <span className="font-bold">{foundCvhc.companyName}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-white/10 p-4 rounded-2xl">
+                                            <span className="block text-[10px] uppercase opacity-60 mb-1">Ngày nộp</span>
+                                            <span className="font-bold">{foundCvhc.date}</span>
+                                        </div>
+                                        <div className="bg-white/10 p-4 rounded-2xl">
+                                            <span className="block text-[10px] uppercase opacity-60 mb-1">Trạng thái</span>
+                                            <span className={`font-bold uppercase ${foundCvhc.status === 'Completed' ? 'text-green-300' : 'text-yellow-300'}`}>
+                                                {foundCvhc.status === 'Completed' ? 'Đã hoàn' : 'Chờ xử lý'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* UNC File Download if Completed */}
+                                    {foundCvhc.status === 'Completed' && foundCvhc.uncFile && (
+                                        <div 
+                                            onClick={() => handleDownloadFile(foundCvhc.uncFile!)}
+                                            className="bg-green-500/20 p-4 rounded-2xl border border-green-400/50 cursor-pointer hover:bg-green-500/30 transition flex items-center justify-between"
+                                        >
+                                            <div>
+                                                <span className="block text-[10px] uppercase opacity-80 text-green-200 mb-1">Ủy nhiệm chi</span>
+                                                <span className="font-bold text-white flex items-center"><FileText size={14} className="mr-2"/> {foundCvhc.uncFile}</span>
+                                            </div>
+                                            <Download size={20} className="text-white" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {cvhcStatus === 'not_found' && (
+                            <div className="animate-in zoom-in duration-300">
+                                <div className="mb-6">
+                                    <div className="flex items-center mb-2">
+                                        <AlertTriangle className="text-white mr-2" size={24} />
+                                        <h3 className="text-xl font-bold">Chưa Tìm Thấy</h3>
+                                    </div>
+                                    <p className="text-white/80 text-sm leading-relaxed">
+                                        Hệ thống chưa có dữ liệu cho HBL này. <br/>
+                                        Vui lòng điền thông tin và tải lên file scan ở cột bên trái để nộp hồ sơ mới.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+      );
+  }
+
+  // RENDER CREATE VIEW (ONLINE FORM)
+  return (
+    <div className="flex flex-col lg:flex-row gap-8 h-full min-h-0 pt-4 animate-in slide-in-from-bottom-4">
+        
+        {/* LEFT: INPUTS (Styled like FinanceGuq) */}
+        <div className="w-full lg:w-[400px] flex flex-col h-full overflow-y-auto pr-2 custom-scrollbar">
+            <div className="bg-white p-2 rounded-t-xl sticky top-0 z-10">
+                <h3 className="font-black text-slate-800 text-lg uppercase flex items-center">
+                    <PenTool className="mr-2 text-slate-500" size={20} /> Soạn thảo CVHC
+                </h3>
+            </div>
+            
+            <div className="space-y-4 pb-10">
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Tên công ty (*)</label>
+                    <input type="text" className="w-full px-5 py-3 bg-[#dce5eb] rounded-[1.5rem] outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-slate-300 transition-all" value={cvhcCreateData.companyName} onChange={(e) => setCvhcCreateData({...cvhcCreateData, companyName: e.target.value})} placeholder="Công ty..." />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Ngày thanh toán</label>
+                        <input type="date" className="w-full px-5 py-3 bg-[#dce5eb] rounded-[1.5rem] outline-none text-slate-700 text-sm focus:ring-2 focus:ring-slate-300 transition-all" value={cvhcCreateData.paymentDate} onChange={(e) => setCvhcCreateData({...cvhcCreateData, paymentDate: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Số tiền hoàn</label>
+                        <input type="number" className="w-full px-5 py-3 bg-[#dce5eb] rounded-[1.5rem] outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-slate-300 transition-all" value={cvhcCreateData.amount} onChange={handleCvhcAmountChange} placeholder="VNĐ" />
+                    </div>
+                </div>
+
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Bằng chữ</label>
+                    <div className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-[1.5rem] text-xs italic text-slate-500 min-h-[46px] flex items-center">
+                        {cvhcCreateData.amountInWords || '...'}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Số HBL</label>
+                        <input type="text" className="w-full px-5 py-3 bg-[#dce5eb] rounded-[1.5rem] outline-none font-bold text-slate-700 text-sm uppercase focus:ring-2 focus:ring-slate-300 transition-all" value={cvhcCreateData.hbl} onChange={(e) => setCvhcCreateData({...cvhcCreateData, hbl: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Số Container</label>
+                        <input type="text" className="w-full px-5 py-3 bg-[#dce5eb] rounded-[1.5rem] outline-none font-bold text-slate-700 text-sm uppercase focus:ring-2 focus:ring-slate-300 transition-all" placeholder="TCLU..." value={cvhcCreateData.containerNo} onChange={(e) => setCvhcCreateData({...cvhcCreateData, containerNo: e.target.value})} />
+                    </div>
+                </div>
+                
+                <div className="pt-4 border-t border-slate-100">
+                    <label className="text-xs font-black text-slate-800 uppercase block mb-3">Thông tin thụ hưởng</label>
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Người thụ hưởng (*)</label>
+                            <input type="text" className="w-full px-5 py-3 bg-[#dce5eb] rounded-[1.5rem] outline-none font-bold text-slate-700 text-sm uppercase focus:ring-2 focus:ring-slate-300 transition-all" value={cvhcCreateData.beneficiary} onChange={(e) => setCvhcCreateData({...cvhcCreateData, beneficiary: e.target.value})} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Số tài khoản (*)</label>
+                            <input type="text" className="w-full px-5 py-3 bg-[#dce5eb] rounded-[1.5rem] outline-none font-mono font-bold text-slate-700 text-sm focus:ring-2 focus:ring-slate-300 transition-all" value={cvhcCreateData.accountNumber} onChange={(e) => setCvhcCreateData({...cvhcCreateData, accountNumber: e.target.value})} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Tại ngân hàng</label>
+                            <input type="text" className="w-full px-5 py-3 bg-[#dce5eb] rounded-[1.5rem] outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-slate-300 transition-all" value={cvhcCreateData.bank} onChange={(e) => setCvhcCreateData({...cvhcCreateData, bank: e.target.value})} />
+                        </div>
+                    </div>
+                </div>
+
+                <button onClick={() => window.print()} className="w-full bg-[#1e2a3b] hover:bg-black text-white py-4 rounded-[1.5rem] font-bold shadow-lg transition-all uppercase tracking-wider flex items-center justify-center mt-4">
+                    <Printer size={18} className="mr-2" /> In & Tải xuống
+                </button>
+            </div>
+        </div>
+
+        {/* RIGHT: LIVE PREVIEW (A4) */}
+        <div className="flex-1 bg-slate-100 rounded-[2rem] p-8 overflow-y-auto border border-slate-200 shadow-inner flex justify-center print:bg-white print:p-0 print:border-none print:shadow-none print:w-full print:block">
+            <div 
+                className="bg-white w-full max-w-[210mm] shadow-2xl p-12 min-h-[297mm] text-gray-900 relative print:shadow-none print:w-full print:max-w-none print:p-0"
+                style={{ fontFamily: '"Times New Roman", Times, serif' }}
+            >
+                <div className="text-center mb-8 mt-4">
+                    <h3 className="text-[16px] font-bold uppercase mb-1">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</h3>
+                    <h4 className="text-[15px] font-bold underline underline-offset-4">Độc lập – Tự do – Hạnh Phúc</h4>
+                </div>
+
+                <div className="text-center mb-10">
+                    <h1 className="text-[24px] font-bold uppercase mb-2">CÔNG VĂN HOÀN CƯỢC</h1>
+                </div>
+
+                <div className="space-y-4 text-[15px] leading-relaxed text-justify">
+                    <div className="absolute top-12 left-12 text-left print:static print:mb-4">
+                        <p className="font-bold uppercase text-[13px]">{cvhcCreateData.companyName || '....................'}</p>
+                        <p className="text-[11px] italic mt-1">V/v: chuyển trả lại tiền cược vỏ</p>
+                    </div>
+
+                    <div className="space-y-1 mt-12">
+                        <p className="indent-8">
+                            <span className="font-bold">Kính gửi : </span> 
+                            <span className="uppercase font-bold">CÔNG TY TNHH TIẾP VẬN VÀ VẬN TẢI QUỐC TẾ LONG HOÀNG</span>
+                        </p>
+                        <p className="indent-8">
+                            <span className="font-bold">Kính gửi : </span> 
+                            <span className="uppercase font-bold">KIMBERRY MERCHANT LINE</span>
+                        </p>
+                    </div>
+
+                    <div className="indent-8">
+                        Lời đầu tiên xin gửi tới quý Công ty lời chào trân trọng nhất và cảm ơn quý công ty đã giúp đỡ chúng tôi trong thời gian qua.
+                    </div>
+
+                    <div className="mt-4 indent-8">
+                        Ngày {cvhcCreateData.paymentDate ? new Date(cvhcCreateData.paymentDate).toLocaleDateString('vi-VN') : '.../.../202...'}, Công ty chúng tôi có làm thủ tục cược vỏ cho lô hàng dưới đây qua quý công ty:
+                    </div>
+
+                    <div className="pl-8 space-y-1 font-bold">
+                        <p>- Số bill (B/L No): {cvhcCreateData.hbl || '................'}</p>
+                        <p>- Số container (Cont No): {cvhcCreateData.containerNo || '................'}</p>
+                        <p>- Số tiền: {Number(cvhcCreateData.amount || 0).toLocaleString()} VNĐ (Bằng chữ: {cvhcCreateData.amountInWords || '................'})</p>
+                    </div>
+
+                    <p className="mt-4 indent-8">
+                        Sau khi rút hàng xong, công ty chúng tôi đã hoàn trả vỏ container về đúng bãi quy định theo yêu cầu của hãng tàu.
+                    </p>
+
+                    <p className="mt-4 indent-8">
+                        Bằng công văn này, Công ty chúng tôi xin được rút lại tiền cược và đề nghị quý hãng chuyển tiền vào:
+                    </p>
+
+                    <div className="pl-8 space-y-2 font-bold mt-4">
+                        <p>- Người thụ hưởng: {cvhcCreateData.beneficiary || '................................................'}</p>
+                        <p>- Số TK: {cvhcCreateData.accountNumber || '................................................'}</p>
+                        <p>- Ngân hàng: {cvhcCreateData.bank || '................................................'}</p>
+                    </div>
+
+                    <p className="mt-2 text-[14px] italic text-justify pl-8 uppercase">
+                        Yêu cầu Khách hàng cung cấp tên đăng ký giao dịch E-Bank với ngân hàng chính xác nhất (Khi cung cấp sai, chậm trễ trong việc hoàn cược chúng tôi <span className="font-bold">không chịu trách nhiệm</span>)
+                    </p>
+                </div>
+
+                <div className="flex justify-between mt-16 px-4">
+                    <div className="text-left italic">
+                        <p>Xin chân thành cảm ơn.</p>
+                        <p>Trân trọng kính chào.</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="italic mb-4">Tp. Hồ Chí Minh, Ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}</p>
+                        <p className="font-bold uppercase">ĐẠI DIỆN THEO PHÁP LUẬT</p>
+                        <p className="text-[12px] italic text-gray-400 mt-12">(Ký, đóng dấu, ghi rõ họ tên)</p>
+                    </div>
+                </div>
+                
+                <div className="absolute bottom-10 left-12 right-12 border-t border-gray-300 pt-2 print:relative print:mt-12">
+                    <p className="text-[11px] italic text-justify text-gray-600">
+                        <span className="font-bold underline">Lưu ý:</span> Công văn xin hoàn cược phải do người đại diện pháp luật (Giám đốc hoặc Tổng Giám đốc) ký, trường hợp uỷ quyền cho cá nhân khác ký, Khách hàng phải có giấy uỷ quyền của Giám đốc cho cá nhân này.
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
   );
 };

@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react';
-import { Menu, X, Phone, Mail, Facebook, Youtube, Instagram, User, LogOut, ChevronDown, ShieldCheck, Briefcase, Lock, Key, ArrowRight, ShieldAlert, UserPlus } from 'lucide-react';
+import { Menu, X, Phone, Mail, Facebook, Youtube, Instagram, User, LogOut, ChevronDown, ShieldCheck, Briefcase, Lock, Key, ArrowRight, ShieldAlert, UserPlus, Eye, EyeOff, CheckSquare, Square } from 'lucide-react';
 import { NAV_LINKS } from '../constants';
 import { UserRole, UserAccount } from '../App';
 
 interface HeaderProps {
   userRole: UserRole;
-  currentUser: UserAccount | null; // Added currentUser prop
+  currentUser: UserAccount | null;
   onLogin: (role: UserRole, user?: UserAccount, remember?: boolean) => void;
   onLogout: () => void;
   onOpenPage: (page: 'finance' | 'company' | 'management' | 'settings' | 'account' | null) => void;
@@ -22,8 +22,9 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Register Modal State
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -58,20 +59,16 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
     const lowerUser = username.toLowerCase().trim();
     const pass = password.trim();
 
-    // 1. Find user by email (insensitive)
     const targetUser = users.find(acc => acc.email.toLowerCase() === lowerUser);
 
     if (targetUser) {
-        // Check Status First
         if (targetUser.status === 'Locked') {
-            setError('Tài khoản đã bị KHÓA do nhập sai mật khẩu quá 5 lần. Vui lòng liên hệ Admin.');
-            if (onLoginAttempt) onLoginAttempt(targetUser.email, false); // Log attempt on locked account
+            setError('Account LOCKED. Please contact Admin.');
+            if (onLoginAttempt) onLoginAttempt(targetUser.email, false);
             return;
         }
 
-        // Check Password
         if (targetUser.password === pass) {
-            // SUCCESS
             if (onLoginAttempt) onLoginAttempt(targetUser.email, true);
             
             let role: UserRole = 'staff';
@@ -82,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
                 redirectPage = 'settings';
             } else if (targetUser.role === 'Accounting' || targetUser.role === 'Manager') {
                 role = 'manager';
-                redirectPage = 'account'; // Accounting goes to Account Portal
+                redirectPage = 'account';
             } else if (targetUser.role === 'Sales' || targetUser.role === 'Document' || targetUser.role === 'Staff') {
                 role = 'staff';
                 redirectPage = 'company';
@@ -91,29 +88,25 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
                 redirectPage = 'finance';
             }
 
-            onLogin(role, targetUser, rememberMe); // Pass user object and remember flag
+            onLogin(role, targetUser, rememberMe);
             onOpenPage(redirectPage as any);
             setShowLoginModal(false);
             return;
         } else {
-            // WRONG PASSWORD
             const attempts = (targetUser.failedAttempts || 0) + 1;
             if (onLoginAttempt) onLoginAttempt(targetUser.email, false);
 
             if (attempts >= 5) {
-                setError('Tài khoản của bạn vừa bị KHÓA do nhập sai quá 5 lần!');
+                setError('Account LOCKED due to 5 failed attempts!');
             } else {
-                setError(`Mật khẩu không đúng! Bạn còn ${5 - attempts} lần thử.`);
+                setError(`Incorrect password!`);
             }
             setPassword('');
             return;
         }
     }
 
-    // No fallback to Demo Accounts anymore
-    setError('Tài khoản không tồn tại hoặc mật khẩu không đúng.');
-    
-    // Clear password on error
+    setError('Account does not exist.');
     if (error) setPassword('');
   };
 
@@ -122,22 +115,22 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
       setRegError('');
 
       if (!regName || !regEmail || !regPassword || !regConfirmPassword) {
-          setRegError('Vui lòng điền đầy đủ thông tin.');
+          setRegError('Please fill in all fields.');
           return;
       }
 
       if (regPassword !== regConfirmPassword) {
-          setRegError('Mật khẩu xác nhận không khớp.');
+          setRegError('Passwords do not match.');
           return;
       }
 
       if (regPassword.length < 6) {
-          setRegError('Mật khẩu phải có ít nhất 6 ký tự.');
+          setRegError('Password must be at least 6 characters.');
           return;
       }
 
       const newUser: UserAccount = {
-          id: 0, // Will be set by App
+          id: 0,
           name: regName,
           email: regEmail,
           password: regPassword,
@@ -149,15 +142,14 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
       if (onRegister) {
           const success = onRegister(newUser);
           if (success) {
-              alert('Đăng ký thành công! Đang tự động đăng nhập...');
+              alert('Registration successful! Logging in...');
               setShowRegisterModal(false);
-              // Clean up form
               setRegName('');
               setRegEmail('');
               setRegPassword('');
               setRegConfirmPassword('');
           } else {
-              setRegError('Email này đã được sử dụng. Vui lòng chọn email khác.');
+              setRegError('Email is already in use.');
           }
       }
   };
@@ -169,7 +161,7 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
     setError('');
     setUsername('');
     setPassword('');
-    setRememberMe(false);
+    setRememberMe(true);
   };
 
   const openRegister = () => {
@@ -183,85 +175,40 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
       setRegConfirmPassword('');
   };
 
-  // Build links including Management for specific roles
   const currentNavLinks = [...NAV_LINKS];
   if (userRole === 'admin' || (userRole === 'manager' && currentUser?.role !== 'Accounting')) {
-    // Only show Management if admin OR (manager AND NOT Accounting)
     if (!currentNavLinks.find(l => l.href === 'management')) {
         currentNavLinks.push({ name: 'Management', href: 'management' });
     }
   }
 
-  // Filter links based on role
   const filteredLinks = currentNavLinks.filter(link => {
     const isRestricted = ['finance', 'company', 'management', 'settings', 'account'].includes(link.href);
     if (!isRestricted) return true;
 
     if (userRole === 'admin') return true; 
     if (userRole === 'manager') {
-       // Management is already filtered by logic above construction of currentNavLinks
-       // Check other restricted links
        if (['company', 'account'].includes(link.href)) return true;
-       if (link.href === 'management') return true; // It's only here if passed the check above
+       if (link.href === 'management') return true;
     }
     if (userRole === 'staff' && (link.href === 'company')) return true;
-    
     if (userRole === 'customer') {
-        // Customer sees Finance but NOT Company, Account, Management, Settings
         if (link.href === 'finance') return true;
         return false;
     }
-
     return false;
   });
 
   const getRoleLabel = () => {
-    if (userRole === 'admin') return 'Quản trị viên';
-    if (userRole === 'manager') return 'Quản lý';
-    if (userRole === 'staff') return 'Nhân viên';
-    if (userRole === 'customer') return 'Khách hàng';
+    if (userRole === 'admin') return 'Administrator';
+    if (userRole === 'manager') return 'Manager';
+    if (userRole === 'staff') return 'Staff';
+    if (userRole === 'customer') return 'Customer';
     return '';
   };
 
-  // Styles for LED Border Animation (Pink Color - Slower Speed)
-  const ledStyle = `
-    @keyframes led-top { 0% { left: -100%; } 50%, 100% { left: 100%; } }
-    @keyframes led-right { 0% { top: -100%; } 50%, 100% { top: 100%; } }
-    @keyframes led-bottom { 0% { right: -100%; } 50%, 100% { right: 100%; } }
-    @keyframes led-left { 0% { bottom: -100%; } 50%, 100% { bottom: 100%; } }
-    
-    .led-border span {
-      position: absolute;
-      display: block;
-    }
-    .led-border span:nth-child(1) {
-      top: 0; left: 0; width: 100%; height: 3px;
-      background: linear-gradient(90deg, transparent, #ff00cc);
-      animation: led-top 4s linear infinite;
-    }
-    .led-border span:nth-child(2) {
-      top: -100%; right: 0; width: 3px; height: 100%;
-      background: linear-gradient(180deg, transparent, #ff00cc);
-      animation: led-right 4s linear infinite;
-      animation-delay: 1s;
-    }
-    .led-border span:nth-child(3) {
-      bottom: 0; right: -100%; width: 100%; height: 3px;
-      background: linear-gradient(270deg, transparent, #ff00cc);
-      animation: led-bottom 4s linear infinite;
-      animation-delay: 2s;
-    }
-    .led-border span:nth-child(4) {
-      bottom: -100%; left: 0; width: 3px; height: 100%;
-      background: linear-gradient(360deg, transparent, #ff00cc);
-      animation: led-left 4s linear infinite;
-      animation-delay: 3s;
-    }
-  `;
-
   return (
     <header className="w-full sticky top-0 z-50 bg-white shadow-md">
-      <style>{ledStyle}</style>
       {/* Top Bar */}
       <div className="bg-[#1e2a3b] text-white py-2 text-xs border-b border-gray-700">
         <div className="container mx-auto px-4 flex justify-between items-center">
@@ -374,23 +321,23 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
                     onClick={openLogin}
                     className="w-full bg-primary text-white font-bold py-3 rounded-lg text-sm flex items-center justify-center"
                     >
-                    <User size={18} className="mr-2" /> ĐĂNG NHẬP
+                    <User size={18} className="mr-2" /> LOGIN
                     </button>
                     <button 
                     onClick={openRegister}
                     className="w-full bg-white border border-primary text-primary font-bold py-3 rounded-lg text-sm flex items-center justify-center"
                     >
-                    <UserPlus size={18} className="mr-2" /> ĐĂNG KÝ
+                    <UserPlus size={18} className="mr-2" /> REGISTER
                     </button>
                 </>
               ) : (
                 <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg">
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tài khoản</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Account</p>
                     <p className="text-sm font-black text-gray-700">{getRoleLabel()}</p>
                   </div>
                   <button onClick={onLogout} className="text-red-500 font-bold text-xs uppercase flex items-center">
-                    Đăng xuất <LogOut size={14} className="ml-2" />
+                    Logout <LogOut size={14} className="ml-2" />
                   </button>
                 </div>
               )}
@@ -399,50 +346,66 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
         </div>
       )}
 
-      {/* Login Modal - Glassmorphism with Pink LED Border */}
+      {/* LOGIN MODAL - RE-DESIGNED DARK THEME */}
       {showLoginModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLoginModal(false)}></div>
-          
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 w-full max-w-md rounded-2xl shadow-[0_0_40px_rgba(255,0,204,0.4)] relative z-10 overflow-hidden animate-in fade-in zoom-in duration-300 led-border">
-            {/* LED Spans */}
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#0f172a] overflow-y-auto">
+          {/* Animated Background Effect */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+             <div className="absolute top-0 left-0 w-full h-full bg-[#0f172a]"></div>
+             <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full animate-pulse"></div>
+             <div className="absolute bottom-[10%] right-[10%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full animate-pulse delay-1000"></div>
+          </div>
 
-            {/* Modal Header */}
-            <div className="p-8 text-center relative border-b border-white/10">
-                <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-white/70 hover:text-white transition">
-                    <X size={20} />
-                </button>
-                <div className="mb-4">
-                   <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto backdrop-blur-sm shadow-[0_0_15px_rgba(255,0,204,0.5)]">
-                      <User size={32} className="text-white" />
-                   </div>
+          <div className="relative z-10 w-full max-w-5xl h-auto min-h-[600px] bg-[#1e293b] rounded-3xl shadow-2xl flex overflow-hidden border border-gray-700 animate-in zoom-in duration-300">
+             
+             {/* LEFT SIDE: ILLUSTRATION */}
+             <div className="hidden lg:flex w-1/2 bg-[#0b1120] relative items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-transparent"></div>
+                {/* 3D Tech Illustration Placeholder */}
+                <div className="relative z-10 w-full h-full flex items-center justify-center p-12">
+                    <img 
+                      src="https://images.unsplash.com/photo-1676299081847-c0326a0333d5?q=80&w=1000&auto=format&fit=crop" 
+                      alt="Tech Server Illustration" 
+                      className="w-full h-auto object-contain opacity-90 drop-shadow-[0_0_30px_rgba(59,130,246,0.5)] transform hover:scale-105 transition duration-700"
+                    />
                 </div>
-                <h3 className="text-2xl font-bold text-white uppercase tracking-wider drop-shadow-md">Chào mừng trở lại</h3>
-                <p className="text-gray-200 text-xs mt-2 font-medium">Đăng nhập để truy cập hệ thống</p>
-            </div>
+                {/* Floating Elements */}
+                <div className="absolute top-10 left-10 w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
+                <div className="absolute bottom-20 right-20 w-1 h-1 bg-cyan-400 rounded-full animate-ping delay-500"></div>
+             </div>
 
-            {/* Modal Body */}
-            <div className="p-8 pt-4">
+             {/* RIGHT SIDE: FORM */}
+             <div className="w-full lg:w-1/2 p-8 md:p-12 flex flex-col justify-center relative bg-[#1e293b]">
+                {/* Logo & Close */}
+                <div className="flex justify-between items-start mb-10">
+                    <div className="flex items-center gap-2">
+                        <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="Logo" className="h-8 w-auto brightness-0 invert" />
+                    </div>
+                    <button onClick={() => setShowLoginModal(false)} className="text-gray-400 hover:text-white transition">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <div className="mb-8">
+                    <h2 className="text-2xl font-bold text-white mb-2 tracking-wide">Operational Management</h2>
+                    <p className="text-gray-400 text-sm">Sign in to access Logistics system</p>
+                </div>
+
                 <form onSubmit={handleLoginSubmit} className="space-y-5">
                     {error && (
-                        <div className="bg-red-500/20 text-white text-xs font-bold p-3 rounded-xl flex items-start border border-red-500/30 backdrop-blur-sm">
-                            <ShieldAlert size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                            <span>{error}</span>
+                        <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-3 rounded-lg flex items-center">
+                            <ShieldAlert size={14} className="mr-2" /> {error}
                         </div>
                     )}
-                    
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-200 uppercase tracking-wider ml-1">Email</label>
-                        <div className="relative">
-                            <Mail className="absolute left-3 top-3 text-gray-300" size={18} />
+
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-400 uppercase ml-1">Username / Phone number</label>
+                        <div className="relative group">
+                            <User className="absolute left-4 top-3.5 text-gray-500 group-focus-within:text-blue-500 transition" size={18} />
                             <input 
                                 type="text" 
-                                className="w-full pl-10 pr-4 py-3 bg-black/20 border border-white/10 rounded-xl outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500/50 transition font-bold text-white placeholder-gray-400" 
-                                placeholder="user@kimberry.com"
+                                className="w-full pl-12 pr-4 py-3 bg-[#0f172a] border border-gray-700 rounded-xl outline-none focus:border-blue-500 text-white placeholder-gray-600 transition font-medium"
+                                placeholder="Admin / user@domain.com"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 autoFocus
@@ -450,150 +413,165 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-200 uppercase tracking-wider ml-1">Mật khẩu</label>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-3 text-gray-300" size={18} />
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-400 uppercase ml-1">Password</label>
+                        <div className="relative group">
+                            <Lock className="absolute left-4 top-3.5 text-gray-500 group-focus-within:text-blue-500 transition" size={18} />
                             <input 
-                                type="password" 
-                                className="w-full pl-10 pr-4 py-3 bg-black/20 border border-white/10 rounded-xl outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500/50 transition font-bold text-white placeholder-gray-400" 
+                                type={showPassword ? "text" : "password"}
+                                className="w-full pl-12 pr-12 py-3 bg-[#0f172a] border border-gray-700 rounded-xl outline-none focus:border-blue-500 text-white placeholder-gray-600 transition font-medium"
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />
+                            <button 
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-3.5 text-gray-500 hover:text-white transition"
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
                     </div>
 
-                    {/* Remember Me Checkbox */}
                     <div className="flex items-center justify-between mt-2">
-                        <label className="flex items-center text-xs text-gray-200 cursor-pointer select-none">
-                            <input
-                                type="checkbox"
-                                className="mr-2 w-4 h-4 accent-pink-500 rounded border-gray-300 focus:ring-pink-500"
-                                checked={rememberMe}
-                                onChange={(e) => setRememberMe(e.target.checked)}
-                            />
-                            Ghi nhớ
+                        <label className="flex items-center text-xs text-gray-400 cursor-pointer hover:text-gray-300 transition">
+                            <div className={`w-4 h-4 mr-2 border rounded flex items-center justify-center transition ${rememberMe ? 'bg-blue-600 border-blue-600' : 'border-gray-600'}`}>
+                                <input type="checkbox" className="hidden" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} />
+                                {rememberMe && <CheckSquare size={10} className="text-white" />}
+                            </div>
+                            Remember me
                         </label>
-                        <a href="#" className="text-xs text-gray-200 hover:text-white hover:underline font-medium">Quên mật khẩu?</a>
+                        <a href="#" className="text-xs text-blue-500 hover:text-blue-400 transition font-bold">Forgot password?</a>
                     </div>
 
                     <button 
                         type="submit" 
-                        className="w-full bg-[#1A535C] hover:bg-[#13424a] text-white font-bold py-3.5 rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center mt-6 border border-white/10"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-900/30 transition-all transform active:scale-[0.98] mt-4"
                     >
-                        Đăng nhập ngay
+                        Sign In
                     </button>
-
-                    <div className="text-center pt-4 border-t border-white/10 mt-4">
-                        <p className="text-xs text-gray-300">Chưa có tài khoản?</p>
-                        <button 
-                            type="button" 
-                            onClick={openRegister}
-                            className="text-sm font-bold text-pink-400 hover:text-pink-300 mt-1 hover:underline"
-                        >
-                            Đăng ký tài khoản mới
-                        </button>
-                    </div>
                 </form>
-            </div>
+
+                <div className="mt-auto pt-8 flex items-center justify-center text-xs text-gray-500">
+                    <span>Don't have an account?</span>
+                    <button onClick={openRegister} className="text-blue-500 hover:text-blue-400 font-bold ml-2 hover:underline">
+                        Register new account
+                    </button>
+                </div>
+             </div>
           </div>
         </div>
       )}
 
-      {/* Register Modal - Glassmorphism with Pink LED Border */}
+      {/* REGISTER MODAL - RE-DESIGNED DARK THEME */}
       {showRegisterModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRegisterModal(false)}></div>
-          
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 w-full max-w-md rounded-2xl shadow-[0_0_40px_rgba(255,0,204,0.4)] relative z-10 overflow-hidden animate-in fade-in zoom-in duration-300 led-border">
-            {/* LED Spans */}
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#0f172a] overflow-y-auto">
+          {/* Animated Background Effect */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+             <div className="absolute top-0 left-0 w-full h-full bg-[#0f172a]"></div>
+             <div className="absolute bottom-[20%] left-[10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full animate-pulse"></div>
+          </div>
 
-            {/* Modal Header */}
-            <div className="p-6 text-center relative border-b border-white/10">
-                <button onClick={() => setShowRegisterModal(false)} className="absolute top-4 right-4 text-white/70 hover:text-white transition">
-                    <X size={20} />
-                </button>
-                <h3 className="text-xl font-bold text-white uppercase tracking-wider drop-shadow-md">Đăng ký tài khoản</h3>
-                <p className="text-gray-200 text-xs mt-1">Dành cho Khách hàng & Đối tác</p>
-            </div>
+          <div className="relative z-10 w-full max-w-5xl h-auto min-h-[600px] bg-[#1e293b] rounded-3xl shadow-2xl flex overflow-hidden border border-gray-700 animate-in zoom-in duration-300">
+             
+             {/* LEFT SIDE: ILLUSTRATION */}
+             <div className="hidden lg:flex w-1/2 bg-[#0b1120] relative items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-tr from-cyan-900/20 to-transparent"></div>
+                <div className="relative z-10 w-full h-full flex items-center justify-center p-12">
+                    {/* Different illustration for Register */}
+                    <img 
+                      src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1000&auto=format&fit=crop" 
+                      alt="Abstract Tech Cube" 
+                      className="w-full h-auto object-contain opacity-80 drop-shadow-[0_0_30px_rgba(34,211,238,0.3)] transform hover:rotate-1 transition duration-700"
+                    />
+                </div>
+             </div>
 
-            {/* Modal Body */}
-            <div className="p-8 pt-4">
+             {/* RIGHT SIDE: FORM */}
+             <div className="w-full lg:w-1/2 p-8 md:p-12 flex flex-col justify-center relative bg-[#1e293b]">
+                {/* Logo & Close */}
+                <div className="flex justify-between items-start mb-8">
+                    <div className="flex items-center gap-2">
+                        <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="Logo" className="h-8 w-auto brightness-0 invert" />
+                    </div>
+                    <button onClick={() => setShowRegisterModal(false)} className="text-gray-400 hover:text-white transition">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white mb-2 tracking-wide">Create new account</h2>
+                    <p className="text-gray-400 text-sm">Experience professional Logistics services</p>
+                </div>
+
                 <form onSubmit={handleRegisterSubmit} className="space-y-4">
                     {regError && (
-                        <div className="bg-red-500/20 text-white text-xs font-bold p-3 rounded-xl flex items-start border border-red-500/30 backdrop-blur-sm mb-4">
-                            <ShieldAlert size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                            <span>{regError}</span>
+                        <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-3 rounded-lg flex items-center">
+                            <ShieldAlert size={14} className="mr-2" /> {regError}
                         </div>
                     )}
-                    
+
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-200 uppercase ml-1">Họ và tên</label>
+                        <label className="text-xs font-bold text-gray-400 uppercase ml-1">Company Name</label>
                         <input 
                             type="text" 
-                            className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500/50 transition font-bold text-white placeholder-gray-400" 
-                            placeholder="Nguyễn Văn A"
+                            className="w-full px-4 py-3 bg-[#0f172a] border border-gray-700 rounded-xl outline-none focus:border-cyan-500 text-white placeholder-gray-600 transition"
+                            placeholder="Company Co., Ltd"
                             value={regName}
                             onChange={(e) => setRegName(e.target.value)}
                         />
                     </div>
 
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-200 uppercase ml-1">Email</label>
+                        <label className="text-xs font-bold text-gray-400 uppercase ml-1">Email</label>
                         <input 
                             type="email" 
-                            className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500/50 transition font-bold text-white placeholder-gray-400" 
+                            className="w-full px-4 py-3 bg-[#0f172a] border border-gray-700 rounded-xl outline-none focus:border-cyan-500 text-white placeholder-gray-600 transition"
                             placeholder="email@example.com"
                             value={regEmail}
                             onChange={(e) => setRegEmail(e.target.value)}
                         />
                     </div>
 
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-200 uppercase ml-1">Mật khẩu</label>
-                        <input 
-                            type="password" 
-                            className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500/50 transition font-bold text-white placeholder-gray-400" 
-                            placeholder="••••••"
-                            value={regPassword}
-                            onChange={(e) => setRegPassword(e.target.value)}
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-200 uppercase ml-1">Xác nhận mật khẩu</label>
-                        <input 
-                            type="password" 
-                            className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500/50 transition font-bold text-white placeholder-gray-400" 
-                            placeholder="••••••"
-                            value={regConfirmPassword}
-                            onChange={(e) => setRegConfirmPassword(e.target.value)}
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-400 uppercase ml-1">Password</label>
+                            <input 
+                                type="password" 
+                                className="w-full px-4 py-3 bg-[#0f172a] border border-gray-700 rounded-xl outline-none focus:border-cyan-500 text-white placeholder-gray-600 transition"
+                                placeholder="••••••"
+                                value={regPassword}
+                                onChange={(e) => setRegPassword(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-400 uppercase ml-1">Confirm Password</label>
+                            <input 
+                                type="password" 
+                                className="w-full px-4 py-3 bg-[#0f172a] border border-gray-700 rounded-xl outline-none focus:border-cyan-500 text-white placeholder-gray-600 transition"
+                                placeholder="••••••"
+                                value={regConfirmPassword}
+                                onChange={(e) => setRegConfirmPassword(e.target.value)}
+                            />
+                        </div>
                     </div>
 
                     <button 
                         type="submit" 
-                        className="w-full bg-[#1A535C] hover:bg-[#13424a] text-white font-bold py-3.5 rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center mt-6 border border-white/10"
+                        className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-cyan-900/30 transition-all transform active:scale-[0.98] mt-4"
                     >
-                        <UserPlus size={18} className="mr-2" /> Đăng ký
+                        Register Now
                     </button>
-
-                    <div className="text-center pt-4 border-t border-white/10 mt-4">
-                        <p className="text-xs text-gray-300">Đã có tài khoản?</p>
-                        <button 
-                            type="button" 
-                            onClick={openLogin}
-                            className="text-sm font-bold text-pink-400 hover:text-pink-300 mt-1 hover:underline"
-                        >
-                            Đăng nhập
-                        </button>
-                    </div>
                 </form>
-            </div>
+
+                <div className="mt-auto pt-6 flex items-center justify-center text-xs text-gray-500">
+                    <span>Already have an account?</span>
+                    <button onClick={openLogin} className="text-cyan-500 hover:text-cyan-400 font-bold ml-2 hover:underline">
+                        Sign In
+                    </button>
+                </div>
+             </div>
           </div>
         </div>
       )}
