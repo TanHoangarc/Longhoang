@@ -66,7 +66,8 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
   // Filter users to show only staff/sales/docs/accounting
   const employeeList = users.filter(u => ['Sales', 'Document', 'Accounting', 'Staff'].includes(u.role) && u.status === 'Active');
 
-  const filteredGuq = guqRecords.filter(r => r.companyName.toLowerCase().includes(guqSearch.toLowerCase()));
+  // Safe filtering for GUQ to prevent crashes
+  const filteredGuq = guqRecords.filter(r => (r.companyName || '').toLowerCase().includes(guqSearch.toLowerCase()));
 
   // --- PREVIEW HANDLER ---
   const handlePreview = (fileData: string | { fileName: string, path?: string }, defaultCategory: string = 'UPLOADS') => {
@@ -203,8 +204,8 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                 <tbody className="divide-y divide-gray-50">
                     {filteredGuq.map(item => (
                     <tr key={item.id} className="hover:bg-gray-50/50 transition">
-                        <td className="px-6 py-4 font-bold text-gray-800">{item.companyName}</td>
-                        <td className="px-6 py-4 text-gray-500 text-sm">{item.date}</td>
+                        <td className="px-6 py-4 font-bold text-gray-800">{item.companyName || 'Chưa cập nhật'}</td>
+                        <td className="px-6 py-4 text-gray-500 text-sm">{item.date || (item as any).uploadDate || '-'}</td>
                         <td className="px-6 py-4">
                             <span 
                                 onClick={() => handlePreview(item, 'GUQ')}

@@ -59,7 +59,7 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
     const lowerUser = username.toLowerCase().trim();
     const pass = password.trim();
 
-    const targetUser = users.find(acc => acc.email.toLowerCase() === lowerUser);
+    const targetUser = users.find(acc => (acc.email || '').toLowerCase() === lowerUser);
 
     if (targetUser) {
         if (targetUser.status === 'Locked') {

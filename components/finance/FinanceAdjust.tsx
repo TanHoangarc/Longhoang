@@ -67,7 +67,7 @@ const FinanceAdjust: React.FC<FinanceAdjustProps> = ({ adjustments = [], onAddAd
       e.preventDefault();
       if (!blSearch.trim()) return;
       
-      const results = adjustments.filter(a => a.bl.toLowerCase().includes(blSearch.toLowerCase()));
+      const results = adjustments.filter(a => (a.bl || '').toLowerCase().includes(blSearch.toLowerCase()));
       if (results.length > 0) {
           setFoundAdjustments(results);
           setStatus('found');

@@ -57,7 +57,7 @@ const FinanceCvhc: React.FC<FinanceCvhcProps> = ({ mode = 'lookup', records = []
     e.preventDefault();
     if (!cvhcSearchTerm.trim()) return;
 
-    const result = records.find(item => item.bl.toLowerCase().trim() === cvhcSearchTerm.toLowerCase().trim());
+    const result = records.find(item => (item.bl || '').toLowerCase().trim() === cvhcSearchTerm.toLowerCase().trim());
 
     if (result) {
       setCvhcStatus('found');

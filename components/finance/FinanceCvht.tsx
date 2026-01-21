@@ -63,7 +63,7 @@ const FinanceCvht: React.FC<FinanceCvhtProps> = ({ mode = 'lookup', records = []
       e.preventDefault();
       if (!searchTerm.trim()) return;
       
-      const res = records.find(i => i.hbl.toLowerCase() === searchTerm.toLowerCase() || i.companyName.toLowerCase().includes(searchTerm.toLowerCase()));
+      const res = records.find(i => (i.bl || '').toLowerCase() === searchTerm.toLowerCase() || (i.companyName || '').toLowerCase().includes(searchTerm.toLowerCase()));
       if (res) {
           setSearchStatus('found');
           setFoundResult(res);

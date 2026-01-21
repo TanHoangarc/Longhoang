@@ -24,7 +24,7 @@ const FinanceGuq: React.FC<FinanceGuqProps> = ({ guqRecords, onUpdateGuq, curren
     if (!guqSearchTerm.trim()) return;
 
     const result = guqRecords.find(item => 
-      item.companyName.toLowerCase().includes(guqSearchTerm.toLowerCase())
+      (item.companyName || '').toLowerCase().includes(guqSearchTerm.toLowerCase())
     );
 
     if (result) {
