@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { X, Award, Users, TrendingUp, Calendar, ChevronLeft, ChevronRight, Play, Image as ImageIcon, Plus, Trash2, Edit, Save } from 'lucide-react';
+import { X, Award, Users, TrendingUp, Calendar, ChevronLeft, ChevronRight, Play, Image as ImageIcon, Plus, Trash2, Edit, Save, Pin, PinOff } from 'lucide-react';
 import { GalleryAlbum, UserRole, Milestone } from '../App';
 
 interface AboutProps {
@@ -28,9 +27,10 @@ const About: React.FC<AboutProps> = ({
   const [selectedAlbum, setSelectedAlbum] = useState<GalleryAlbum | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Add Album Modal
-  const [isAddAlbumOpen, setIsAddAlbumOpen] = useState(false);
-  const [newAlbumData, setNewAlbumData] = useState({ title: '', cover: '', images: '', date: '' });
+  // Album Management (Add/Edit)
+  const [isAlbumModalOpen, setIsAlbumModalOpen] = useState(false);
+  const [editingAlbumId, setEditingAlbumId] = useState<number | null>(null);
+  const [albumFormData, setAlbumFormData] = useState({ title: '', cover: '', images: '', date: '' });
 
   // Milestone Management Modal
   const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
@@ -47,16 +47,35 @@ const About: React.FC<AboutProps> = ({
 
   // Prevent scrolling when modal is open
   useEffect(() => {
-    if (isModalOpen || selectedAlbum || isAddAlbumOpen || isMilestoneModalOpen) {
+    if (isModalOpen || selectedAlbum || isAlbumModalOpen || isMilestoneModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
-  }, [isModalOpen, selectedAlbum, isAddAlbumOpen, isMilestoneModalOpen]);
+  }, [isModalOpen, selectedAlbum, isAlbumModalOpen, isMilestoneModalOpen]);
+
+  // Helper to parse date for sorting (MM/YYYY or YYYY)
+  const parseDateScore = (dateStr: string) => {
+      if (!dateStr) return 0;
+      const parts = dateStr.split('/');
+      if (parts.length === 2) { // MM/YYYY
+          return parseInt(parts[1]) * 100 + parseInt(parts[0]); 
+      }
+      // Try parsing as Year
+      const year = parseInt(dateStr);
+      return isNaN(year) ? 0 : year * 100;
+  };
+
+  // Sort albums: Pinned First, then Newest to Oldest
+  const sortedAlbums = [...galleryAlbums].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return parseDateScore(b.date) - parseDateScore(a.date);
+  });
 
   // Navigation Logic for Main Gallery
   const handleNextAlbums = () => {
-    if (visibleStartIndex + ITEMS_PER_PAGE < galleryAlbums.length) {
+    if (visibleStartIndex + ITEMS_PER_PAGE < sortedAlbums.length) {
       setVisibleStartIndex(prev => prev + 1);
     }
   };
@@ -80,29 +99,68 @@ const About: React.FC<AboutProps> = ({
     }
   };
 
-  // Add Album Logic
+  // --- ALBUM MANAGEMENT HANDLERS ---
+
+  const handleOpenAddAlbum = () => {
+      setEditingAlbumId(null);
+      setAlbumFormData({ title: '', cover: '', images: '', date: '' });
+      setIsAlbumModalOpen(true);
+  };
+
+  const handleEditAlbum = (album: GalleryAlbum, e: React.MouseEvent) => {
+      e.stopPropagation();
+      setEditingAlbumId(album.id);
+      setAlbumFormData({
+          title: album.title,
+          cover: album.cover,
+          images: album.images.join('\n'),
+          date: album.date
+      });
+      setIsAlbumModalOpen(true);
+  };
+
+  const handleTogglePin = (id: number, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onUpdateGallery) {
+          onUpdateGallery(galleryAlbums.map(a => a.id === id ? { ...a, isPinned: !a.isPinned } : a));
+      }
+  };
+
   const handleSaveAlbum = () => {
-    if (!newAlbumData.title || !newAlbumData.cover) return alert('Vui lòng nhập tiêu đề và ảnh bìa');
+    if (!albumFormData.title || !albumFormData.cover) return alert('Vui lòng nhập tiêu đề và ảnh bìa');
     
     // Process images textarea
-    const imagesArray = newAlbumData.images.split('\n').map(url => url.trim()).filter(url => url.length > 0);
+    const imagesArray = albumFormData.images.split('\n').map(url => url.trim()).filter(url => url.length > 0);
     // If no specific images added, use cover as the first image
-    if (imagesArray.length === 0) imagesArray.push(newAlbumData.cover);
-
-    const newAlbum: GalleryAlbum = {
-      id: Date.now(),
-      title: newAlbumData.title,
-      cover: newAlbumData.cover,
-      images: imagesArray,
-      date: newAlbumData.date || new Date().toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })
-    };
+    if (imagesArray.length === 0) imagesArray.push(albumFormData.cover);
 
     if (onUpdateGallery) {
-      onUpdateGallery([newAlbum, ...galleryAlbums]);
+        if (editingAlbumId) {
+            // Update Existing
+            onUpdateGallery(galleryAlbums.map(a => a.id === editingAlbumId ? {
+                ...a,
+                title: albumFormData.title,
+                cover: albumFormData.cover,
+                images: imagesArray,
+                date: albumFormData.date || a.date
+            } : a));
+        } else {
+            // Create New
+            const newAlbum: GalleryAlbum = {
+                id: Date.now(),
+                title: albumFormData.title,
+                cover: albumFormData.cover,
+                images: imagesArray,
+                date: albumFormData.date || new Date().toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' }),
+                isPinned: false
+            };
+            onUpdateGallery([newAlbum, ...galleryAlbums]);
+        }
     }
     
-    setIsAddAlbumOpen(false);
-    setNewAlbumData({ title: '', cover: '', images: '', date: '' });
+    setIsAlbumModalOpen(false);
+    setEditingAlbumId(null);
+    setAlbumFormData({ title: '', cover: '', images: '', date: '' });
   };
 
   const handleDeleteAlbum = (id: number, e: React.MouseEvent) => {
@@ -154,8 +212,8 @@ const About: React.FC<AboutProps> = ({
     }
   };
 
-  // Sort milestones by year
-  const sortedMilestones = [...milestones].sort((a, b) => parseInt(a.year) - parseInt(b.year));
+  // Sort milestones by year (Newest to Oldest)
+  const sortedMilestones = [...milestones].sort((a, b) => parseInt(b.year) - parseInt(a.year));
 
   return (
     <section id="about" className="py-20 bg-gray-50">
@@ -290,7 +348,7 @@ const About: React.FC<AboutProps> = ({
                     <div className="flex items-center gap-3">
                         {canEdit && (
                             <button 
-                                onClick={() => setIsAddAlbumOpen(true)}
+                                onClick={handleOpenAddAlbum}
                                 className="bg-primary hover:bg-primaryDark text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow transition mr-4"
                             >
                                 <Plus size={16} className="mr-2" /> Thêm Album
@@ -305,17 +363,17 @@ const About: React.FC<AboutProps> = ({
                         </button>
                         <button 
                             onClick={handleNextAlbums}
-                            disabled={visibleStartIndex + ITEMS_PER_PAGE >= galleryAlbums.length}
-                            className={`p-2 rounded-full border border-gray-200 transition ${visibleStartIndex + ITEMS_PER_PAGE >= galleryAlbums.length ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100 hover:text-primary'}`}
+                            disabled={visibleStartIndex + ITEMS_PER_PAGE >= sortedAlbums.length}
+                            className={`p-2 rounded-full border border-gray-200 transition ${visibleStartIndex + ITEMS_PER_PAGE >= sortedAlbums.length ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100 hover:text-primary'}`}
                         >
                             <ChevronRight size={20} />
                         </button>
                     </div>
                 </div>
 
-                {galleryAlbums.length > 0 ? (
+                {sortedAlbums.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {galleryAlbums.slice(visibleStartIndex, visibleStartIndex + ITEMS_PER_PAGE).map((album) => (
+                    {sortedAlbums.slice(visibleStartIndex, visibleStartIndex + ITEMS_PER_PAGE).map((album) => (
                         <div 
                             key={album.id} 
                             onClick={() => { setSelectedAlbum(album); setCurrentImageIndex(0); }}
@@ -328,6 +386,13 @@ const About: React.FC<AboutProps> = ({
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-90 transition-opacity"></div>
                             
+                            {/* Pinned Badge */}
+                            {album.isPinned && (
+                                <div className="absolute top-2 left-2 z-10 bg-primary text-white p-1.5 rounded-full shadow-md">
+                                    <Pin size={12} fill="white" />
+                                </div>
+                            )}
+
                             {/* Album Info */}
                             <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform">
                                 <span className="text-[10px] font-bold text-primary bg-white/20 backdrop-blur-sm px-2 py-1 rounded uppercase tracking-wider mb-2 inline-block">
@@ -339,15 +404,31 @@ const About: React.FC<AboutProps> = ({
                                 </div>
                             </div>
 
-                            {/* Delete Button (Admin) */}
+                            {/* Actions Overlay (Admin) */}
                             {canEdit && (
-                                <button 
-                                    onClick={(e) => handleDeleteAlbum(album.id, e)}
-                                    className="absolute top-2 right-2 p-2 bg-white/90 text-red-500 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
-                                    title="Xóa Album"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
+                                <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                                    <button 
+                                        onClick={(e) => handleEditAlbum(album, e)}
+                                        className="p-2 bg-white/90 text-blue-600 rounded-lg shadow-sm hover:bg-white"
+                                        title="Chỉnh sửa"
+                                    >
+                                        <Edit size={16} />
+                                    </button>
+                                    <button 
+                                        onClick={(e) => handleTogglePin(album.id, e)}
+                                        className="p-2 bg-white/90 text-gray-600 rounded-lg shadow-sm hover:bg-white hover:text-primary"
+                                        title={album.isPinned ? "Bỏ ghim" : "Ghim lên đầu"}
+                                    >
+                                        {album.isPinned ? <PinOff size={16} /> : <Pin size={16} />}
+                                    </button>
+                                    <button 
+                                        onClick={(e) => handleDeleteAlbum(album.id, e)}
+                                        className="p-2 bg-white/90 text-red-500 rounded-lg shadow-sm hover:bg-white"
+                                        title="Xóa Album"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                             )}
                         </div>
                     ))}
@@ -532,14 +613,17 @@ const About: React.FC<AboutProps> = ({
           </div>
       )}
 
-      {/* ADD ALBUM MODAL */}
-      {isAddAlbumOpen && (
+      {/* ADD/EDIT ALBUM MODAL */}
+      {isAlbumModalOpen && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setIsAddAlbumOpen(false)}></div>
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setIsAlbumModalOpen(false)}></div>
               <div className="bg-white rounded-xl w-full max-w-lg relative z-20 overflow-hidden shadow-2xl animate-in zoom-in duration-200">
                   <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                      <h3 className="text-lg font-bold text-gray-800">Thêm Album mới</h3>
-                      <button onClick={() => setIsAddAlbumOpen(false)}><X size={20} className="text-gray-400" /></button>
+                      <h3 className="text-lg font-bold text-gray-800 flex items-center">
+                          {editingAlbumId ? <Edit size={20} className="mr-2 text-blue-600"/> : <Plus size={20} className="mr-2 text-green-600"/>}
+                          {editingAlbumId ? 'Chỉnh sửa Album' : 'Thêm Album mới'}
+                      </h3>
+                      <button onClick={() => setIsAlbumModalOpen(false)}><X size={20} className="text-gray-400" /></button>
                   </div>
                   <div className="p-6 space-y-4">
                       <div>
@@ -548,8 +632,8 @@ const About: React.FC<AboutProps> = ({
                             type="text" 
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary font-bold"
                             placeholder="VD: Tiệc tất niên 2024..."
-                            value={newAlbumData.title}
-                            onChange={(e) => setNewAlbumData({...newAlbumData, title: e.target.value})}
+                            value={albumFormData.title}
+                            onChange={(e) => setAlbumFormData({...albumFormData, title: e.target.value})}
                           />
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -559,8 +643,8 @@ const About: React.FC<AboutProps> = ({
                                 type="text" 
                                 className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary text-sm"
                                 placeholder="VD: 05/2024"
-                                value={newAlbumData.date}
-                                onChange={(e) => setNewAlbumData({...newAlbumData, date: e.target.value})}
+                                value={albumFormData.date}
+                                onChange={(e) => setAlbumFormData({...albumFormData, date: e.target.value})}
                               />
                           </div>
                           <div className="sm:col-span-2">
@@ -569,8 +653,8 @@ const About: React.FC<AboutProps> = ({
                                 type="text" 
                                 className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary text-sm"
                                 placeholder="https://..."
-                                value={newAlbumData.cover}
-                                onChange={(e) => setNewAlbumData({...newAlbumData, cover: e.target.value})}
+                                value={albumFormData.cover}
+                                onChange={(e) => setAlbumFormData({...albumFormData, cover: e.target.value})}
                               />
                           </div>
                       </div>
@@ -579,15 +663,17 @@ const About: React.FC<AboutProps> = ({
                           <textarea 
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary text-sm font-mono h-32"
                             placeholder="Dán link ảnh tại đây, mỗi link một dòng..."
-                            value={newAlbumData.images}
-                            onChange={(e) => setNewAlbumData({...newAlbumData, images: e.target.value})}
+                            value={albumFormData.images}
+                            onChange={(e) => setAlbumFormData({...albumFormData, images: e.target.value})}
                           ></textarea>
                           <p className="text-[10px] text-gray-400 mt-1">* Hỗ trợ link ảnh và video (chỉ hiển thị thumbnail nếu là ảnh)</p>
                       </div>
                   </div>
                   <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                      <button onClick={() => setIsAddAlbumOpen(false)} className="px-4 py-2 text-gray-500 font-bold text-sm hover:bg-gray-200 rounded-lg transition">Hủy</button>
-                      <button onClick={handleSaveAlbum} className="px-6 py-2 bg-primary text-white font-bold text-sm rounded-lg hover:bg-primaryDark transition shadow-lg">Lưu Album</button>
+                      <button onClick={() => setIsAlbumModalOpen(false)} className="px-4 py-2 text-gray-500 font-bold text-sm hover:bg-gray-200 rounded-lg transition">Hủy</button>
+                      <button onClick={handleSaveAlbum} className="px-6 py-2 bg-primary text-white font-bold text-sm rounded-lg hover:bg-primaryDark transition shadow-lg">
+                          {editingAlbumId ? 'Cập nhật' : 'Lưu Album'}
+                      </button>
                   </div>
               </div>
           </div>

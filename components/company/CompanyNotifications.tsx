@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { 
-  Bell, Plus, Calendar, Pin, AlertCircle, PinOff, Edit, Trash2, X, Image as ImageIcon, RefreshCcw, FileText, Upload, Eye
+  Bell, Plus, Calendar, Pin, AlertCircle, PinOff, Edit, Trash2, X, Image as ImageIcon, RefreshCcw, FileText, Upload, Eye, Download
 } from 'lucide-react';
 import { SystemNotification } from '../../App';
 import { API_BASE_URL } from '../../constants';
@@ -183,6 +183,40 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
       }
   };
 
+  const handleDownloadFile = async (fileName: string) => {
+      if (!fileName) return;
+      
+      let url = '';
+      if (fileName.startsWith('http')) {
+          url = fileName;
+      } else {
+          url = `${API_BASE_URL}/files/THONGBAO/${fileName}`;
+      }
+
+      // Try to download via blob to force "Save As" behavior
+      try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName; // Force download
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(blobUrl);
+      } catch (e) {
+          // Fallback to simple link click if fetch fails (e.g. CORS on external images)
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileName;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+      }
+  };
+
   const sortedNotifications = [...notifications].sort((a, b) => {
     if (a.isPinned === b.isPinned) return 0;
     return a.isPinned ? -1 : 1;
@@ -256,12 +290,22 @@ const CompanyNotifications: React.FC<CompanyNotificationsProps> = ({ notificatio
                         <FileText size={16} className="text-primary flex-shrink-0" />
                         <span className="text-xs font-bold text-gray-600 truncate">Tài liệu đính kèm</span>
                     </div>
-                    <button 
-                        onClick={() => handleViewFile(notif.attachment!)}
-                        className="flex items-center bg-white border border-gray-200 text-primary text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition shadow-sm"
-                    >
-                        <Eye size={12} className="mr-1" /> Xem
-                    </button>
+                    <div className="flex space-x-1">
+                        <button 
+                            onClick={() => handleViewFile(notif.attachment!)}
+                            className="flex items-center bg-white border border-gray-200 text-primary text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition shadow-sm"
+                            title="Xem online"
+                        >
+                            <Eye size={12} className="mr-1" /> Xem
+                        </button>
+                        <button 
+                            onClick={() => handleDownloadFile(notif.attachment!)}
+                            className="flex items-center bg-white border border-gray-200 text-green-600 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-green-600 hover:text-white transition shadow-sm"
+                            title="Tải xuống"
+                        >
+                            <Download size={12} className="mr-1" /> Tải
+                        </button>
+                    </div>
                   </div>
                 )}
 

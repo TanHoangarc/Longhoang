@@ -66,10 +66,10 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
       return Array.from({ length: days }, (_, i) => i + 1);
   }, [selectedMonth, selectedYear]);
 
-  // Filter users based on search
+  // Filter users based on search (Fixed: Safe check for strings)
   const filteredUsers = users.filter(u => 
-      u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      u.role.toLowerCase().includes(searchTerm.toLowerCase())
+      (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (u.role || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getRecord = (userId: number, day: number) => {

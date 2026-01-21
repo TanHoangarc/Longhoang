@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, ArrowRight, MapPin, Calendar, Tag, Plus, Edit, Trash2, Image as ImageIcon, Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ArrowRight, MapPin, Calendar, Tag, Plus, Edit, Trash2, Image as ImageIcon, Save, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { Project, UserRole } from '../App';
 
 interface HeroProps {
@@ -19,6 +19,9 @@ const Hero: React.FC<HeroProps> = ({ projects, onUpdateProjects, userRole }) => 
   
   // View Detail Project (for Album viewing)
   const [viewingProject, setViewingProject] = useState<Project | null>(null);
+
+  // Video Playing State for Grid View
+  const [playingVideoId, setPlayingVideoId] = useState<number | null>(null);
 
   // Form State
   const [formData, setFormData] = useState<Project>({
@@ -45,6 +48,24 @@ const Hero: React.FC<HeroProps> = ({ projects, onUpdateProjects, userRole }) => 
       document.body.style.overflow = 'unset';
     }
   }, [isProjectModalOpen, isEditModalOpen]);
+
+  // Reset playing video when closing modal
+  useEffect(() => {
+    if (!isProjectModalOpen) setPlayingVideoId(null);
+  }, [isProjectModalOpen]);
+
+  // --- HELPER FUNCTIONS FOR YOUTUBE ---
+  const getYouTubeId = (url: string) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const getYouTubeThumbnail = (url: string) => {
+    const id = getYouTubeId(url);
+    return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : url;
+  };
 
   // --- CRUD HANDLERS ---
 
@@ -140,14 +161,30 @@ const Hero: React.FC<HeroProps> = ({ projects, onUpdateProjects, userRole }) => 
                     <p className="text-gray-600 leading-relaxed text-lg mb-10 whitespace-pre-line">{project.desc}</p>
 
                     {/* Album Grid */}
-                    <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center"><ImageIcon size={20} className="mr-2 text-primary" /> Album ảnh dự án</h3>
+                    <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center"><ImageIcon size={20} className="mr-2 text-primary" /> Album ảnh & Video</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {project.images.map((img, idx) => (
-                            <div key={idx} className={`rounded-xl overflow-hidden shadow-sm hover:shadow-md transition group relative ${idx === 0 ? 'md:col-span-2 md:h-[400px]' : 'h-64'}`}>
-                                <img src={img} alt={`Project ${idx}`} className="w-full h-full object-cover transition duration-700 group-hover:scale-105" />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition"></div>
-                            </div>
-                        ))}
+                        {project.images.map((img, idx) => {
+                            const videoId = getYouTubeId(img);
+                            return (
+                                <div key={idx} className={`rounded-xl overflow-hidden shadow-sm hover:shadow-md transition group relative ${idx === 0 ? 'md:col-span-2 md:h-[400px]' : 'h-64'}`}>
+                                    {videoId ? (
+                                        <iframe 
+                                            className="w-full h-full"
+                                            src={`https://www.youtube.com/embed/${videoId}`}
+                                            title="YouTube video player"
+                                            frameBorder="0"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                            allowFullScreen
+                                        ></iframe>
+                                    ) : (
+                                        <>
+                                            <img src={img} alt={`Project ${idx}`} className="w-full h-full object-cover transition duration-700 group-hover:scale-105" />
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition"></div>
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
@@ -239,67 +276,107 @@ const Hero: React.FC<HeroProps> = ({ projects, onUpdateProjects, userRole }) => 
                     {/* List View Body */}
                     <div className="overflow-y-auto p-6 bg-gray-50 flex-1">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {projects.map((project) => (
-                            <div key={project.id} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col h-full group relative">
-                                {/* Image Wrapper */}
-                                <div className="relative h-64 overflow-hidden cursor-pointer" onClick={() => setViewingProject(project)}>
-                                    <img 
-                                        src={project.images[0]} 
-                                        alt={project.title} 
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                    />
-                                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
-                                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-primary text-xs font-bold px-3 py-1 rounded shadow-md uppercase">
-                                        {project.category}
+                            {projects.map((project) => {
+                                const coverImage = project.images[0];
+                                const isVideo = !!getYouTubeId(coverImage);
+                                const isPlaying = playingVideoId === project.id;
+                                const displayImage = isVideo ? getYouTubeThumbnail(coverImage) : coverImage;
+                                const videoId = isVideo ? getYouTubeId(coverImage) : null;
+
+                                return (
+                                    <div key={project.id} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col h-full group relative">
+                                        {/* Image/Video Wrapper */}
+                                        <div 
+                                            className="relative h-64 overflow-hidden cursor-pointer" 
+                                            onClick={() => !isPlaying && setViewingProject(project)}
+                                        >
+                                            {isPlaying && videoId ? (
+                                                <iframe 
+                                                    className="w-full h-full"
+                                                    src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+                                                    title="YouTube video player"
+                                                    frameBorder="0"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                                    allowFullScreen
+                                                ></iframe>
+                                            ) : (
+                                                <>
+                                                    <img 
+                                                        src={displayImage} 
+                                                        alt={project.title} 
+                                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                                    />
+                                                    
+                                                    {/* Play Button for Video */}
+                                                    {isVideo && (
+                                                        <div 
+                                                            className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors z-10"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setPlayingVideoId(project.id);
+                                                            }}
+                                                        >
+                                                            <div className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                                                <Play size={24} className="text-white fill-white ml-1" />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors pointer-events-none"></div>
+                                                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-primary text-xs font-bold px-3 py-1 rounded shadow-md uppercase">
+                                                        {project.category}
+                                                    </div>
+                                                    {project.images.length > 1 && (
+                                                        <div className="absolute bottom-4 right-4 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded flex items-center">
+                                                            <ImageIcon size={12} className="mr-1" /> +{project.images.length - 1} ảnh/video
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                        
+                                        {/* Content */}
+                                        <div className="p-6 flex flex-col flex-grow relative">
+                                            {/* Edit Actions Overlay on Hover (Admin only) */}
+                                            {canEdit && (
+                                                <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                                    <button onClick={(e) => handleEdit(project, e)} className="p-2 bg-white/90 text-blue-600 rounded-lg shadow hover:bg-blue-50"><Edit size={16} /></button>
+                                                    <button onClick={(e) => handleDelete(project.id, e)} className="p-2 bg-white/90 text-red-500 rounded-lg shadow hover:bg-red-50"><Trash2 size={16} /></button>
+                                                </div>
+                                            )}
+
+                                            <h3 
+                                                className="text-xl font-bold text-gray-800 mb-3 group-hover:text-primary transition-colors cursor-pointer"
+                                                onClick={() => setViewingProject(project)}
+                                            >
+                                                {project.title}
+                                            </h3>
+                                            
+                                            <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
+                                                <div className="flex items-center">
+                                                <MapPin size={16} className="text-primary mr-1" />
+                                                {project.location}
+                                                </div>
+                                                <div className="flex items-center">
+                                                <Calendar size={16} className="text-primary mr-1" />
+                                                {project.date}
+                                                </div>
+                                            </div>
+
+                                            <p className="text-gray-600 leading-relaxed mb-6 flex-grow line-clamp-3">
+                                                {project.desc}
+                                            </p>
+
+                                            <button 
+                                                onClick={() => setViewingProject(project)}
+                                                className="flex items-center text-primary font-bold uppercase text-sm tracking-wide hover:underline mt-auto"
+                                            >
+                                                Xem chi tiết <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                                            </button>
+                                        </div>
                                     </div>
-                                    {project.images.length > 1 && (
-                                        <div className="absolute bottom-4 right-4 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded flex items-center">
-                                            <ImageIcon size={12} className="mr-1" /> +{project.images.length - 1} ảnh
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                {/* Content */}
-                                <div className="p-6 flex flex-col flex-grow relative">
-                                    {/* Edit Actions Overlay on Hover (Admin only) */}
-                                    {canEdit && (
-                                        <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                            <button onClick={(e) => handleEdit(project, e)} className="p-2 bg-white/90 text-blue-600 rounded-lg shadow hover:bg-blue-50"><Edit size={16} /></button>
-                                            <button onClick={(e) => handleDelete(project.id, e)} className="p-2 bg-white/90 text-red-500 rounded-lg shadow hover:bg-red-50"><Trash2 size={16} /></button>
-                                        </div>
-                                    )}
-
-                                    <h3 
-                                        className="text-xl font-bold text-gray-800 mb-3 group-hover:text-primary transition-colors cursor-pointer"
-                                        onClick={() => setViewingProject(project)}
-                                    >
-                                        {project.title}
-                                    </h3>
-                                    
-                                    <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
-                                        <div className="flex items-center">
-                                        <MapPin size={16} className="text-primary mr-1" />
-                                        {project.location}
-                                        </div>
-                                        <div className="flex items-center">
-                                        <Calendar size={16} className="text-primary mr-1" />
-                                        {project.date}
-                                        </div>
-                                    </div>
-
-                                    <p className="text-gray-600 leading-relaxed mb-6 flex-grow line-clamp-3">
-                                        {project.desc}
-                                    </p>
-
-                                    <button 
-                                        onClick={() => setViewingProject(project)}
-                                        className="flex items-center text-primary font-bold uppercase text-sm tracking-wide hover:underline mt-auto"
-                                    >
-                                        Xem chi tiết <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
-                                    </button>
-                                </div>
-                            </div>
-                            ))}
+                                );
+                            })}
                         </div>
                         
                         {/* CTA in Modal */}
@@ -379,14 +456,14 @@ const Hero: React.FC<HeroProps> = ({ projects, onUpdateProjects, userRole }) => 
                           />
                       </div>
                       <div>
-                          <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Album ảnh (URLs)</label>
+                          <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Album ảnh & Video (URLs)</label>
                           <textarea 
                             className="w-full border border-gray-200 rounded-lg p-2.5 outline-none focus:border-primary text-xs font-mono h-24"
-                            placeholder="Dán link ảnh tại đây (mỗi link một dòng hoặc cách nhau bằng dấu phẩy)..."
+                            placeholder="Dán link ảnh hoặc link video YouTube tại đây (mỗi link một dòng)..."
                             value={imageUrls}
                             onChange={e => setImageUrls(e.target.value)}
                           ></textarea>
-                          <p className="text-[10px] text-gray-400 mt-1">Hỗ trợ nhiều ảnh để tạo Album.</p>
+                          <p className="text-[10px] text-gray-400 mt-1">Hỗ trợ link ảnh và link video YouTube (Ví dụ: https://www.youtube.com/watch?v=...)</p>
                       </div>
                       <div>
                           <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Mô tả chi tiết</label>

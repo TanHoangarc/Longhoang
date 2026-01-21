@@ -3,10 +3,10 @@ import React, { useState } from 'react';
 import { 
   X, FileText, Search, Download, Users, FileCheck, CreditCard, 
   ArrowLeft, Eye, ShieldCheck, Filter, ChevronRight, Package, 
-  Ship, Truck, BarChart2, Briefcase, FileOutput, FolderOpen, Calendar, Trash2, Upload
+  Ship, Truck, BarChart2, Briefcase, FileOutput, FolderOpen, Calendar, Trash2, Upload, Paperclip
 } from 'lucide-react';
 // Use type import to avoid circular dependency
-import type { UserRole, UserAccount, GUQRecord, UserFileRecord, AdjustmentRecord, CVHCRecord, CVHTRecord } from '../App';
+import type { UserRole, UserAccount, GUQRecord, UserFileRecord, AdjustmentRecord, CVHCRecord, CVHTRecord, ContractRecord } from '../App';
 import { API_BASE_URL } from '../constants';
 
 interface ManagementPageProps {
@@ -23,9 +23,11 @@ interface ManagementPageProps {
   onUpdateUserFiles: (files: UserFileRecord[]) => void;
   adjustments: AdjustmentRecord[]; // Receive real adjustments
   onUpdateAdjustments: (records: AdjustmentRecord[]) => void;
+  contracts: ContractRecord[];
+  onUpdateContracts: (contracts: ContractRecord[]) => void;
 }
 
-type ManagementSection = 'GUQ' | 'CVHC' | 'CVHT' | 'ADJUST' | 'EMPLOYEES';
+type ManagementSection = 'GUQ' | 'CVHC' | 'CVHT' | 'ADJUST' | 'EMPLOYEES' | 'CONTRACTS';
 
 // Helper to generate mock details for any user (Shipments only now)
 const getMockEmployeeDetails = (user: UserAccount) => {
@@ -41,12 +43,14 @@ const getMockEmployeeDetails = (user: UserAccount) => {
 const ManagementPage: React.FC<ManagementPageProps> = ({ 
   onClose, userRole, users, guqRecords, onUpdateGuq, 
   cvhcRecords, onUpdateCvhc, cvhtRecords, onUpdateCvht,
-  userFiles, onUpdateUserFiles, adjustments, onUpdateAdjustments 
+  userFiles, onUpdateUserFiles, adjustments, onUpdateAdjustments,
+  contracts, onUpdateContracts
 }) => {
   const [activeSection, setActiveSection] = useState<ManagementSection>('EMPLOYEES');
   const [adjustFilter, setAdjustFilter] = useState<'All' | 'Signed' | 'Unsigned'>('All');
   const [selectedEmployee, setSelectedEmployee] = useState<ReturnType<typeof getMockEmployeeDetails> | null>(null);
   const [guqSearch, setGuqSearch] = useState('');
+  const [contractSearch, setContractSearch] = useState('');
   
   // Preview Modal State
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string } | null>(null);
@@ -68,6 +72,12 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
 
   // Safe filtering for GUQ to prevent crashes
   const filteredGuq = guqRecords.filter(r => (r.companyName || '').toLowerCase().includes(guqSearch.toLowerCase()));
+
+  // Filter Contracts
+  const filteredContracts = contracts.filter(c => 
+    (c.contractNo || '').toLowerCase().includes(contractSearch.toLowerCase()) || 
+    (c.customerName || '').toLowerCase().includes(contractSearch.toLowerCase())
+  );
 
   // --- PREVIEW HANDLER ---
   const handlePreview = (fileData: string | { fileName: string, path?: string }, defaultCategory: string = 'UPLOADS') => {
@@ -147,6 +157,12 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
       }
   };
 
+  const handleDeleteContract = (id: number) => {
+      if (confirm('Bạn có chắc chắn muốn xóa hợp đồng này?')) {
+          onUpdateContracts(contracts.filter(c => c.id !== id));
+      }
+  };
+
   // --- UPLOAD HANDLER FOR UNC (PROOF OF PAYMENT) ---
   const handleUploadUNC = async (file: File, recordId: number, type: 'CVHC' | 'CVHT') => {
       const formData = new FormData();
@@ -181,6 +197,67 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
 
   const renderSection = () => {
     switch (activeSection) {
+      case 'CONTRACTS':
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in duration-300">
+            <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                <h3 className="font-bold text-gray-800 flex items-center"><Briefcase className="mr-2 text-teal-600" size={20} /> Danh sách Hợp đồng Vận chuyển</h3>
+                <div className="relative">
+                    <Search className="absolute left-3 top-2.5 text-gray-300" size={16} />
+                    <input 
+                        className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-white outline-none focus:border-teal-500" 
+                        placeholder="Tìm số HĐ, khách hàng..." 
+                        value={contractSearch}
+                        onChange={(e) => setContractSearch(e.target.value)}
+                    />
+                </div>
+            </div>
+            <div className="max-h-[600px] overflow-y-auto">
+                <table className="w-full text-left">
+                <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white border-b border-gray-100 sticky top-0 z-10">
+                    <tr>
+                        <th className="px-6 py-4">Số Hợp đồng</th>
+                        <th className="px-6 py-4">Khách hàng</th>
+                        <th className="px-6 py-4">Người tạo</th>
+                        <th className="px-6 py-4">Ngày ký</th>
+                        <th className="px-6 py-4">Ngày hết hạn</th>
+                        <th className="px-6 py-4 text-center">Trạng thái</th>
+                        <th className="px-6 py-4 text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                    {filteredContracts.map(c => {
+                        const isExpired = new Date(c.expiryDate) < new Date();
+                        return (
+                            <tr key={c.id} className="hover:bg-gray-50/50 transition">
+                                <td className="px-6 py-4 font-mono text-sm font-bold text-teal-600">{c.contractNo}</td>
+                                <td className="px-6 py-4 font-bold text-gray-700">{c.customerName}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500">{c.creatorName || 'N/A'}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500">{new Date(c.date).toLocaleDateString('vi-VN')}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500">{new Date(c.expiryDate).toLocaleDateString('vi-VN')}</td>
+                                <td className="px-6 py-4 text-center">
+                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${isExpired ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                                        {isExpired ? 'Hết hạn' : 'Hiệu lực'}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                    {userRole === 'admin' && (
+                                        <button onClick={() => handleDeleteContract(c.id)} className="p-2 text-gray-400 hover:text-red-500 transition bg-white border border-transparent hover:border-red-100 rounded-lg" title="Xóa hợp đồng">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </td>
+                            </tr>
+                        );
+                    })}
+                    {filteredContracts.length === 0 && (
+                        <tr><td colSpan={7} className="text-center py-12 text-gray-400 italic">Không tìm thấy hợp đồng nào.</td></tr>
+                    )}
+                </tbody>
+                </table>
+            </div>
+          </div>
+        );
       case 'GUQ':
         return (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in duration-300">
@@ -665,6 +742,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
           <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/5 overflow-x-auto max-w-full">
             {[
               { id: 'EMPLOYEES', label: 'Nhân viên', icon: Users },
+              { id: 'CONTRACTS', label: 'Hợp đồng', icon: Briefcase },
               { id: 'GUQ', label: 'GUQ', icon: FileText },
               { id: 'CVHC', label: 'CVHC', icon: FileCheck },
               { id: 'CVHT', label: 'CVHT', icon: CreditCard },
@@ -688,6 +766,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
             <div>
                 <h2 className="text-3xl font-black text-gray-800 tracking-tight uppercase">
                     {activeSection === 'EMPLOYEES' && 'Quản lý nhân sự'}
+                    {activeSection === 'CONTRACTS' && 'Quản lý hợp đồng'}
                     {activeSection === 'GUQ' && 'Giấy ủy quyền'}
                     {activeSection === 'CVHC' && 'Hoàn cược'}
                     {activeSection === 'CVHT' && 'Hoàn tiền'}

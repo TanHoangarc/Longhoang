@@ -1,7 +1,8 @@
 
-import React, { useState, useMemo } from 'react';
-import { Printer, X, Phone, Mail, Download, Plus, Trash2, AlertCircle, Save } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Printer, X, Phone, Mail, Download, Plus, Trash2, AlertCircle, Save, List, FileText, Edit } from 'lucide-react';
 import { UserAccount, UserFileRecord } from '../../App';
+import { API_BASE_URL } from '../../constants';
 
 interface QuoteRow {
   id: number;
@@ -32,6 +33,9 @@ interface QuotationData {
 interface CompanyQuotationProps {
   currentUser: UserAccount | null;
   onAddFile: (file: UserFileRecord) => void;
+  // New props for list management
+  userFiles: UserFileRecord[];
+  onUpdateUserFiles: (files: UserFileRecord[]) => void;
 }
 
 const PORTS_HCM = [
@@ -59,15 +63,18 @@ const FOREIGN_PORTS = [
   'Tokyo (JPN)', 'Port Klang (MYS)', 'Dubai (ARE)', 'Bangkok (THA)', 'Laem Chabang (THA)'
 ];
 
-const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddFile }) => {
+const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddFile, userFiles, onUpdateUserFiles }) => {
+  const [viewMode, setViewMode] = useState<'form' | 'list'>('list'); // Default to list if user has history
+  const [editingFileId, setEditingFileId] = useState<number | null>(null);
+
   const [rows, setRows] = useState<QuoteRow[]>([{ id: 1, cost: '', unit: 'Lô', qty: 1, price: 0, vat: 10, currency: 'USD' }]);
   const [units, setUnits] = useState(['Lô', 'Bill', 'Bộ', 'Cont', 'CBM', 'Kgs', 'Chuyến']);
   const [currencies, setCurrencies] = useState(['USD', 'VND', 'EUR']);
   const [showPDF, setShowPDF] = useState(false);
   const [quoteType, setQuoteType] = useState<'import' | 'export'>('import');
   
-  // Generated code for reference
-  const quoteCode = useMemo(() => `LH-QT-${Math.floor(Date.now() / 100000)}`, []);
+  // Dynamic Quote Code
+  const [quoteCode, setQuoteCode] = useState(`LH-QT-${Math.floor(Date.now() / 100000)}`);
 
   const [quoteData, setQuoteData] = useState<QuotationData>({
     region: 'Hồ Chí Minh',
@@ -85,6 +92,16 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddF
     salerEmail: currentUser ? currentUser.email : ''
   });
 
+  // Switch to list view automatically if user has quotes on mount
+  useEffect(() => {
+      const myQuotes = userFiles.filter(f => f.type === 'QUOTATION' && f.userId === currentUser?.id);
+      if (myQuotes.length > 0) {
+          setViewMode('list');
+      } else {
+          setViewMode('form');
+      }
+  }, []);
+
   if (!currentUser) {
       return (
           <div className="flex flex-col items-center justify-center p-12 text-gray-400 h-[60vh]">
@@ -94,6 +111,8 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddF
           </div>
       );
   }
+
+  const myQuotes = userFiles.filter(f => f.type === 'QUOTATION' && f.userId === currentUser.id).sort((a,b) => b.id - a.id);
 
   const vats = [0, 5, 8, 10];
   
@@ -149,26 +168,88 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddF
   );
 
   const handlePrint = () => {
-      // Create a record of this file generation
-      if (currentUser) {
-          const fileName = `Bao_Gia_${quoteCode}_${quoteData.commodity ? quoteData.commodity.replace(/\s+/g, '_') : 'General'}.pdf`;
-          
-          const newFileRecord: UserFileRecord = {
-              id: Date.now(),
-              userId: currentUser.id,
-              userName: currentUser.name,
-              fileName: fileName,
-              type: 'QUOTATION',
-              date: new Date().toLocaleDateString('vi-VN'),
-              customer: quoteData.term ? `${quoteData.term} - ${quoteData.aod}` : 'Khách hàng',
-              description: `Báo giá ${quoteType} - ${quoteData.commodity}`
-          };
-          
+      // 1. Generate IDs and Names
+      const uniqueId = editingFileId || Date.now();
+      const fileName = `Bao_Gia_${quoteCode}_${quoteData.commodity ? quoteData.commodity.replace(/\s+/g, '_') : 'General'}.pdf`;
+      
+      // 2. Save Data to LocalStorage for future editing
+      // (Since backend is mock/file-based, we use LS to persist structured form data)
+      const persistData = {
+          rows,
+          quoteData,
+          quoteType,
+          quoteCode
+      };
+      localStorage.setItem(`quote_draft_${uniqueId}`, JSON.stringify(persistData));
+
+      // 3. Create File Record
+      const newFileRecord: UserFileRecord = {
+          id: uniqueId,
+          userId: currentUser.id,
+          userName: currentUser.name,
+          fileName: fileName,
+          type: 'QUOTATION',
+          date: new Date().toLocaleDateString('vi-VN'),
+          customer: quoteData.term ? `${quoteData.term} - ${quoteData.aod}` : 'Khách hàng',
+          description: `Báo giá ${quoteType === 'import' ? 'Nhập' : 'Xuất'} - ${quoteData.commodity} [${quoteCode}]`
+      };
+      
+      // 4. Update State
+      if (editingFileId) {
+          // Update existing
+          onUpdateUserFiles(userFiles.map(f => f.id === editingFileId ? newFileRecord : f));
+          alert('Đã cập nhật báo giá thành công!');
+      } else {
+          // Create new
           onAddFile(newFileRecord);
       }
       
-      // Trigger print
+      // 5. Print
       window.print();
+      
+      // 6. Return to list after printing
+      setEditingFileId(null);
+      setViewMode('list');
+  };
+
+  const handleCreateNew = (type: 'import' | 'export') => {
+      setEditingFileId(null);
+      setQuoteCode(`LH-QT-${Math.floor(Date.now() / 100000)}`);
+      setQuoteType(type);
+      // Reset form
+      setRows([{ id: 1, cost: '', unit: 'Lô', qty: 1, price: 0, vat: 10, currency: 'USD' }]);
+      setQuoteData({
+        region: 'Hồ Chí Minh', pickup: '', placeOfReceipt: '', aod: '', term: 'FOB', weight: '', volume: '', unit: 'CBM', commodity: '', note: '',
+        salerName: currentUser.name, salerPhone: currentUser.department === 'Sales' ? '090xxxxxxx' : '', salerEmail: currentUser.email
+      });
+      setViewMode('form');
+  };
+
+  const handleEditQuote = (fileId: number) => {
+      // Try to retrieve data from LocalStorage
+      const savedData = localStorage.getItem(`quote_draft_${fileId}`);
+      if (savedData) {
+          try {
+              const parsed = JSON.parse(savedData);
+              setRows(parsed.rows);
+              setQuoteData(parsed.quoteData);
+              setQuoteType(parsed.quoteType);
+              setQuoteCode(parsed.quoteCode);
+              setEditingFileId(fileId);
+              setViewMode('form');
+          } catch (e) {
+              alert('Dữ liệu báo giá bị lỗi, không thể chỉnh sửa.');
+          }
+      } else {
+          alert('Không tìm thấy dữ liệu gốc của báo giá này (Có thể đã bị xóa cache trình duyệt). Bạn chỉ có thể xem file PDF cũ.');
+      }
+  };
+
+  const handleDeleteQuote = (fileId: number) => {
+      if (confirm('Bạn có chắc chắn muốn xóa báo giá này?')) {
+          onUpdateUserFiles(userFiles.filter(f => f.id !== fileId));
+          localStorage.removeItem(`quote_draft_${fileId}`);
+      }
   };
 
   // --- DYNAMIC PAGINATION ALGORITHM ---
@@ -414,18 +495,12 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddF
               size: A4;
               margin: 0;
             }
-            
-            /* Hide everything initially */
             body {
               visibility: hidden;
             }
-
-            /* Show only the print container and its children */
             .print-container, .print-container * {
               visibility: visible;
             }
-
-            /* Position the print container to top-left of viewport/page */
             .print-container {
               position: absolute;
               left: 0;
@@ -434,8 +509,6 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddF
               margin: 0;
               padding: 0;
             }
-
-            /* Reset modal wrapper behavior for print */
             .pdf-modal-wrapper {
               position: absolute !important;
               top: 0 !important;
@@ -446,8 +519,6 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddF
               overflow: visible !important;
               display: block !important;
             }
-
-            /* Ensure pages break correctly */
             .quote-page {
               width: 210mm !important;
               height: 297mm !important;
@@ -456,11 +527,8 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddF
               break-after: page;
               overflow: hidden;
               background: white;
-              /* Ensure padding is respected in print */
               box-sizing: border-box; 
             }
-
-            /* Hide UI elements explicitly */
             .print-hidden {
               display: none !important;
             }
@@ -487,7 +555,7 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddF
           </button>
       </div>
 
-      {/* Pages Container - Added print-container class for CSS scoping */}
+      {/* Pages Container */}
       <div className="flex-1 w-full overflow-y-auto scroll-container print-container pb-20" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col items-center space-y-8 print:space-y-0 print:block">
            {quotePages.map((pageNodes, index) => (
@@ -516,375 +584,482 @@ const CompanyQuotation: React.FC<CompanyQuotationProps> = ({ currentUser, onAddF
     <div className="space-y-8">
       {showPDF && <PDFPreview />}
       
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <div className="flex bg-gray-100 p-1 rounded-lg">
           <button 
-            onClick={() => setQuoteType('import')}
-            className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${quoteType === 'import' ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}
+            onClick={() => handleCreateNew('import')}
+            className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${viewMode === 'form' && quoteType === 'import' ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}
           >
             Hàng Nhập
           </button>
           <button 
-            onClick={() => setQuoteType('export')}
-            className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${quoteType === 'export' ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}
+            onClick={() => handleCreateNew('export')}
+            className={`px-6 py-2 rounded-md text-sm font-bold transition-all ${viewMode === 'form' && quoteType === 'export' ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}
           >
             Hàng Xuất
           </button>
+          <div className="w-px bg-gray-300 mx-1 my-2"></div>
+          <button 
+            onClick={() => setViewMode('list')}
+            className={`px-6 py-2 rounded-md text-sm font-bold transition-all flex items-center ${viewMode === 'list' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-800'}`}
+          >
+            <List size={16} className="mr-2" /> Danh sách
+          </button>
         </div>
-        <button 
-          onClick={() => setShowPDF(true)}
-          className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center hover:bg-green-700 transition"
-        >
-          <Download size={16} className="mr-2" /> Xuất File PDF
-        </button>
+        
+        {viewMode === 'form' && (
+            <button 
+            onClick={() => setShowPDF(true)}
+            className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center hover:bg-green-700 transition shadow-lg shadow-green-100"
+            >
+            <Download size={16} className="mr-2" /> Xuất File PDF
+            </button>
+        )}
       </div>
 
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          
-          {/* Field 1: Pickup */}
-          <div className="space-y-1">
-            <div className="flex justify-between items-center h-6">
-                <label className="text-xs font-bold text-gray-400 uppercase">Pickup ({quoteType === 'export' ? 'Cảng đi' : 'Nơi nhận'})</label>
-                {quoteType === 'export' && renderRegionToggle('pickup')}
-            </div>
-            {quoteType === 'export' ? (
-              <select 
-                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm"
-                value={quoteData.pickup}
-                onChange={(e) => setQuoteData({...quoteData, pickup: e.target.value})}
-              >
-                <option value="">Chọn cảng đi...</option>
-                {portList.map(port => <option key={port} value={port}>{port}</option>)}
-              </select>
-            ) : (
-              <input 
-                type="text" 
-                className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
-                placeholder="Địa điểm đóng hàng nước ngoài" 
-                value={quoteData.pickup}
-                onChange={(e) => setQuoteData({...quoteData, pickup: e.target.value})}
-              />
-            )}
+      {viewMode === 'list' ? (
+          /* --- LIST VIEW --- */
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+              <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                  <h3 className="font-bold text-gray-800 text-lg flex items-center">
+                      <List className="mr-2 text-primary" /> Danh sách báo giá đã lập
+                  </h3>
+                  <span className="text-xs font-bold text-gray-500 bg-white px-3 py-1 rounded border border-gray-200">
+                      Tổng: {myQuotes.length}
+                  </span>
+              </div>
+              <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                      <thead className="text-xs font-bold text-gray-400 uppercase bg-white border-b border-gray-100">
+                          <tr>
+                              <th className="px-6 py-4">Tên file / Mô tả</th>
+                              <th className="px-6 py-4">Khách hàng / Code</th>
+                              <th className="px-6 py-4">Ngày tạo</th>
+                              <th className="px-6 py-4 text-right">Thao tác</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                          {myQuotes.map(file => (
+                              <tr key={file.id} className="hover:bg-gray-50/50 transition group">
+                                  <td className="px-6 py-4">
+                                      <div className="flex items-center">
+                                          <div className="p-2 bg-blue-50 text-blue-600 rounded-lg mr-3">
+                                              <FileText size={20} />
+                                          </div>
+                                          <div>
+                                              <p className="font-bold text-gray-800 text-sm">{file.description || file.fileName}</p>
+                                              <p className="text-xs text-gray-400 font-mono mt-0.5">{file.fileName}</p>
+                                          </div>
+                                      </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                      <p className="text-sm font-bold text-gray-700">{file.customer}</p>
+                                  </td>
+                                  <td className="px-6 py-4 text-sm text-gray-500">
+                                      {file.date}
+                                  </td>
+                                  <td className="px-6 py-4 text-right">
+                                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button 
+                                              onClick={() => handleEditQuote(file.id)}
+                                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                              title="Chỉnh sửa"
+                                          >
+                                              <Edit size={16} />
+                                          </button>
+                                          <button 
+                                              onClick={() => {
+                                                  // Construct URL to download if available, but since this is client-gen, we might not have a URL
+                                                  // In this context, we can't easily re-download the PDF unless generated again.
+                                                  // Just alert for now or implement blob retrieval if possible.
+                                                  alert("Vui lòng sử dụng chức năng Chỉnh sửa -> Xuất PDF để tải lại file.");
+                                              }}
+                                              className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition"
+                                              title="Tải xuống (Vui lòng Edit để xuất lại)"
+                                          >
+                                              <Download size={16} />
+                                          </button>
+                                          <button 
+                                              onClick={() => handleDeleteQuote(file.id)}
+                                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                                              title="Xóa"
+                                          >
+                                              <Trash2 size={16} />
+                                          </button>
+                                      </div>
+                                  </td>
+                              </tr>
+                          ))}
+                          {myQuotes.length === 0 && (
+                              <tr>
+                                  <td colSpan={4} className="px-6 py-12 text-center text-gray-400 italic">
+                                      Bạn chưa tạo báo giá nào.
+                                  </td>
+                              </tr>
+                          )}
+                      </tbody>
+                  </table>
+              </div>
           </div>
+      ) : (
+          /* --- FORM VIEW --- */
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-4">
+                <h3 className="font-bold text-gray-800 text-lg flex items-center uppercase">
+                    {editingFileId ? <Edit className="mr-2 text-blue-500" /> : <Plus className="mr-2 text-green-500" />}
+                    {editingFileId ? 'Chỉnh sửa báo giá' : 'Tạo báo giá mới'}
+                </h3>
+                <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-500">
+                    ID: {quoteCode}
+                </span>
+            </div>
 
-          {/* Field 2 & 3 & 4 */}
-          {quoteType === 'export' ? (
-            <>
-              {/* Export Slot 2: Place of Receipt */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              
+              {/* Field 1: Pickup */}
               <div className="space-y-1">
                 <div className="flex justify-between items-center h-6">
-                  <label className="text-xs font-bold text-gray-400 uppercase">Địa điểm lấy hàng</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase">Pickup ({quoteType === 'export' ? 'Cảng đi' : 'Nơi nhận'})</label>
+                    {quoteType === 'export' && renderRegionToggle('pickup')}
                 </div>
-                <input 
-                  type="text" 
-                  className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
-                  placeholder="Kho/Nhà máy..." 
-                  value={quoteData.placeOfReceipt || ''}
-                  onChange={(e) => setQuoteData({...quoteData, placeOfReceipt: e.target.value})}
-                />
+                {quoteType === 'export' ? (
+                  <select 
+                    className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm"
+                    value={quoteData.pickup}
+                    onChange={(e) => setQuoteData({...quoteData, pickup: e.target.value})}
+                  >
+                    <option value="">Chọn cảng đi...</option>
+                    {portList.map(port => <option key={port} value={port}>{port}</option>)}
+                  </select>
+                ) : (
+                  <input 
+                    type="text" 
+                    className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
+                    placeholder="Địa điểm đóng hàng nước ngoài" 
+                    value={quoteData.pickup}
+                    onChange={(e) => setQuoteData({...quoteData, pickup: e.target.value})}
+                  />
+                )}
               </div>
 
-              {/* Export Slot 3: AOD (Foreign) - Input with Datalist */}
-              <div className="space-y-1">
-                <div className="flex justify-between items-center h-6">
-                  <label className="text-xs font-bold text-gray-400 uppercase">AOD (Cảng đích)</label>
-                </div>
-                <input 
-                  list="foreign-ports-list"
-                  type="text" 
-                  className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
-                  placeholder="Nhập hoặc chọn cảng đích nước ngoài" 
-                  value={quoteData.aod}
-                  onChange={(e) => setQuoteData({...quoteData, aod: e.target.value})}
-                />
-                <datalist id="foreign-ports-list">
-                  {FOREIGN_PORTS.map(port => <option key={port} value={port} />)}
-                </datalist>
-              </div>
+              {/* Field 2 & 3 & 4 */}
+              {quoteType === 'export' ? (
+                <>
+                  {/* Export Slot 2: Place of Receipt */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center h-6">
+                      <label className="text-xs font-bold text-gray-400 uppercase">Địa điểm lấy hàng</label>
+                    </div>
+                    <input 
+                      type="text" 
+                      className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
+                      placeholder="Kho/Nhà máy..." 
+                      value={quoteData.placeOfReceipt || ''}
+                      onChange={(e) => setQuoteData({...quoteData, placeOfReceipt: e.target.value})}
+                    />
+                  </div>
 
-              {/* Export Slot 4: Term */}
-              <div className="space-y-1">
-                <div className="flex justify-between items-center h-6">
-                  <label className="text-xs font-bold text-gray-400 uppercase">Term</label>
-                </div>
-                <select 
-                  className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm"
-                  value={quoteData.term}
-                  onChange={(e) => setQuoteData({...quoteData, term: e.target.value})}
-                >
-                  <option>EXW</option><option>FCA</option><option>FOB</option><option>CIF</option><option>DDU</option><option>DDP</option>
-                </select>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Import Slot 2: AOD (VN Port with Toggle & Datalist) */}
-              <div className="space-y-1">
-                <div className="flex justify-between items-center h-6">
-                  <label className="text-xs font-bold text-gray-400 uppercase">AOD (Cảng đích)</label>
-                  {renderRegionToggle('aod')}
-                </div>
-                <input 
-                  list="vn-ports-list"
-                  type="text" 
-                  className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
-                  placeholder="Chọn hoặc nhập cảng đích..."
-                  value={quoteData.aod}
-                  onChange={(e) => setQuoteData({...quoteData, aod: e.target.value})}
-                />
-                <datalist id="vn-ports-list">
-                  {portList.map(port => <option key={port} value={port} />)}
-                </datalist>
-              </div>
+                  {/* Export Slot 3: AOD (Foreign) - Input with Datalist */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center h-6">
+                      <label className="text-xs font-bold text-gray-400 uppercase">AOD (Cảng đích)</label>
+                    </div>
+                    <input 
+                      list="foreign-ports-list"
+                      type="text" 
+                      className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
+                      placeholder="Nhập hoặc chọn cảng đích nước ngoài" 
+                      value={quoteData.aod}
+                      onChange={(e) => setQuoteData({...quoteData, aod: e.target.value})}
+                    />
+                    <datalist id="foreign-ports-list">
+                      {FOREIGN_PORTS.map(port => <option key={port} value={port} />)}
+                    </datalist>
+                  </div>
 
-              {/* Import Slot 3: Term */}
-              <div className="space-y-1">
-                <div className="flex justify-between items-center h-6">
-                  <label className="text-xs font-bold text-gray-400 uppercase">Term</label>
-                </div>
-                <select 
-                  className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm"
-                  value={quoteData.term}
-                  onChange={(e) => setQuoteData({...quoteData, term: e.target.value})}
-                >
-                  <option>EXW</option><option>FCA</option><option>FOB</option><option>CIF</option><option>DDU</option><option>DDP</option>
-                </select>
-              </div>
+                  {/* Export Slot 4: Term */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center h-6">
+                      <label className="text-xs font-bold text-gray-400 uppercase">Term</label>
+                    </div>
+                    <select 
+                      className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm"
+                      value={quoteData.term}
+                      onChange={(e) => setQuoteData({...quoteData, term: e.target.value})}
+                    >
+                      <option>EXW</option><option>FCA</option><option>FOB</option><option>CIF</option><option>DDU</option><option>DDP</option>
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Import Slot 2: AOD (VN Port with Toggle & Datalist) */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center h-6">
+                      <label className="text-xs font-bold text-gray-400 uppercase">AOD (Cảng đích)</label>
+                      {renderRegionToggle('aod')}
+                    </div>
+                    <input 
+                      list="vn-ports-list"
+                      type="text" 
+                      className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
+                      placeholder="Chọn hoặc nhập cảng đích..."
+                      value={quoteData.aod}
+                      onChange={(e) => setQuoteData({...quoteData, aod: e.target.value})}
+                    />
+                    <datalist id="vn-ports-list">
+                      {portList.map(port => <option key={port} value={port} />)}
+                    </datalist>
+                  </div>
 
-              {/* Import Slot 4: Weight */}
+                  {/* Import Slot 3: Term */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center h-6">
+                      <label className="text-xs font-bold text-gray-400 uppercase">Term</label>
+                    </div>
+                    <select 
+                      className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm"
+                      value={quoteData.term}
+                      onChange={(e) => setQuoteData({...quoteData, term: e.target.value})}
+                    >
+                      <option>EXW</option><option>FCA</option><option>FOB</option><option>CIF</option><option>DDU</option><option>DDP</option>
+                    </select>
+                  </div>
+
+                  {/* Import Slot 4: Weight */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center h-6">
+                      <label className="text-xs font-bold text-gray-400 uppercase">Gross Weight (KGS)</label>
+                    </div>
+                    <input 
+                      type="number" 
+                      className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
+                      placeholder="0.00" 
+                      value={quoteData.weight}
+                      onChange={(e) => setQuoteData({...quoteData, weight: e.target.value})}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Next Row Fields */}
+              {quoteType === 'export' && (
+                 <div className="space-y-1">
+                    <div className="flex justify-between items-center h-6">
+                      <label className="text-xs font-bold text-gray-400 uppercase">Gross Weight (KGS)</label>
+                    </div>
+                    <input 
+                      type="number" 
+                      className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
+                      placeholder="0.00" 
+                      value={quoteData.weight}
+                      onChange={(e) => setQuoteData({...quoteData, weight: e.target.value})}
+                    />
+                 </div>
+              )}
+
               <div className="space-y-1">
                 <div className="flex justify-between items-center h-6">
-                  <label className="text-xs font-bold text-gray-400 uppercase">Gross Weight (KGS)</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase">Volume</label>
                 </div>
                 <input 
                   type="number" 
                   className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
                   placeholder="0.00" 
-                  value={quoteData.weight}
-                  onChange={(e) => setQuoteData({...quoteData, weight: e.target.value})}
+                  value={quoteData.volume}
+                  onChange={(e) => setQuoteData({...quoteData, volume: e.target.value})}
                 />
               </div>
-            </>
-          )}
-
-          {/* Next Row Fields */}
-          {quoteType === 'export' && (
-             <div className="space-y-1">
+              <div className="space-y-1">
                 <div className="flex justify-between items-center h-6">
-                  <label className="text-xs font-bold text-gray-400 uppercase">Gross Weight (KGS)</label>
+                  <label className="text-xs font-bold text-gray-400 uppercase">Đơn vị</label>
+                </div>
+                <select 
+                  className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm"
+                  value={quoteData.unit}
+                  onChange={(e) => setQuoteData({...quoteData, unit: e.target.value})}
+                >
+                  <option>CBM</option>
+                  <option>KGS</option>
+                  <option>Cont 20GP</option>
+                  <option>Cont 40GP</option>
+                  <option>Cont 40HQ</option>
+                  <option>Cont 45DC</option>
+                  <option>Pallet</option>
+                  <option>Carton</option>
+                  <option>Package</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between items-center h-6">
+                  <label className="text-xs font-bold text-gray-400 uppercase">Commodity</label>
                 </div>
                 <input 
-                  type="number" 
+                  type="text" 
                   className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
-                  placeholder="0.00" 
-                  value={quoteData.weight}
-                  onChange={(e) => setQuoteData({...quoteData, weight: e.target.value})}
+                  placeholder="Tên hàng hóa" 
+                  value={quoteData.commodity}
+                  onChange={(e) => setQuoteData({...quoteData, commodity: e.target.value})}
                 />
-             </div>
-          )}
+              </div>
+            </div>
 
-          <div className="space-y-1">
-            <div className="flex justify-between items-center h-6">
-              <label className="text-xs font-bold text-gray-400 uppercase">Volume</label>
-            </div>
-            <input 
-              type="number" 
-              className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
-              placeholder="0.00" 
-              value={quoteData.volume}
-              onChange={(e) => setQuoteData({...quoteData, volume: e.target.value})}
-            />
-          </div>
-          <div className="space-y-1">
-            <div className="flex justify-between items-center h-6">
-              <label className="text-xs font-bold text-gray-400 uppercase">Đơn vị</label>
-            </div>
-            <select 
-              className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm"
-              value={quoteData.unit}
-              onChange={(e) => setQuoteData({...quoteData, unit: e.target.value})}
-            >
-              <option>CBM</option>
-              <option>KGS</option>
-              <option>Cont 20GP</option>
-              <option>Cont 40GP</option>
-              <option>Cont 40HQ</option>
-              <option>Cont 45DC</option>
-              <option>Pallet</option>
-              <option>Carton</option>
-              <option>Package</option>
-            </select>
-          </div>
-          <div className="space-y-1">
-            <div className="flex justify-between items-center h-6">
-              <label className="text-xs font-bold text-gray-400 uppercase">Commodity</label>
-            </div>
-            <input 
-              type="text" 
-              className="w-full border-b border-gray-200 py-2 focus:border-primary outline-none transition text-sm" 
-              placeholder="Tên hàng hóa" 
-              value={quoteData.commodity}
-              onChange={(e) => setQuoteData({...quoteData, commodity: e.target.value})}
-            />
-          </div>
-        </div>
-
-        <div className="pt-8">
-          <h4 className="font-bold text-gray-800 mb-4 border-l-4 border-primary pl-3">Bảng báo giá chi tiết</h4>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead className="bg-gray-50 text-xs font-bold text-gray-500">
-                <tr>
-                  <th className="p-3 border text-center w-12">STT</th>
-                  <th className="p-3 border text-left">Các loại chi phí</th>
-                  <th className="p-3 border text-left w-32">ĐVT</th>
-                  <th className="p-3 border text-center w-20">Số lượng</th>
-                  <th className="p-3 border text-right w-32">Đơn giá</th>
-                  <th className="p-3 border text-center w-24">VAT (%)</th>
-                  <th className="p-3 border text-center w-32">Tiền tệ</th>
-                  <th className="p-3 border text-right w-32">Thành tiền</th>
-                  <th className="p-3 border text-center w-12"></th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {rows.map((row, idx) => (
-                  <tr key={row.id}>
-                    <td className="p-2 border text-center text-gray-400 text-sm">{idx + 1}</td>
-                    <td className="p-1 border">
-                      <input 
-                        type="text" 
-                        className="w-full p-2 outline-none text-sm" 
-                        placeholder="Local charge, Freight..." 
-                        value={row.cost}
-                        onChange={(e) => updateRow(row.id, 'cost', e.target.value)}
-                      />
-                    </td>
-                    <td className="p-1 border">
-                      <div className="flex items-center space-x-1">
-                        <select 
-                          className="w-full p-2 outline-none bg-transparent text-sm"
-                          value={row.unit}
-                          onChange={(e) => updateRow(row.id, 'unit', e.target.value)}
-                        >
-                          {units.map(u => <option key={u} value={u}>{u}</option>)}
-                        </select>
-                        <button onClick={handleAddUnit} className="text-primary hover:bg-orange-50 p-1 rounded transition">
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="p-1 border">
-                      <input 
-                        type="number" 
-                        className="w-full p-2 outline-none text-center text-sm" 
-                        value={row.qty}
-                        onChange={(e) => updateRow(row.id, 'qty', parseFloat(e.target.value) || 0)}
-                      />
-                    </td>
-                    <td className="p-1 border">
-                      <input 
-                        type="number" 
-                        className="w-full p-2 outline-none text-right text-sm" 
-                        placeholder="0"
-                        value={row.price}
-                        onChange={(e) => updateRow(row.id, 'price', parseFloat(e.target.value) || 0)}
-                      />
-                    </td>
-                    <td className="p-1 border">
-                      <div className="flex flex-col">
-                        <select 
-                          className="w-full p-1 text-sm outline-none bg-transparent"
-                          value={vats.includes(row.vat) ? row.vat : 'custom'}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val !== 'custom') updateRow(row.id, 'vat', parseInt(val));
-                          }}
-                        >
-                          {vats.map(v => <option key={v} value={v}>{v}%</option>)}
-                          <option value="custom">Khác...</option>
-                        </select>
-                        {(!vats.includes(row.vat) || row.vat === undefined) && (
+            <div className="pt-8">
+              <h4 className="font-bold text-gray-800 mb-4 border-l-4 border-primary pl-3">Bảng báo giá chi tiết</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead className="bg-gray-50 text-xs font-bold text-gray-500">
+                    <tr>
+                      <th className="p-3 border text-center w-12">STT</th>
+                      <th className="p-3 border text-left">Các loại chi phí</th>
+                      <th className="p-3 border text-left w-32">ĐVT</th>
+                      <th className="p-3 border text-center w-20">Số lượng</th>
+                      <th className="p-3 border text-right w-32">Đơn giá</th>
+                      <th className="p-3 border text-center w-24">VAT (%)</th>
+                      <th className="p-3 border text-center w-32">Tiền tệ</th>
+                      <th className="p-3 border text-right w-32">Thành tiền</th>
+                      <th className="p-3 border text-center w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm">
+                    {rows.map((row, idx) => (
+                      <tr key={row.id}>
+                        <td className="p-2 border text-center text-gray-400 text-sm">{idx + 1}</td>
+                        <td className="p-1 border">
+                          <input 
+                            type="text" 
+                            className="w-full p-2 outline-none text-sm" 
+                            placeholder="Local charge, Freight..." 
+                            value={row.cost}
+                            onChange={(e) => updateRow(row.id, 'cost', e.target.value)}
+                          />
+                        </td>
+                        <td className="p-1 border">
+                          <div className="flex items-center space-x-1">
+                            <select 
+                              className="w-full p-2 outline-none bg-transparent text-sm"
+                              value={row.unit}
+                              onChange={(e) => updateRow(row.id, 'unit', e.target.value)}
+                            >
+                              {units.map(u => <option key={u} value={u}>{u}</option>)}
+                            </select>
+                            <button onClick={handleAddUnit} className="text-primary hover:bg-orange-50 p-1 rounded transition">
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="p-1 border">
                           <input 
                             type="number" 
-                            className="w-full p-1 text-sm outline-none border-t border-gray-100" 
-                            placeholder="%"
-                            value={row.vat}
-                            onChange={(e) => updateRow(row.id, 'vat', parseFloat(e.target.value) || 0)}
+                            className="w-full p-2 outline-none text-center text-sm" 
+                            value={row.qty}
+                            onChange={(e) => updateRow(row.id, 'qty', parseFloat(e.target.value) || 0)}
                           />
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-1 border">
-                      <div className="flex items-center space-x-1">
-                        <select 
-                          className="w-full p-2 outline-none bg-transparent text-sm"
-                          value={row.currency}
-                          onChange={(e) => updateRow(row.id, 'currency', e.target.value)}
-                        >
-                          {currencies.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        <button onClick={handleAddCurrency} className="text-primary hover:bg-orange-50 p-1 rounded transition">
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="p-2 border text-right font-bold text-gray-700 text-sm">
-                      {calculateRowTotal(row)}
-                    </td>
-                    <td className="p-2 border text-center">
-                      <button onClick={() => removeRow(row.id)} className="text-gray-300 hover:text-red-500 transition"><Trash2 size={16} /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <button onClick={addRow} className="mt-4 text-primary text-sm font-bold flex items-center hover:underline">
-              <Plus size={16} className="mr-1" /> Thêm dòng chi phí
-            </button>
-          </div>
-        </div>
+                        </td>
+                        <td className="p-1 border">
+                          <input 
+                            type="number" 
+                            className="w-full p-2 outline-none text-right text-sm" 
+                            placeholder="0"
+                            value={row.price}
+                            onChange={(e) => updateRow(row.id, 'price', parseFloat(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td className="p-1 border">
+                          <div className="flex flex-col">
+                            <select 
+                              className="w-full p-1 text-sm outline-none bg-transparent"
+                              value={vats.includes(row.vat) ? row.vat : 'custom'}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val !== 'custom') updateRow(row.id, 'vat', parseInt(val));
+                              }}
+                            >
+                              {vats.map(v => <option key={v} value={v}>{v}%</option>)}
+                              <option value="custom">Khác...</option>
+                            </select>
+                            {(!vats.includes(row.vat) || row.vat === undefined) && (
+                              <input 
+                                type="number" 
+                                className="w-full p-1 text-sm outline-none border-t border-gray-100" 
+                                placeholder="%"
+                                value={row.vat}
+                                onChange={(e) => updateRow(row.id, 'vat', parseFloat(e.target.value) || 0)}
+                              />
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-1 border">
+                          <div className="flex items-center space-x-1">
+                            <select 
+                              className="w-full p-2 outline-none bg-transparent text-sm"
+                              value={row.currency}
+                              onChange={(e) => updateRow(row.id, 'currency', e.target.value)}
+                            >
+                              {currencies.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            <button onClick={handleAddCurrency} className="text-primary hover:bg-orange-50 p-1 rounded transition">
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="p-2 border text-right font-bold text-gray-700 text-sm">
+                          {calculateRowTotal(row)}
+                        </td>
+                        <td className="p-2 border text-center">
+                          <button onClick={() => removeRow(row.id)} className="text-gray-300 hover:text-red-500 transition"><Trash2 size={16} /></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <button onClick={addRow} className="mt-4 text-primary text-sm font-bold flex items-center hover:underline">
+                  <Plus size={16} className="mr-1" /> Thêm dòng chi phí
+                </button>
+              </div>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-gray-100">
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-400 uppercase">Note (Ghi chú)</label>
-              <textarea 
-                className="w-full border border-gray-200 rounded p-3 text-sm focus:border-primary outline-none h-24" 
-                placeholder="Điều kiện báo giá, thời gian hiệu lực..."
-                value={quoteData.note}
-                onChange={(e) => setQuoteData({...quoteData, note: e.target.value})}
-              ></textarea>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-gray-100">
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase">Note (Ghi chú)</label>
+                  <textarea 
+                    className="w-full border border-gray-200 rounded p-3 text-sm focus:border-primary outline-none h-24" 
+                    placeholder="Điều kiện báo giá, thời gian hiệu lực..."
+                    value={quoteData.note}
+                    onChange={(e) => setQuoteData({...quoteData, note: e.target.value})}
+                  ></textarea>
+                </div>
+              </div>
+              <div className="bg-gray-50 p-6 rounded-lg space-y-4">
+                <h5 className="font-bold text-sm text-gray-600 uppercase mb-2">Thông tin liên hệ Sale</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  <input 
+                    type="text" 
+                    className="bg-white border border-gray-200 rounded p-2 text-sm outline-none" 
+                    placeholder="Tên Saler" 
+                    value={quoteData.salerName}
+                    onChange={(e) => setQuoteData({...quoteData, salerName: e.target.value})}
+                  />
+                  <input 
+                    type="text" 
+                    className="bg-white border border-gray-200 rounded p-2 text-sm outline-none" 
+                    placeholder="Số điện thoại" 
+                    value={quoteData.salerPhone}
+                    onChange={(e) => setQuoteData({...quoteData, salerPhone: e.target.value})}
+                  />
+                  <input 
+                    type="email" 
+                    className="bg-white border border-gray-200 rounded p-2 text-sm outline-none col-span-2" 
+                    placeholder="Email liên hệ" 
+                    value={quoteData.salerEmail}
+                    onChange={(e) => setQuoteData({...quoteData, salerEmail: e.target.value})}
+                  />
+                </div>
+              </div>
             </div>
           </div>
-          <div className="bg-gray-50 p-6 rounded-lg space-y-4">
-            <h5 className="font-bold text-sm text-gray-600 uppercase mb-2">Thông tin liên hệ Sale</h5>
-            <div className="grid grid-cols-2 gap-4">
-              <input 
-                type="text" 
-                className="bg-white border border-gray-200 rounded p-2 text-sm outline-none" 
-                placeholder="Tên Saler" 
-                value={quoteData.salerName}
-                onChange={(e) => setQuoteData({...quoteData, salerName: e.target.value})}
-              />
-              <input 
-                type="text" 
-                className="bg-white border border-gray-200 rounded p-2 text-sm outline-none" 
-                placeholder="Số điện thoại" 
-                value={quoteData.salerPhone}
-                onChange={(e) => setQuoteData({...quoteData, salerPhone: e.target.value})}
-              />
-              <input 
-                type="email" 
-                className="bg-white border border-gray-200 rounded p-2 text-sm outline-none col-span-2" 
-                placeholder="Email liên hệ" 
-                value={quoteData.salerEmail}
-                onChange={(e) => setQuoteData({...quoteData, salerEmail: e.target.value})}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

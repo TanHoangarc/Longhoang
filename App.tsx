@@ -179,6 +179,31 @@ export interface UserFileRecord {
   description?: string;
 }
 
+// Interface for Contracts
+export interface ContractRecord {
+  id: number;
+  contractNo: string;
+  date: string;
+  expiryDate: string;
+  creatorName?: string; // NEW: Track who created it
+  
+  // Party A (Customer)
+  customerName: string;
+  customerAddress: string;
+  customerTaxId: string;
+  customerRep: string;
+  customerPosition: string;
+
+  // Content Sections
+  article1: string[];
+  article2: string[];
+  article3_1: string[];
+  article3_2: string[];
+  article4_1: string[];
+  article4_2: string[];
+  article5: string[];
+}
+
 // Interfaces for Library
 export interface LibraryFile {
   id: number;
@@ -200,6 +225,7 @@ export interface GalleryAlbum {
   cover: string;
   images: string[];
   date: string;
+  isPinned?: boolean; // Support pinning albums
 }
 
 // Interface for History Milestone
@@ -295,7 +321,8 @@ const INITIAL_GALLERY: GalleryAlbum[] = [
     images: [
       "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
       "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    ]
+    ],
+    isPinned: false
   },
   {
     id: 2,
@@ -305,7 +332,8 @@ const INITIAL_GALLERY: GalleryAlbum[] = [
     images: [
       "https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
       "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-    ]
+    ],
+    isPinned: true
   },
   {
     id: 3,
@@ -315,7 +343,8 @@ const INITIAL_GALLERY: GalleryAlbum[] = [
     images: [
         "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1578575437130-527eed3abbec?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-    ]
+    ],
+    isPinned: false
   }
 ];
 
@@ -419,6 +448,7 @@ function App() {
   const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbum[]>(INITIAL_GALLERY);
   const [milestones, setMilestones] = useState<Milestone[]>(INITIAL_MILESTONES);
   const [adjustments, setAdjustments] = useState<AdjustmentRecord[]>(INITIAL_ADJUSTMENTS);
+  const [contracts, setContracts] = useState<ContractRecord[]>([]);
   
   // Server connection status
   const [isServerOnline, setIsServerOnline] = useState(true);
@@ -459,6 +489,7 @@ function App() {
       galleryAlbums,
       milestones,
       adjustments,
+      contracts,
       ...overrides
     };
   };
@@ -488,6 +519,7 @@ function App() {
           if (db.galleryAlbums && db.galleryAlbums.length > 0) setGalleryAlbums(db.galleryAlbums);
           if (db.milestones && db.milestones.length > 0) setMilestones(db.milestones);
           if (db.adjustments && db.adjustments.length > 0) setAdjustments(db.adjustments);
+          if (db.contracts && db.contracts.length > 0) setContracts(db.contracts);
           setIsServerOnline(true);
         } else {
             console.warn("Server responded but with error. Using local defaults.");
@@ -602,6 +634,11 @@ function App() {
     syncToServer(getFullState({ adjustments: newAdjustments }));
   };
 
+  const handleUpdateContracts = (newContracts: ContractRecord[]) => {
+    setContracts(newContracts);
+    syncToServer(getFullState({ contracts: newContracts }));
+  };
+
   // --- AUTHENTICATION ---
   const handleLogin = (role: UserRole, user?: UserAccount, remember: boolean = false) => {
     setUserRole(role);
@@ -713,6 +750,8 @@ function App() {
                 onUpdateLibrary={handleUpdateLibrary}
                 userFiles={userFiles}
                 onUpdateUserFiles={handleUpdateUserFiles}
+                contracts={contracts}
+                onUpdateContracts={handleUpdateContracts}
             />
         );
       case 'account':
@@ -746,6 +785,8 @@ function App() {
             onUpdateUserFiles={handleUpdateUserFiles}
             adjustments={adjustments}
             onUpdateAdjustments={handleUpdateAdjustments}
+            contracts={contracts}
+            onUpdateContracts={handleUpdateContracts}
           />
         );
       case 'settings':

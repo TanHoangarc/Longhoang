@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { 
-  X, Bell, FileSpreadsheet, BarChart3, Library, ArrowLeft, LayoutDashboard, ChevronRight, BookOpen, Truck, Clock
+  X, Bell, FileSpreadsheet, BarChart3, Library, ArrowLeft, LayoutDashboard, ChevronRight, BookOpen, Truck, Clock, FileText
 } from 'lucide-react';
 import CompanyNotifications from './company/CompanyNotifications';
 import CompanyQuotation from './company/CompanyQuotation';
@@ -10,7 +10,8 @@ import CompanyLibrary from './company/CompanyLibrary';
 import CompanyDecrees from './company/CompanyDecrees';
 import CompanyManifests from './company/CompanyManifests'; 
 import Timekeeping from './attendance/Timekeeping';
-import { StatementData, UserAccount, AttendanceRecord, SystemNotification, Decree, LibraryFolder, UserFileRecord } from '../App';
+import CompanyContract from './company/CompanyContract';
+import { StatementData, UserAccount, AttendanceRecord, SystemNotification, Decree, LibraryFolder, UserFileRecord, ContractRecord } from '../App';
 
 interface CompanyPageProps {
   onClose: () => void;
@@ -27,14 +28,16 @@ interface CompanyPageProps {
   onUpdateLibrary: (lib: LibraryFolder[]) => void;
   userFiles: UserFileRecord[];
   onUpdateUserFiles: (files: UserFileRecord[]) => void;
+  contracts: ContractRecord[];
+  onUpdateContracts: (contracts: ContractRecord[]) => void;
 }
 
-type ViewType = 'dashboard' | 'notifications' | 'quotation' | 'reports' | 'library' | 'decrees' | 'manifests' | 'attendance';
+type ViewType = 'dashboard' | 'notifications' | 'quotation' | 'contract' | 'reports' | 'library' | 'decrees' | 'manifests' | 'attendance';
 
 const CompanyPage: React.FC<CompanyPageProps> = ({ 
   onClose, statements, onUpdateStatements, currentUser, attendanceRecords, 
   onUpdateAttendance, notifications, onUpdateNotifications, decrees, onUpdateDecrees,
-  library, onUpdateLibrary, userFiles, onUpdateUserFiles
+  library, onUpdateLibrary, userFiles, onUpdateUserFiles, contracts, onUpdateContracts
 }) => {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
 
@@ -49,6 +52,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({
     { id: 'decrees', title: 'Nghị định', icon: BookOpen, color: 'bg-red-500', desc: 'Cập nhật văn bản pháp luật mới', label: 'Nghị định' },
     { id: 'manifests', title: 'Bảng kê xe tải', icon: Truck, color: 'bg-orange-500', desc: 'Xem bảng kê được chia sẻ từ Kế toán', label: 'Bảng kê' },
     { id: 'quotation', title: 'Lập báo giá', icon: FileSpreadsheet, color: 'bg-green-500', desc: 'Báo giá hàng nhập/xuất chuyên nghiệp', label: 'Báo giá' },
+    { id: 'contract', title: 'Hợp đồng', icon: FileText, color: 'bg-teal-600', desc: 'Quản lý và soạn thảo hợp đồng vận chuyển', label: 'Hợp đồng' },
     { id: 'reports', title: 'Báo cáo', icon: BarChart3, color: 'bg-purple-500', desc: 'Thống kê sản lượng và doanh thu cá nhân', label: 'Báo cáo' },
     { id: 'library', title: 'Thư viện mẫu', icon: Library, color: 'bg-gray-800', desc: 'Kho biểu mẫu và tài liệu chuẩn hóa', label: 'Thư viện' }
   ];
@@ -67,7 +71,8 @@ const CompanyPage: React.FC<CompanyPageProps> = ({
   const renderContent = () => {
     switch (activeView) {
       case 'notifications': return <CompanyNotifications notifications={notifications} onUpdate={onUpdateNotifications} />;
-      case 'quotation': return <CompanyQuotation currentUser={currentUser} onAddFile={handleAddFile} />;
+      case 'quotation': return <CompanyQuotation currentUser={currentUser} onAddFile={handleAddFile} userFiles={userFiles} onUpdateUserFiles={onUpdateUserFiles} />;
+      case 'contract': return <CompanyContract contracts={contracts} onUpdateContracts={onUpdateContracts} currentUser={currentUser} />;
       case 'reports': return <CompanyReports currentUser={currentUser} />;
       case 'library': return <CompanyLibrary currentUser={currentUser} folders={library} onUpdate={onUpdateLibrary} />;
       case 'decrees': return <CompanyDecrees decrees={decrees} onUpdate={onUpdateDecrees} />;
@@ -96,6 +101,11 @@ const CompanyPage: React.FC<CompanyPageProps> = ({
     }
   };
 
+  // Determine container class based on active view to allow full width for heavy editors
+  const containerClass = activeView === 'contract' 
+    ? "flex-1 container mx-auto px-4 py-6 max-w-full print:py-0 print:px-0" 
+    : "flex-1 container mx-auto px-4 py-12 max-w-7xl print:py-0 print:px-0 print:max-w-none";
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="bg-[#1e2a3b] text-white py-4 px-8 sticky top-0 z-40 shadow-lg border-b border-white/5 print:hidden">
@@ -116,7 +126,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({
               </button>
               
               {/* Render navigation buttons from visible items (limit to 5 for space) */}
-              {visibleItems.slice(0, 5).map(item => (
+              {visibleItems.slice(0, 6).map(item => (
                 <button 
                   key={item.id}
                   onClick={() => setActiveView(item.id as ViewType)}
@@ -143,7 +153,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({
           </div>
         </div>
       </div>
-      <div className="flex-1 container mx-auto px-4 py-12 max-w-7xl print:py-0 print:px-0 print:max-w-none">
+      <div className={containerClass}>
         {activeView !== 'dashboard' && (
           <button 
             onClick={() => setActiveView('dashboard')}
@@ -153,7 +163,7 @@ const CompanyPage: React.FC<CompanyPageProps> = ({
             Quay lại Bàn làm việc
           </button>
         )}
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full">
           {renderContent()}
         </div>
       </div>
