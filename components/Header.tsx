@@ -360,18 +360,18 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
              
              {/* LEFT SIDE: ILLUSTRATION */}
              <div className="hidden lg:flex w-1/2 bg-[#0b1120] relative items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-transparent"></div>
-                {/* 3D Tech Illustration Placeholder */}
-                <div className="relative z-10 w-full h-full flex items-center justify-center p-12">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-900/40 to-transparent z-10"></div>
+                {/* Updated Image with Object-Cover for portrait crop */}
+                <div className="relative z-0 w-full h-full">
                     <img 
-                      src="https://images.unsplash.com/photo-1676299081847-c0326a0333d5?q=80&w=1000&auto=format&fit=crop" 
-                      alt="Tech Server Illustration" 
-                      className="w-full h-auto object-contain opacity-90 drop-shadow-[0_0_30px_rgba(59,130,246,0.5)] transform hover:scale-105 transition duration-700"
+                      src="https://plus.unsplash.com/premium_photo-1668473367234-fe8a1decd456?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
+                      alt="Logistics Login" 
+                      className="w-full h-full object-cover opacity-80 hover:scale-105 transition duration-700"
                     />
                 </div>
                 {/* Floating Elements */}
-                <div className="absolute top-10 left-10 w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
-                <div className="absolute bottom-20 right-20 w-1 h-1 bg-cyan-400 rounded-full animate-ping delay-500"></div>
+                <div className="absolute top-10 left-10 w-2 h-2 bg-blue-500 rounded-full animate-ping z-20"></div>
+                <div className="absolute bottom-20 right-20 w-1 h-1 bg-cyan-400 rounded-full animate-ping delay-500 z-20"></div>
              </div>
 
              {/* RIGHT SIDE: FORM */}
@@ -477,13 +477,13 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
              
              {/* LEFT SIDE: ILLUSTRATION */}
              <div className="hidden lg:flex w-1/2 bg-[#0b1120] relative items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-tr from-cyan-900/20 to-transparent"></div>
-                <div className="relative z-10 w-full h-full flex items-center justify-center p-12">
-                    {/* Different illustration for Register */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-cyan-900/40 to-transparent z-10"></div>
+                <div className="relative z-0 w-full h-full">
+                    {/* Updated Image with Object-Cover for portrait crop */}
                     <img 
-                      src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1000&auto=format&fit=crop" 
-                      alt="Abstract Tech Cube" 
-                      className="w-full h-auto object-contain opacity-80 drop-shadow-[0_0_30px_rgba(34,211,238,0.3)] transform hover:rotate-1 transition duration-700"
+                      src="https://plus.unsplash.com/premium_photo-1764702446180-dd9dc8de3faa?q=80&w=2040&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
+                      alt="Register Logistics" 
+                      className="w-full h-full object-cover opacity-80 hover:scale-105 transition duration-700"
                     />
                 </div>
              </div>
