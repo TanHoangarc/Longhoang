@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
-import { X, Award, Users, TrendingUp, Calendar, ChevronLeft, ChevronRight, Play, Image as ImageIcon, Plus, Trash2, Edit, Save, Pin, PinOff } from 'lucide-react';
+import { X, Award, Users, TrendingUp, Calendar, ChevronLeft, ChevronRight, Play, Image as ImageIcon, Plus, Trash2, Edit, Save, Pin, PinOff, Upload, Loader2, CheckCircle } from 'lucide-react';
 import { GalleryAlbum, UserRole, Milestone } from '../App';
+import { API_BASE_URL } from '../constants';
 
 interface AboutProps {
   galleryAlbums?: GalleryAlbum[];
@@ -31,6 +33,10 @@ const About: React.FC<AboutProps> = ({
   const [isAlbumModalOpen, setIsAlbumModalOpen] = useState(false);
   const [editingAlbumId, setEditingAlbumId] = useState<number | null>(null);
   const [albumFormData, setAlbumFormData] = useState({ title: '', cover: '', images: '', date: '' });
+  
+  // File Upload State
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Milestone Management Modal
   const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
@@ -104,6 +110,7 @@ const About: React.FC<AboutProps> = ({
   const handleOpenAddAlbum = () => {
       setEditingAlbumId(null);
       setAlbumFormData({ title: '', cover: '', images: '', date: '' });
+      setSelectedFiles([]);
       setIsAlbumModalOpen(true);
   };
 
@@ -116,6 +123,7 @@ const About: React.FC<AboutProps> = ({
           images: album.images.join('\n'),
           date: album.date
       });
+      setSelectedFiles([]);
       setIsAlbumModalOpen(true);
   };
 
@@ -126,22 +134,64 @@ const About: React.FC<AboutProps> = ({
       }
   };
 
-  const handleSaveAlbum = () => {
-    if (!albumFormData.title || !albumFormData.cover) return alert('Vui lòng nhập tiêu đề và ảnh bìa');
-    
-    // Process images textarea
-    const imagesArray = albumFormData.images.split('\n').map(url => url.trim()).filter(url => url.length > 0);
-    // If no specific images added, use cover as the first image
-    if (imagesArray.length === 0) imagesArray.push(albumFormData.cover);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) {
+          setSelectedFiles(Array.from(e.target.files));
+      }
+  };
 
+  const handleSaveAlbum = async () => {
+    if (!albumFormData.title) return alert('Vui lòng nhập tiêu đề!');
+    if (!albumFormData.cover && !albumFormData.images && selectedFiles.length === 0) return alert('Vui lòng thêm ít nhất 1 ảnh (Link hoặc Tải lên)');
+    
+    setIsUploading(true);
+
+    // 1. Process Uploaded Files
+    const uploadedUrls: string[] = [];
+    if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                // Upload to GALLERY folder
+                const res = await fetch(`${API_BASE_URL}/api/upload?category=GALLERY`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    // Construct full URL
+                    uploadedUrls.push(`${API_BASE_URL}/files/GALLERY/${data.record.fileName}`);
+                }
+            } catch (error) {
+                console.error("Upload failed for", file.name, error);
+            }
+        }
+    }
+
+    // 2. Process Existing Textarea URLs
+    const textUrls = albumFormData.images.split('\n').map(url => url.trim()).filter(url => url.length > 0);
+    
+    // 3. Combine All Images
+    const allImages = [...textUrls, ...uploadedUrls];
+    
+    // 4. Handle Cover Image
+    let finalCover = albumFormData.cover;
+    // If no cover set but we have images, take the first one
+    if (!finalCover && allImages.length > 0) {
+        finalCover = allImages[0];
+    }
+
+    // 5. Update State
     if (onUpdateGallery) {
         if (editingAlbumId) {
             // Update Existing
             onUpdateGallery(galleryAlbums.map(a => a.id === editingAlbumId ? {
                 ...a,
                 title: albumFormData.title,
-                cover: albumFormData.cover,
-                images: imagesArray,
+                cover: finalCover,
+                images: allImages,
                 date: albumFormData.date || a.date
             } : a));
         } else {
@@ -149,8 +199,8 @@ const About: React.FC<AboutProps> = ({
             const newAlbum: GalleryAlbum = {
                 id: Date.now(),
                 title: albumFormData.title,
-                cover: albumFormData.cover,
-                images: imagesArray,
+                cover: finalCover,
+                images: allImages,
                 date: albumFormData.date || new Date().toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' }),
                 isPinned: false
             };
@@ -158,9 +208,11 @@ const About: React.FC<AboutProps> = ({
         }
     }
     
+    setIsUploading(false);
     setIsAlbumModalOpen(false);
     setEditingAlbumId(null);
     setAlbumFormData({ title: '', cover: '', images: '', date: '' });
+    setSelectedFiles([]);
   };
 
   const handleDeleteAlbum = (id: number, e: React.MouseEvent) => {
@@ -616,16 +668,16 @@ const About: React.FC<AboutProps> = ({
       {/* ADD/EDIT ALBUM MODAL */}
       {isAlbumModalOpen && (
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setIsAlbumModalOpen(false)}></div>
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => !isUploading && setIsAlbumModalOpen(false)}></div>
               <div className="bg-white rounded-xl w-full max-w-lg relative z-20 overflow-hidden shadow-2xl animate-in zoom-in duration-200">
                   <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                       <h3 className="text-lg font-bold text-gray-800 flex items-center">
                           {editingAlbumId ? <Edit size={20} className="mr-2 text-blue-600"/> : <Plus size={20} className="mr-2 text-green-600"/>}
                           {editingAlbumId ? 'Chỉnh sửa Album' : 'Thêm Album mới'}
                       </h3>
-                      <button onClick={() => setIsAlbumModalOpen(false)}><X size={20} className="text-gray-400" /></button>
+                      <button onClick={() => !isUploading && setIsAlbumModalOpen(false)}><X size={20} className="text-gray-400" /></button>
                   </div>
-                  <div className="p-6 space-y-4">
+                  <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                       <div>
                           <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Tên Album</label>
                           <input 
@@ -658,21 +710,52 @@ const About: React.FC<AboutProps> = ({
                               />
                           </div>
                       </div>
+                      
+                      {/* UPLOAD SECTION */}
+                      <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
+                          <label className="text-xs font-bold text-primary uppercase block mb-2 flex items-center">
+                              <Upload size={14} className="mr-1"/> Tải ảnh từ máy tính (Ổ E)
+                          </label>
+                          <input 
+                              type="file" 
+                              multiple 
+                              accept="image/*"
+                              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-white file:text-primary hover:file:bg-orange-50 cursor-pointer"
+                              onChange={handleFileSelect}
+                          />
+                          {selectedFiles.length > 0 && (
+                              <div className="mt-2 text-xs text-gray-600 font-medium">
+                                  <CheckCircle size={12} className="inline mr-1 text-green-500"/>
+                                  Đã chọn {selectedFiles.length} file (Sẽ được tải lên khi nhấn Lưu)
+                              </div>
+                          )}
+                      </div>
+
                       <div>
-                          <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Danh sách ảnh/video (URL)</label>
+                          <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Hoặc dán Link ảnh (URL)</label>
                           <textarea 
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary text-sm font-mono h-32"
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary text-sm font-mono h-24"
                             placeholder="Dán link ảnh tại đây, mỗi link một dòng..."
                             value={albumFormData.images}
                             onChange={(e) => setAlbumFormData({...albumFormData, images: e.target.value})}
                           ></textarea>
-                          <p className="text-[10px] text-gray-400 mt-1">* Hỗ trợ link ảnh và video (chỉ hiển thị thumbnail nếu là ảnh)</p>
                       </div>
                   </div>
                   <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                      <button onClick={() => setIsAlbumModalOpen(false)} className="px-4 py-2 text-gray-500 font-bold text-sm hover:bg-gray-200 rounded-lg transition">Hủy</button>
-                      <button onClick={handleSaveAlbum} className="px-6 py-2 bg-primary text-white font-bold text-sm rounded-lg hover:bg-primaryDark transition shadow-lg">
-                          {editingAlbumId ? 'Cập nhật' : 'Lưu Album'}
+                      <button 
+                        onClick={() => !isUploading && setIsAlbumModalOpen(false)} 
+                        className="px-4 py-2 text-gray-500 font-bold text-sm hover:bg-gray-200 rounded-lg transition"
+                        disabled={isUploading}
+                      >
+                          Hủy
+                      </button>
+                      <button 
+                        onClick={handleSaveAlbum} 
+                        className={`px-6 py-2 bg-primary text-white font-bold text-sm rounded-lg hover:bg-primaryDark transition shadow-lg flex items-center ${isUploading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                        disabled={isUploading}
+                      >
+                          {isUploading && <Loader2 size={16} className="mr-2 animate-spin" />}
+                          {isUploading ? 'Đang tải lên...' : (editingAlbumId ? 'Cập nhật' : 'Lưu Album')}
                       </button>
                   </div>
               </div>
