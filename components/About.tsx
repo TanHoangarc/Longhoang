@@ -60,6 +60,19 @@ const About: React.FC<AboutProps> = ({
     }
   }, [isModalOpen, selectedAlbum, isAlbumModalOpen, isMilestoneModalOpen]);
 
+  // --- YOUTUBE HELPERS ---
+  const getYouTubeId = (url: string) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const getYouTubeThumbnail = (url: string) => {
+    const id = getYouTubeId(url);
+    return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : url;
+  };
+
   // Helper to parse date for sorting (MM/YYYY or YYYY)
   const parseDateScore = (dateStr: string) => {
       if (!dateStr) return 0;
@@ -425,17 +438,30 @@ const About: React.FC<AboutProps> = ({
 
                 {sortedAlbums.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {sortedAlbums.slice(visibleStartIndex, visibleStartIndex + ITEMS_PER_PAGE).map((album) => (
+                    {sortedAlbums.slice(visibleStartIndex, visibleStartIndex + ITEMS_PER_PAGE).map((album) => {
+                        const videoId = getYouTubeId(album.cover);
+                        const displayImage = videoId ? getYouTubeThumbnail(album.cover) : album.cover;
+
+                        return (
                         <div 
                             key={album.id} 
                             onClick={() => { setSelectedAlbum(album); setCurrentImageIndex(0); }}
                             className="group relative cursor-pointer h-64 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100"
                         >
                             <img 
-                                src={album.cover} 
+                                src={displayImage} 
                                 alt={album.title} 
                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                             />
+                            {/* Play Icon if video cover */}
+                            {videoId && (
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                                    <div className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/20">
+                                        <Play size={20} className="text-white fill-white ml-1" />
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-90 transition-opacity"></div>
                             
                             {/* Pinned Badge */}
@@ -483,7 +509,7 @@ const About: React.FC<AboutProps> = ({
                                 </div>
                             )}
                         </div>
-                    ))}
+                    )})}
                     </div>
                 ) : (
                     <div className="text-center py-12 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl text-gray-400">
@@ -623,13 +649,32 @@ const About: React.FC<AboutProps> = ({
                           <ChevronLeft size={40} />
                       </button>
 
-                      <div className="max-h-[80vh] max-w-full relative shadow-2xl">
-                          <img 
-                            src={selectedAlbum.images[currentImageIndex]} 
-                            alt={`Slide ${currentImageIndex}`} 
-                            className="max-h-[80vh] max-w-full object-contain rounded-lg"
-                          />
-                          <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">
+                      <div className="max-h-[80vh] max-w-full relative shadow-2xl flex items-center justify-center">
+                          {(() => {
+                              const currentUrl = selectedAlbum.images[currentImageIndex];
+                              const videoId = getYouTubeId(currentUrl);
+                              if (videoId) {
+                                  return (
+                                      <iframe 
+                                          className="w-[80vw] h-[45vw] max-h-[80vh] max-w-[1200px] rounded-lg"
+                                          src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+                                          title="YouTube video player"
+                                          frameBorder="0"
+                                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                          allowFullScreen
+                                      ></iframe>
+                                  );
+                              } else {
+                                  return (
+                                      <img 
+                                        src={currentUrl} 
+                                        alt={`Slide ${currentImageIndex}`} 
+                                        className="max-h-[80vh] max-w-full object-contain rounded-lg"
+                                      />
+                                  );
+                              }
+                          })()}
+                          <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm pointer-events-none">
                               {currentImageIndex + 1} / {selectedAlbum.images.length}
                           </div>
                       </div>
@@ -650,15 +695,25 @@ const About: React.FC<AboutProps> = ({
                           <span className="text-sm opacity-70">{selectedAlbum.date}</span>
                       </div>
                       <div className="flex gap-2 overflow-x-auto pb-2 px-4 scrollbar-hide">
-                          {selectedAlbum.images.map((img, idx) => (
-                              <div 
-                                key={idx} 
-                                onClick={() => setCurrentImageIndex(idx)}
-                                className={`h-16 w-24 flex-shrink-0 rounded-lg overflow-hidden cursor-pointer border-2 transition ${currentImageIndex === idx ? 'border-primary opacity-100' : 'border-transparent opacity-50 hover:opacity-80'}`}
-                              >
-                                  <img src={img} className="w-full h-full object-cover" alt="thumbnail" />
-                              </div>
-                          ))}
+                          {selectedAlbum.images.map((img, idx) => {
+                              const thumbVideoId = getYouTubeId(img);
+                              const thumbSrc = thumbVideoId ? getYouTubeThumbnail(img) : img;
+                              
+                              return (
+                                <div 
+                                    key={idx} 
+                                    onClick={() => setCurrentImageIndex(idx)}
+                                    className={`h-16 w-24 flex-shrink-0 rounded-lg overflow-hidden cursor-pointer border-2 transition relative ${currentImageIndex === idx ? 'border-primary opacity-100' : 'border-transparent opacity-50 hover:opacity-80'}`}
+                                >
+                                    <img src={thumbSrc} className="w-full h-full object-cover" alt="thumbnail" />
+                                    {thumbVideoId && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                            <Play size={16} className="text-white fill-white" />
+                                        </div>
+                                    )}
+                                </div>
+                              );
+                          })}
                       </div>
                   </div>
               </div>
@@ -700,7 +755,7 @@ const About: React.FC<AboutProps> = ({
                               />
                           </div>
                           <div className="sm:col-span-2">
-                              <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Ảnh bìa (URL)</label>
+                              <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Ảnh bìa (URL hoặc Link YouTube)</label>
                               <input 
                                 type="text" 
                                 className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary text-sm"
@@ -732,13 +787,14 @@ const About: React.FC<AboutProps> = ({
                       </div>
 
                       <div>
-                          <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Hoặc dán Link ảnh (URL)</label>
+                          <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Dán Link ảnh (URL) hoặc Link Video YouTube</label>
                           <textarea 
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-primary text-sm font-mono h-24"
-                            placeholder="Dán link ảnh tại đây, mỗi link một dòng..."
+                            placeholder="Dán link ảnh hoặc link YouTube (VD: https://youtu.be/...) tại đây, mỗi link một dòng..."
                             value={albumFormData.images}
                             onChange={(e) => setAlbumFormData({...albumFormData, images: e.target.value})}
                           ></textarea>
+                          <p className="text-[10px] text-gray-400 mt-1">Hỗ trợ hiển thị video trực tiếp từ YouTube.</p>
                       </div>
                   </div>
                   <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
