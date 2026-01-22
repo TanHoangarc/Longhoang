@@ -28,7 +28,7 @@ const FinanceIntro = () => (
       <div className="inline-flex items-center justify-center p-3 bg-blue-50 text-blue-600 rounded-full mb-4">
           <Info size={32} />
       </div>
-      <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tight mb-2">Quy Định & Hướng Dẫn Tài Chính</h2>
+      <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tight mb-2">Quy Định & Hướng Dẫn Tài Chính Kimberry</h2>
       <div className="w-24 h-1.5 bg-blue-500 mx-auto rounded-full"></div>
       <p className="text-slate-500 mt-4 max-w-2xl mx-auto text-sm">
           Vui lòng đọc kỹ các quy định dưới đây về quy trình thanh toán, hoàn cược và xuất hóa đơn để đảm bảo quyền lợi của Quý khách hàng.
