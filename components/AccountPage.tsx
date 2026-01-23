@@ -1,10 +1,17 @@
 
 import React, { useState } from 'react';
-import { X, ArrowLeft, LayoutDashboard, FileSpreadsheet, Clock, UserCheck, Database, Plus, ChevronRight, Search, FileText, Lock } from 'lucide-react';
+import { 
+    X, LayoutDashboard, FileSpreadsheet, DollarSign, UserCheck, 
+    LogOut, ChevronRight, Menu, Wallet, Banknote
+} from 'lucide-react';
 import AccountStatement from './account/AccountStatement';
 import AccountData, { Carrier } from './account/AccountData';
 import AccountAttendance from './account/AccountAttendance';
-import { StatementData, AttendanceRecord, UserAccount, SystemNotification } from '../App';
+import AccountDebitNote from './account/AccountDebitNote';
+import AccountOverview from './account/AccountOverview';
+import AccountWCA from './account/AccountWCA';
+import AccountSalary from './account/AccountSalary';
+import { StatementData, AttendanceRecord, UserAccount, SystemNotification, DebitNoteRecord, CustomerDef, FeeDef } from '../App';
 
 interface AccountPageProps {
   onClose: () => void;
@@ -17,17 +24,42 @@ interface AccountPageProps {
   notifications: SystemNotification[];
   carriers: Carrier[];
   onUpdateCarriers: (carriers: Carrier[]) => void;
+  debitNotes: DebitNoteRecord[]; 
+  onUpdateDebitNotes: (notes: DebitNoteRecord[]) => void;
+  // Config Props
+  customerDefs?: CustomerDef[];
+  onUpdateCustomerDefs?: (defs: CustomerDef[]) => void;
+  feeDefs?: FeeDef[];
+  onUpdateFeeDefs?: (defs: FeeDef[]) => void;
 }
 
-type ViewType = 'dashboard' | 'statement_list' | 'statement_edit' | 'attendance' | 'data';
+type ViewType = 'dashboard' | 'statement_list' | 'statement_edit' | 'attendance' | 'debit_list' | 'debit_edit' | 'wca' | 'salary';
 
 const AccountPage: React.FC<AccountPageProps> = ({ 
   onClose, statements, onUpdateStatements, attendanceRecords, users, 
-  onUpdateAttendance, onUpdateUser, notifications, carriers, onUpdateCarriers 
+  onUpdateAttendance, onUpdateUser, notifications, carriers, onUpdateCarriers,
+  debitNotes = [], onUpdateDebitNotes, 
+  customerDefs = [], onUpdateCustomerDefs = () => {},
+  feeDefs = [], onUpdateFeeDefs = () => {}
 }) => {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [selectedStatement, setSelectedStatement] = useState<StatementData | undefined>(undefined);
+  const [selectedDebitNote, setSelectedDebitNote] = useState<DebitNoteRecord | undefined>(undefined);
 
+  // BACKGROUND IMAGE URL (Abstract Blue/Pink - Glassmorphism Style)
+  const BG_IMAGE = "https://i.pinimg.com/736x/6d/53/90/6d539064383901fc10736820124e82c2.jpg";
+
+  // Menu Definition
+  const menuItems = [
+      { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard, color: 'text-blue-600' },
+      { id: 'statement_list', label: 'Bảng kê', icon: FileSpreadsheet, color: 'text-green-600' },
+      { id: 'debit_list', label: 'Debit Note', icon: DollarSign, color: 'text-orange-600' },
+      { id: 'attendance', label: 'Chấm công', icon: UserCheck, color: 'text-indigo-600' },
+      { id: 'salary', label: 'Lương', icon: Banknote, color: 'text-emerald-600' },
+      { id: 'wca', label: 'WCA', icon: Wallet, color: 'text-purple-600' },
+  ];
+
+  // --- STATEMENT HANDLERS ---
   const handleCreateNewStatement = () => {
       setSelectedStatement(undefined);
       setActiveView('statement_edit');
@@ -39,7 +71,6 @@ const AccountPage: React.FC<AccountPageProps> = ({
   };
 
   const handleSaveStatement = (data: StatementData) => {
-      // Check if exists
       const exists = statements.find(s => s.id === data.id);
       if (exists) {
           onUpdateStatements(statements.map(s => s.id === data.id ? data : s));
@@ -47,6 +78,33 @@ const AccountPage: React.FC<AccountPageProps> = ({
           onUpdateStatements([...statements, data]);
       }
       setActiveView('statement_list');
+  };
+
+  // --- DEBIT NOTE HANDLERS ---
+  const handleCreateNewDebit = () => {
+      setSelectedDebitNote(undefined);
+      setActiveView('debit_edit');
+  };
+
+  const handleEditDebit = (note: DebitNoteRecord) => {
+      setSelectedDebitNote(note);
+      setActiveView('debit_edit');
+  };
+
+  const handleDeleteDebit = (id: number) => {
+      if (confirm('Bạn có chắc chắn muốn xóa Debit Note này?')) {
+          onUpdateDebitNotes(debitNotes.filter(n => n.id !== id));
+      }
+  };
+
+  const handleSaveDebit = (data: DebitNoteRecord) => {
+      const exists = debitNotes.find(n => n.id === data.id);
+      if (exists) {
+          onUpdateDebitNotes(debitNotes.map(n => n.id === data.id ? data : n));
+      } else {
+          onUpdateDebitNotes([...debitNotes, data]);
+      }
+      setActiveView('debit_list');
   };
 
   const renderContent = () => {
@@ -61,56 +119,46 @@ const AccountPage: React.FC<AccountPageProps> = ({
 
         return (
             <div className="space-y-6">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center border-b border-white/30 pb-4">
                     <div>
-                        <h3 className="text-2xl font-bold text-gray-800">Danh sách Bảng kê</h3>
-                        <p className="text-sm text-gray-500">Quản lý và theo dõi bảng kê vận chuyển</p>
+                        <h3 className="text-2xl font-black text-slate-800 tracking-tight">Danh sách Bảng kê</h3>
+                        <p className="text-sm text-slate-500 font-medium">Quản lý và theo dõi bảng kê vận chuyển</p>
                     </div>
                     <button 
                         onClick={handleCreateNewStatement}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center shadow-lg transition"
+                        className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center shadow-lg shadow-green-200 transition-all transform active:scale-95"
                     >
-                        <Plus size={16} className="mr-2" /> Tạo Bảng kê mới
+                        <FileSpreadsheet size={18} className="mr-2" /> Tạo Bảng kê mới
                     </button>
-                </div>
-
-                {/* Filter / Search placeholder */}
-                <div className="bg-white p-4 rounded-xl border border-gray-100 flex items-center shadow-sm">
-                    <Search className="text-gray-400 mr-2" size={20} />
-                    <input type="text" placeholder="Tìm kiếm theo tên nhà xe..." className="w-full outline-none text-sm" />
                 </div>
 
                 <div className="space-y-8">
                     {Object.keys(grouped).sort().reverse().map(month => (
                         <div key={month}>
-                            <h4 className="text-lg font-bold text-gray-700 mb-3 border-l-4 border-green-500 pl-3">Tháng {month}</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <h4 className="text-lg font-bold text-slate-700 mb-4 border-l-4 border-green-500 pl-3">Tháng {month}</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {grouped[month].map(stmt => (
                                     <div 
                                         key={stmt.id}
                                         onClick={() => handleEditStatement(stmt)}
-                                        className="bg-white p-5 rounded-xl border border-gray-200 hover:border-green-500 hover:shadow-md transition cursor-pointer group relative overflow-hidden"
+                                        className="bg-white/70 backdrop-blur-md p-5 rounded-2xl border border-white/60 shadow-sm hover:border-green-300 hover:shadow-xl transition-all cursor-pointer group relative overflow-hidden"
                                     >
                                         <div className="flex justify-between items-start mb-2">
-                                            <div className="p-2 bg-green-50 text-green-600 rounded-lg group-hover:bg-green-600 group-hover:text-white transition">
+                                            <div className="p-2 bg-green-50 text-green-600 rounded-xl group-hover:bg-green-600 group-hover:text-white transition-colors">
                                                 <FileSpreadsheet size={20} />
                                             </div>
-                                            {stmt.status === 'Shared' && (
-                                                <div className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-[10px] font-bold uppercase flex items-center">
-                                                    <Lock size={10} className="mr-1" /> Shared
-                                                </div>
-                                            )}
-                                            {stmt.status === 'Draft' && (
-                                                 <div className="bg-gray-100 text-gray-500 px-2 py-1 rounded text-[10px] font-bold uppercase">
-                                                    Draft
-                                                 </div>
-                                            )}
+                                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                                                stmt.status === 'Locked' ? 'bg-green-100 text-green-700' : 
+                                                stmt.status === 'Shared' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+                                            }`}>
+                                                {stmt.status}
+                                            </span>
                                         </div>
-                                        <h5 className="font-bold text-gray-800 line-clamp-1 group-hover:text-green-600 transition">{stmt.title || stmt.senderName}</h5>
-                                        <p className="text-xs text-gray-500 mb-3">Ngày tạo: {stmt.createdDate}</p>
-                                        <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
-                                            <span className="font-black text-gray-800">{stmt.totalAmount.toLocaleString()} đ</span>
-                                            <span className="text-[10px] text-gray-400">{stmt.rows.length} chuyến</span>
+                                        <h5 className="font-bold text-slate-800 line-clamp-1 group-hover:text-green-600 transition">{stmt.title || stmt.senderName}</h5>
+                                        <p className="text-xs text-slate-500 mb-3">Ngày tạo: {stmt.createdDate}</p>
+                                        <div className="pt-3 border-t border-white/50 flex justify-between items-center">
+                                            <span className="font-black text-slate-800">{stmt.totalAmount.toLocaleString()} đ</span>
+                                            <span className="text-[10px] text-slate-400 font-bold uppercase">{stmt.rows.length} chuyến</span>
                                         </div>
                                     </div>
                                 ))}
@@ -118,7 +166,7 @@ const AccountPage: React.FC<AccountPageProps> = ({
                         </div>
                     ))}
                     {statements.length === 0 && (
-                        <div className="text-center py-12 text-gray-400">
+                        <div className="text-center py-12 text-slate-400 border-2 border-dashed border-white/50 rounded-2xl bg-white/20">
                             Chưa có bảng kê nào. Hãy tạo mới ngay!
                         </div>
                     )}
@@ -136,98 +184,174 @@ const AccountPage: React.FC<AccountPageProps> = ({
             />
         );
 
-      case 'data': return <AccountData carriers={carriers} onUpdate={onUpdateCarriers} />;
+      case 'debit_list':
+        return (
+            <div className="space-y-6">
+                <div className="flex justify-between items-center border-b border-white/30 pb-4">
+                    <div>
+                        <h3 className="text-2xl font-black text-slate-800 tracking-tight">Danh sách Debit Note</h3>
+                        <p className="text-sm text-slate-500 font-medium">Quản lý công nợ khách hàng</p>
+                    </div>
+                    <button 
+                        onClick={handleCreateNewDebit}
+                        className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center shadow-lg shadow-orange-200 transition-all transform active:scale-95"
+                    >
+                        <DollarSign size={18} className="mr-2" /> Tạo Debit Note
+                    </button>
+                </div>
+
+                <div className="bg-white/70 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm overflow-hidden">
+                    <table className="w-full text-left">
+                        <thead className="text-[10px] font-bold text-slate-400 uppercase bg-white/40 border-b border-white/50">
+                            <tr>
+                                <th className="px-6 py-4">Ngày tạo</th>
+                                <th className="px-6 py-4">Khách hàng</th>
+                                <th className="px-6 py-4">Job No</th>
+                                <th className="px-6 py-4">HBL</th>
+                                <th className="px-6 py-4 text-right">Tổng VND</th>
+                                <th className="px-6 py-4 text-right">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/50">
+                            {debitNotes.map(note => {
+                                const totalVND = note.items.reduce((sum, item) => {
+                                    const amount = item.price * item.qty * (1 + item.vat/100);
+                                    const vnd = item.currency === 'USD' ? amount * note.roe : amount;
+                                    return sum + vnd;
+                                }, 0);
+
+                                return (
+                                    <tr key={note.id} className="hover:bg-white/60 transition cursor-pointer" onClick={() => handleEditDebit(note)}>
+                                        <td className="px-6 py-4 text-sm text-slate-500">{new Date(note.date).toLocaleDateString('vi-VN')}</td>
+                                        <td className="px-6 py-4 font-bold text-slate-800">{note.customerName}</td>
+                                        <td className="px-6 py-4 text-sm text-blue-600 font-bold">{note.jobNo}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-600">{note.hbl}</td>
+                                        <td className="px-6 py-4 text-right font-black text-slate-700">{totalVND.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteDebit(note.id); }} 
+                                                className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition"
+                                            >
+                                                <X size={16}/>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {debitNotes.length === 0 && (
+                                <tr><td colSpan={6} className="text-center py-12 text-slate-400 italic">Chưa có Debit Note nào.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        );
+
+      case 'debit_edit':
+        return (
+            <AccountDebitNote 
+                initialData={selectedDebitNote}
+                onSave={handleSaveDebit}
+                onBack={() => setActiveView('debit_list')}
+                customerDefs={customerDefs}
+                onAddCustomer={ (c) => onUpdateCustomerDefs([...customerDefs, c]) }
+                feeDefs={feeDefs}
+                onAddFee={ (f) => onUpdateFeeDefs([...feeDefs, f]) }
+            />
+        );
+      
+      // Attendance (Formerly "Quản lý lương" in AccountAttendance)
       case 'attendance': return <AccountAttendance attendanceRecords={attendanceRecords} users={users} onUpdate={onUpdateAttendance} onUpdateUser={onUpdateUser} notifications={notifications} />;
       
+      // New Views
+      case 'salary': return <AccountSalary users={users} attendanceRecords={attendanceRecords} />; // Passed attendanceRecords
+      case 'wca': return <AccountWCA />;
+      
       default: return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div 
-            onClick={() => setActiveView('statement_list')}
-            className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group"
-          >
-            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-              <FileSpreadsheet size={32} />
-            </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-green-600 transition-colors">Bảng kê xe tải</h3>
-            <p className="text-gray-500 text-sm leading-relaxed">Tạo, quản lý và in ấn bảng kê vận chuyển xe tải, tính toán VAT tự động.</p>
-          </div>
-
-          <div 
-            onClick={() => setActiveView('data')}
-            className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group"
-          >
-            <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-              <Database size={32} />
-            </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-orange-600 transition-colors">Dữ liệu nhà xe</h3>
-            <p className="text-gray-500 text-sm leading-relaxed">Quản lý danh sách nhà xe, thông tin chuyển khoản và địa chỉ.</p>
-          </div>
-
-          <div 
-            onClick={() => setActiveView('attendance')}
-            className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group"
-          >
-            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-              <UserCheck size={32} />
-            </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">Chấm công</h3>
-            <p className="text-gray-500 text-sm leading-relaxed">Quản lý ngày công, tăng ca và phép năm của nhân sự.</p>
-          </div>
-        </div>
+        <AccountOverview users={users} attendanceRecords={attendanceRecords} />
       );
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-[#1e2a3b] text-white py-4 px-8 sticky top-0 z-40 shadow-lg border-b border-white/5 print:hidden">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveView('dashboard')}>
-              <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="LH Logo" className="h-8 w-auto object-contain" />
-              <span className="font-bold uppercase tracking-tighter text-sm">Account <span className="text-green-500">Portal</span></span>
-            </div>
-            <div className="hidden lg:flex items-center space-x-1 border-l border-white/10 pl-6 ml-6">
-              {[
-                { id: 'dashboard', icon: LayoutDashboard, label: 'Tổng quan' },
-                { id: 'statement_list', icon: FileSpreadsheet, label: 'Bảng kê' },
-                { id: 'data', icon: Database, label: 'Dữ liệu' },
-                { id: 'attendance', icon: UserCheck, label: 'Chấm công' }
-              ].map(item => (
-                <button 
-                  key={item.id}
-                  onClick={() => setActiveView(item.id as ViewType)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeView === item.id || (activeView === 'statement_edit' && item.id === 'statement_list') ? 'bg-white/10 text-green-400' : 'text-gray-400 hover:text-white'}`}
-                >
-                  <item.icon size={14} />
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition">
-            <X size={20} />
-          </button>
-        </div>
+    <div className="flex h-screen overflow-hidden font-sans relative">
+      {/* Background Layer */}
+      <div className="absolute inset-0 z-0">
+          <img src={BG_IMAGE} alt="Glassmorphism Background" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-white/20 backdrop-blur-[5px]"></div>
       </div>
       
-      <div className="flex-1 container mx-auto px-4 py-12 max-w-7xl print:py-0 print:px-0 print:max-w-none">
-        {activeView !== 'dashboard' && (
-          <button 
-            onClick={() => setActiveView('dashboard')}
-            className="mb-8 flex items-center text-gray-400 hover:text-green-600 transition font-bold text-xs uppercase tracking-widest group print:hidden"
-          >
-            <ArrowLeft size={16} className="mr-2 group-hover:-translate-x-1 transition-transform" /> 
-            Quay lại Tổng quan
-          </button>
-        )}
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {renderContent()}
-        </div>
-      </div>
-      
-      <div className="bg-white border-t border-gray-100 py-6 text-center text-xs text-gray-400 font-medium print:hidden">
-        Hệ thống Kế toán Long Hoang Logistics v1.0 • {new Date().getFullYear()}
+      <div className="flex h-full relative z-10">
+        {/* SIDEBAR - Ultra Glass */}
+        <aside className="w-72 bg-white/40 backdrop-blur-2xl border-r border-white/40 flex flex-col flex-shrink-0 shadow-xl z-20">
+            {/* Logo Area */}
+            <div className="h-24 flex items-center px-8 border-b border-white/30">
+                <div className="w-10 h-10 bg-gradient-to-tr from-green-600 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-green-500/30">
+                    K
+                </div>
+                <div className="ml-3">
+                    <h1 className="font-black text-xl tracking-tight text-slate-800">LONG HOÀNG</h1>
+                    <p className="text-[10px] font-bold text-green-600 tracking-widest uppercase">Account</p>
+                </div>
+            </div>
+
+            {/* Navigation Menu */}
+            <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-2 custom-scrollbar">
+                {menuItems.map(item => {
+                    const isActive = activeView === item.id || 
+                        (activeView === 'statement_edit' && item.id === 'statement_list') ||
+                        (activeView === 'debit_edit' && item.id === 'debit_list');
+
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => setActiveView(item.id as ViewType)}
+                            className={`w-full flex items-center px-4 py-4 rounded-2xl transition-all duration-300 group ${
+                                isActive 
+                                ? 'bg-white/80 shadow-lg shadow-blue-100 text-slate-900 font-bold scale-100 border border-white/50' 
+                                : 'text-slate-600 hover:bg-white/40 hover:text-slate-900 font-medium hover:shadow-sm'
+                            }`}
+                        >
+                            <div className={`p-2 rounded-xl mr-3 transition-colors ${isActive ? item.color + ' bg-white/50' : 'bg-white/50 text-slate-400 group-hover:text-slate-600'}`}>
+                                <item.icon size={20} />
+                            </div>
+                            <span className="text-sm flex-1 text-left">{item.label}</span>
+                            {isActive && <ChevronRight size={16} className="text-slate-400" />}
+                        </button>
+                    );
+                })}
+            </nav>
+
+            {/* User Profile Footer */}
+            <div className="p-6 border-t border-white/30 bg-white/20">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-green-600 to-teal-400 flex items-center justify-center text-white font-bold shadow-md ring-2 ring-white/50">
+                        A
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-800 truncate">Accounting Admin</p>
+                        <p className="text-[10px] text-slate-500 truncate">Finance Dept.</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-white/50 rounded-lg text-slate-500 hover:text-red-500 transition shadow-sm">
+                        <LogOut size={18} />
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        {/* MAIN CONTENT AREA */}
+        <main className="flex-1 overflow-y-auto relative p-6 md:p-10 z-10">
+            <div className="max-w-7xl mx-auto h-full flex flex-col">
+                {/* Content Container - Glass Card */}
+                <div className="flex-1 bg-white/60 backdrop-blur-xl border border-white/50 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col relative animate-in fade-in slide-in-from-bottom-4 duration-500 ring-1 ring-white/40 p-6 md:p-10 overflow-y-auto custom-scrollbar">
+                    {renderContent()}
+                </div>
+                
+                <div className="py-4 text-center text-xs text-slate-500 font-medium bg-white/30 backdrop-blur-sm border-t border-white/20 mt-4 rounded-xl">
+                    Hệ thống Kế toán Long Hoang Logistics v1.0 • {new Date().getFullYear()}
+                </div>
+            </div>
+        </main>
       </div>
     </div>
   );

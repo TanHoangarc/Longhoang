@@ -55,13 +55,20 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
   // Preview Modal State
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string } | null>(null);
 
+  // BACKGROUND IMAGE URL (Abstract Blue/Purple - Glassmorphism Style)
+  const BG_IMAGE = "https://i.pinimg.com/1200x/83/6f/7c/836f7cfc772af123841c59e3bf7835a6.jpg";
+
   if (userRole !== 'admin' && userRole !== 'manager') {
       return (
-          <div className="min-h-screen flex items-center justify-center bg-gray-50">
-              <div className="text-center">
+          <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+              <div className="absolute inset-0 z-0">
+                  <img src={BG_IMAGE} alt="Background" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-white/30 backdrop-blur-sm"></div>
+              </div>
+              <div className="text-center bg-white/70 p-8 rounded-3xl shadow-xl backdrop-blur-md relative z-10 border border-white/50">
                   <h1 className="text-2xl font-bold text-gray-800">Truy cập bị từ chối</h1>
-                  <p className="text-gray-500">Bạn không có quyền truy cập vào trang quản lý này.</p>
-                  <button onClick={onClose} className="mt-4 text-primary font-bold">Quay lại</button>
+                  <p className="text-gray-500 mt-2">Bạn không có quyền truy cập vào trang quản lý này.</p>
+                  <button onClick={onClose} className="mt-6 text-white bg-blue-600 px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg">Quay lại</button>
               </div>
           </div>
       );
@@ -195,54 +202,63 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
       }
   };
 
+  const menuItems = [
+      { id: 'EMPLOYEES', label: 'Nhân viên', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
+      { id: 'CONTRACTS', label: 'Hợp đồng', icon: Briefcase, color: 'text-teal-500', bg: 'bg-teal-50' },
+      { id: 'GUQ', label: 'Giấy Ủy Quyền', icon: FileText, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+      { id: 'CVHC', label: 'Hoàn cược', icon: FileCheck, color: 'text-green-500', bg: 'bg-green-50' },
+      { id: 'CVHT', label: 'Hoàn tiền', icon: CreditCard, color: 'text-orange-500', bg: 'bg-orange-50' },
+      { id: 'ADJUST', label: 'Điều chỉnh HĐ', icon: ShieldCheck, color: 'text-purple-500', bg: 'bg-purple-50' },
+  ];
+
   const renderSection = () => {
     switch (activeSection) {
       case 'CONTRACTS':
         return (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in duration-300">
-            <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+          <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 overflow-hidden animate-in fade-in duration-300 h-full flex flex-col ring-1 ring-white/40">
+            <div className="p-6 border-b border-white/30 flex justify-between items-center bg-white/40">
                 <h3 className="font-bold text-gray-800 flex items-center"><Briefcase className="mr-2 text-teal-600" size={20} /> Danh sách Hợp đồng Vận chuyển</h3>
                 <div className="relative">
                     <Search className="absolute left-3 top-2.5 text-gray-300" size={16} />
                     <input 
-                        className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-white outline-none focus:border-teal-500" 
+                        className="pl-9 pr-4 py-2 border rounded-xl text-sm bg-white/50 outline-none focus:ring-2 focus:ring-teal-500/50 transition w-64" 
                         placeholder="Tìm số HĐ, khách hàng..." 
                         value={contractSearch}
                         onChange={(e) => setContractSearch(e.target.value)}
                     />
                 </div>
             </div>
-            <div className="max-h-[600px] overflow-y-auto">
-                <table className="w-full text-left">
-                <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white border-b border-gray-100 sticky top-0 z-10">
+            <div className="overflow-auto flex-1 p-2">
+                <table className="w-full text-left border-collapse">
+                <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white/50 sticky top-0 z-10 backdrop-blur-md">
                     <tr>
-                        <th className="px-6 py-4">Số Hợp đồng</th>
+                        <th className="px-6 py-4 rounded-l-xl">Số Hợp đồng</th>
                         <th className="px-6 py-4">Khách hàng</th>
                         <th className="px-6 py-4">Người tạo</th>
                         <th className="px-6 py-4">Ngày ký</th>
                         <th className="px-6 py-4">Ngày hết hạn</th>
                         <th className="px-6 py-4 text-center">Trạng thái</th>
-                        <th className="px-6 py-4 text-right">Thao tác</th>
+                        <th className="px-6 py-4 text-right rounded-r-xl">Thao tác</th>
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="text-sm">
                     {filteredContracts.map(c => {
                         const isExpired = new Date(c.expiryDate) < new Date();
                         return (
-                            <tr key={c.id} className="hover:bg-gray-50/50 transition">
+                            <tr key={c.id} className="hover:bg-white/60 transition border-b border-dashed border-gray-200/50 last:border-0">
                                 <td className="px-6 py-4 font-mono text-sm font-bold text-teal-600">{c.contractNo}</td>
                                 <td className="px-6 py-4 font-bold text-gray-700">{c.customerName}</td>
                                 <td className="px-6 py-4 text-sm text-gray-500">{c.creatorName || 'N/A'}</td>
                                 <td className="px-6 py-4 text-sm text-gray-500">{new Date(c.date).toLocaleDateString('vi-VN')}</td>
                                 <td className="px-6 py-4 text-sm text-gray-500">{new Date(c.expiryDate).toLocaleDateString('vi-VN')}</td>
                                 <td className="px-6 py-4 text-center">
-                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${isExpired ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                                    <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${isExpired ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
                                         {isExpired ? 'Hết hạn' : 'Hiệu lực'}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     {userRole === 'admin' && (
-                                        <button onClick={() => handleDeleteContract(c.id)} className="p-2 text-gray-400 hover:text-red-500 transition bg-white border border-transparent hover:border-red-100 rounded-lg" title="Xóa hợp đồng">
+                                        <button onClick={() => handleDeleteContract(c.id)} className="p-2 text-gray-400 hover:text-red-500 transition hover:bg-white/50 rounded-lg" title="Xóa hợp đồng">
                                             <Trash2 size={16} />
                                         </button>
                                     )}
@@ -260,27 +276,27 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
         );
       case 'GUQ':
         return (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in duration-300">
-            <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-                <h3 className="font-bold text-gray-800 flex items-center"><FileText className="mr-2 text-primary" size={20} /> Danh sách Giấy ủy quyền</h3>
+          <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 overflow-hidden animate-in fade-in duration-300 h-full flex flex-col ring-1 ring-white/40">
+            <div className="p-6 border-b border-white/30 flex justify-between items-center bg-white/40">
+                <h3 className="font-bold text-gray-800 flex items-center"><FileText className="mr-2 text-indigo-600" size={20} /> Danh sách Giấy ủy quyền</h3>
                 <div className="relative">
                     <Search className="absolute left-3 top-2.5 text-gray-300" size={16} />
                     <input 
-                        className="pl-9 pr-4 py-2 border rounded-lg text-sm bg-white outline-none focus:border-primary" 
+                        className="pl-9 pr-4 py-2 border rounded-xl text-sm bg-white/50 outline-none focus:ring-2 focus:ring-indigo-500/50 transition w-64" 
                         placeholder="Tìm tên công ty..." 
                         value={guqSearch}
                         onChange={(e) => setGuqSearch(e.target.value)}
                     />
                 </div>
             </div>
-            <div className="max-h-[500px] overflow-y-auto">
-                <table className="w-full text-left">
-                <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white border-b border-gray-100 sticky top-0 z-10">
-                    <tr><th className="px-6 py-4">Tên công ty</th><th className="px-6 py-4">Ngày nộp</th><th className="px-6 py-4">File đính kèm</th><th className="px-6 py-4 text-right">Thao tác</th></tr>
+            <div className="overflow-auto flex-1 p-2">
+                <table className="w-full text-left border-collapse">
+                <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white/50 sticky top-0 z-10 backdrop-blur-md">
+                    <tr><th className="px-6 py-4 rounded-l-xl">Tên công ty</th><th className="px-6 py-4">Ngày nộp</th><th className="px-6 py-4">File đính kèm</th><th className="px-6 py-4 text-right rounded-r-xl">Thao tác</th></tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="text-sm">
                     {filteredGuq.map(item => (
-                    <tr key={item.id} className="hover:bg-gray-50/50 transition">
+                    <tr key={item.id} className="hover:bg-white/60 transition border-b border-dashed border-gray-200/50 last:border-0">
                         <td className="px-6 py-4 font-bold text-gray-800">{item.companyName || 'Chưa cập nhật'}</td>
                         <td className="px-6 py-4 text-gray-500 text-sm">{item.date || (item as any).uploadDate || '-'}</td>
                         <td className="px-6 py-4">
@@ -293,14 +309,14 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                         </td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
-                                <button onClick={() => handlePreview(item, 'GUQ')} className="p-2 text-gray-400 hover:text-primary transition" title="Xem">
+                                <button onClick={() => handlePreview(item, 'GUQ')} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white/50 rounded-lg transition" title="Xem">
                                     <Eye size={18} />
                                 </button>
-                                <button onClick={() => handleDownload(item, 'GUQ')} className="p-2 text-gray-400 hover:text-blue-500 transition" title="Tải xuống">
+                                <button onClick={() => handleDownload(item, 'GUQ')} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-white/50 rounded-lg transition" title="Tải xuống">
                                     <Download size={18} />
                                 </button>
                                 {userRole === 'admin' && (
-                                    <button onClick={() => handleDeleteGuq(item.id)} className="p-2 text-gray-400 hover:text-red-500 transition" title="Xóa">
+                                    <button onClick={() => handleDeleteGuq(item.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-white/50 rounded-lg transition" title="Xóa">
                                         <Trash2 size={18} />
                                     </button>
                                 )}
@@ -318,216 +334,222 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
         );
       case 'CVHC':
         return (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in duration-300">
-            <div className="p-6 border-b border-gray-50 bg-gray-50/50"><h3 className="font-bold text-gray-800 flex items-center"><FileCheck className="mr-2 text-green-500" size={20} /> Công văn Hoàn cược</h3></div>
-            <table className="w-full text-left">
-              <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white border-b border-gray-100">
-                <tr>
-                    <th className="px-6 py-4">Tên công ty</th>
-                    <th className="px-6 py-4">Số Bill (BL)</th>
-                    <th className="px-6 py-4">Hồ sơ gốc</th>
-                    <th className="px-6 py-4">Tình trạng</th>
-                    <th className="px-6 py-4 text-right">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {cvhcRecords.map(item => (
-                  <tr key={item.id} className="hover:bg-gray-50/50 transition">
-                    <td className="px-6 py-4 font-bold text-gray-800">{item.companyName}</td>
-                    <td className="px-6 py-4 font-mono text-xs font-bold text-gray-500">{item.bl}</td>
-                    <td className="px-6 py-4 space-y-1">
-                      <div className="text-[10px] font-bold text-blue-500 flex items-center cursor-pointer hover:underline" onClick={() => handlePreview(item.fileCvhc, 'CVHC')}>
-                          <FileText size={12} className="mr-1" /> {item.fileCvhc}
-                      </div>
-                      {item.fileEir && (
-                          <div className="text-[10px] font-bold text-orange-500 flex items-center cursor-pointer hover:underline" onClick={() => handlePreview(item.fileEir!, 'CVHC')}>
-                              <Package size={12} className="mr-1" /> {item.fileEir}
-                          </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                        {item.status === 'Completed' ? (
-                            <div className="flex flex-col">
-                                <span className="inline-flex items-center text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded w-fit mb-1">
-                                    <FileCheck size={12} className="mr-1" /> Đã hoàn
-                                </span>
-                                {item.uncFile && (
-                                    <span 
-                                        className="text-[10px] text-blue-500 underline cursor-pointer hover:text-blue-700"
-                                        onClick={() => handlePreview(item.uncFile!, 'CVHC')}
-                                    >
-                                        Xem UNC
-                                    </span>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="flex items-center space-x-2">
-                                <span className="inline-flex items-center text-xs font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded">
-                                    Chưa hoàn
-                                </span>
-                                <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded shadow transition" title="Xác nhận hoàn & Tải UNC">
-                                    <Upload size={14} />
-                                    <input 
-                                        type="file" 
-                                        className="hidden" 
-                                        onChange={(e) => {
-                                            if (e.target.files?.[0]) handleUploadUNC(e.target.files[0], item.id, 'CVHC');
-                                        }}
-                                    />
-                                </label>
+          <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 overflow-hidden animate-in fade-in duration-300 h-full flex flex-col ring-1 ring-white/40">
+            <div className="p-6 border-b border-white/30 bg-white/40"><h3 className="font-bold text-gray-800 flex items-center"><FileCheck className="mr-2 text-green-500" size={20} /> Công văn Hoàn cược</h3></div>
+            <div className="overflow-auto flex-1 p-2">
+                <table className="w-full text-left border-collapse">
+                <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white/50 sticky top-0 z-10 backdrop-blur-md">
+                    <tr>
+                        <th className="px-6 py-4 rounded-l-xl">Tên công ty</th>
+                        <th className="px-6 py-4">Số Bill (BL)</th>
+                        <th className="px-6 py-4">Hồ sơ gốc</th>
+                        <th className="px-6 py-4">Tình trạng</th>
+                        <th className="px-6 py-4 text-right rounded-r-xl">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody className="text-sm">
+                    {cvhcRecords.map(item => (
+                    <tr key={item.id} className="hover:bg-white/60 transition border-b border-dashed border-gray-200/50 last:border-0">
+                        <td className="px-6 py-4 font-bold text-gray-800">{item.companyName}</td>
+                        <td className="px-6 py-4 font-mono text-xs font-bold text-gray-500">{item.bl}</td>
+                        <td className="px-6 py-4 space-y-1">
+                        <div className="text-[10px] font-bold text-blue-500 flex items-center cursor-pointer hover:underline" onClick={() => handlePreview(item.fileCvhc, 'CVHC')}>
+                            <FileText size={12} className="mr-1" /> {item.fileCvhc}
+                        </div>
+                        {item.fileEir && (
+                            <div className="text-[10px] font-bold text-orange-500 flex items-center cursor-pointer hover:underline" onClick={() => handlePreview(item.fileEir!, 'CVHC')}>
+                                <Package size={12} className="mr-1" /> {item.fileEir}
                             </div>
                         )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                            {item.status === 'Completed' && item.uncFile && (
-                                <button onClick={() => handleDownload(item.uncFile!, 'CVHC')} className="p-2 text-green-600 hover:bg-green-50 rounded transition" title="Tải UNC">
-                                    <Download size={18} />
-                                </button>
+                        </td>
+                        <td className="px-6 py-4">
+                            {item.status === 'Completed' ? (
+                                <div className="flex flex-col">
+                                    <span className="inline-flex items-center text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg w-fit mb-1 border border-green-100">
+                                        <FileCheck size={12} className="mr-1" /> Đã hoàn
+                                    </span>
+                                    {item.uncFile && (
+                                        <span 
+                                            className="text-[10px] text-blue-500 underline cursor-pointer hover:text-blue-700"
+                                            onClick={() => handlePreview(item.uncFile!, 'CVHC')}
+                                        >
+                                            Xem UNC
+                                        </span>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex items-center space-x-2">
+                                    <span className="inline-flex items-center text-xs font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100">
+                                        Chưa hoàn
+                                    </span>
+                                    <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-lg shadow-md transition" title="Xác nhận hoàn & Tải UNC">
+                                        <Upload size={14} />
+                                        <input 
+                                            type="file" 
+                                            className="hidden" 
+                                            onChange={(e) => {
+                                                if (e.target.files?.[0]) handleUploadUNC(e.target.files[0], item.id, 'CVHC');
+                                            }}
+                                        />
+                                    </label>
+                                </div>
                             )}
-                            {userRole === 'admin' && (
-                                <button onClick={() => handleDeleteCvhc(item.id)} className="p-2 text-gray-400 hover:text-red-500 transition" title="Xóa">
-                                    <Trash2 size={18} />
-                                </button>
-                            )}
-                        </div>
-                    </td>
-                  </tr>
-                ))}
-                {cvhcRecords.length === 0 && (
-                    <tr><td colSpan={5} className="text-center py-8 text-gray-400 italic">Chưa có dữ liệu</td></tr>
-                )}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                                {item.status === 'Completed' && item.uncFile && (
+                                    <button onClick={() => handleDownload(item.uncFile!, 'CVHC')} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition" title="Tải UNC">
+                                        <Download size={18} />
+                                    </button>
+                                )}
+                                {userRole === 'admin' && (
+                                    <button onClick={() => handleDeleteCvhc(item.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="Xóa">
+                                        <Trash2 size={18} />
+                                    </button>
+                                )}
+                            </div>
+                        </td>
+                    </tr>
+                    ))}
+                    {cvhcRecords.length === 0 && (
+                        <tr><td colSpan={5} className="text-center py-8 text-gray-400 italic">Chưa có dữ liệu</td></tr>
+                    )}
+                </tbody>
+                </table>
+            </div>
           </div>
         );
       case 'CVHT':
         return (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in duration-300">
-            <div className="p-6 border-b border-gray-50 bg-gray-50/50"><h3 className="font-bold text-gray-800 flex items-center"><CreditCard className="mr-2 text-blue-500" size={20} /> Công văn Hoàn tiền</h3></div>
-            <table className="w-full text-left">
-              <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white border-b border-gray-100">
-                <tr>
-                    <th className="px-6 py-4">Tên công ty</th>
-                    <th className="px-6 py-4">Số Bill (BL)</th>
-                    <th className="px-6 py-4">Số tiền</th>
-                    <th className="px-6 py-4">Tình trạng</th>
-                    <th className="px-6 py-4 text-right">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {cvhtRecords.map(item => (
-                  <tr key={item.id} className="hover:bg-gray-50/50 transition">
-                    <td className="px-6 py-4 font-bold text-gray-800">{item.companyName}</td>
-                    <td className="px-6 py-4 font-mono text-xs">{item.bl}</td>
-                    <td className="px-6 py-4 font-black text-primary">{item.amount} VNĐ</td>
-                    <td className="px-6 py-4">
-                        {item.status === 'Completed' ? (
-                            <div className="flex flex-col">
-                                <span className="inline-flex items-center text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded w-fit mb-1">
-                                    <FileCheck size={12} className="mr-1" /> Đã hoàn
-                                </span>
-                                {item.uncFile && (
-                                    <span 
-                                        className="text-[10px] text-blue-500 underline cursor-pointer hover:text-blue-700"
-                                        onClick={() => handlePreview(item.uncFile!, 'CVHT')}
-                                    >
-                                        Xem UNC
+          <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 overflow-hidden animate-in fade-in duration-300 h-full flex flex-col ring-1 ring-white/40">
+            <div className="p-6 border-b border-white/30 bg-white/40"><h3 className="font-bold text-gray-800 flex items-center"><CreditCard className="mr-2 text-blue-500" size={20} /> Công văn Hoàn tiền</h3></div>
+            <div className="overflow-auto flex-1 p-2">
+                <table className="w-full text-left border-collapse">
+                <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white/50 sticky top-0 z-10 backdrop-blur-md">
+                    <tr>
+                        <th className="px-6 py-4 rounded-l-xl">Tên công ty</th>
+                        <th className="px-6 py-4">Số Bill (BL)</th>
+                        <th className="px-6 py-4">Số tiền</th>
+                        <th className="px-6 py-4">Tình trạng</th>
+                        <th className="px-6 py-4 text-right rounded-r-xl">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody className="text-sm">
+                    {cvhtRecords.map(item => (
+                    <tr key={item.id} className="hover:bg-white/60 transition border-b border-dashed border-gray-200/50 last:border-0">
+                        <td className="px-6 py-4 font-bold text-gray-800">{item.companyName}</td>
+                        <td className="px-6 py-4 font-mono text-xs">{item.bl}</td>
+                        <td className="px-6 py-4 font-black text-blue-600">{item.amount} VNĐ</td>
+                        <td className="px-6 py-4">
+                            {item.status === 'Completed' ? (
+                                <div className="flex flex-col">
+                                    <span className="inline-flex items-center text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg w-fit mb-1 border border-green-100">
+                                        <FileCheck size={12} className="mr-1" /> Đã hoàn
                                     </span>
+                                    {item.uncFile && (
+                                        <span 
+                                            className="text-[10px] text-blue-500 underline cursor-pointer hover:text-blue-700"
+                                            onClick={() => handlePreview(item.uncFile!, 'CVHT')}
+                                        >
+                                            Xem UNC
+                                        </span>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex items-center space-x-2">
+                                    <span className="inline-flex items-center text-xs font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100">
+                                        Chưa hoàn
+                                    </span>
+                                    <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-lg shadow-md transition" title="Xác nhận hoàn & Tải UNC">
+                                        <Upload size={14} />
+                                        <input 
+                                            type="file" 
+                                            className="hidden" 
+                                            onChange={(e) => {
+                                                if (e.target.files?.[0]) handleUploadUNC(e.target.files[0], item.id, 'CVHT');
+                                            }}
+                                        />
+                                    </label>
+                                </div>
+                            )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => handlePreview(item.fileName, 'CVHT')} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Xem CVHT">
+                                    <Eye size={18} />
+                                </button>
+                                {item.status === 'Completed' && item.uncFile && (
+                                    <button onClick={() => handleDownload(item.uncFile!, 'CVHT')} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition" title="Tải UNC">
+                                        <Download size={18} />
+                                    </button>
+                                )}
+                                {userRole === 'admin' && (
+                                    <button onClick={() => handleDeleteCvht(item.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="Xóa">
+                                        <Trash2 size={18} />
+                                    </button>
                                 )}
                             </div>
-                        ) : (
-                            <div className="flex items-center space-x-2">
-                                <span className="inline-flex items-center text-xs font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded">
-                                    Chưa hoàn
-                                </span>
-                                <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded shadow transition" title="Xác nhận hoàn & Tải UNC">
-                                    <Upload size={14} />
-                                    <input 
-                                        type="file" 
-                                        className="hidden" 
-                                        onChange={(e) => {
-                                            if (e.target.files?.[0]) handleUploadUNC(e.target.files[0], item.id, 'CVHT');
-                                        }}
-                                    />
-                                </label>
-                            </div>
-                        )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => handlePreview(item.fileName, 'CVHT')} className="p-2 text-gray-400 hover:text-primary transition" title="Xem CVHT">
-                                <Eye size={18} />
-                            </button>
-                            {item.status === 'Completed' && item.uncFile && (
-                                <button onClick={() => handleDownload(item.uncFile!, 'CVHT')} className="p-2 text-green-600 hover:bg-green-50 rounded transition" title="Tải UNC">
-                                    <Download size={18} />
-                                </button>
-                            )}
-                            {userRole === 'admin' && (
-                                <button onClick={() => handleDeleteCvht(item.id)} className="p-2 text-gray-400 hover:text-red-500 transition" title="Xóa">
-                                    <Trash2 size={18} />
-                                </button>
-                            )}
-                        </div>
-                    </td>
-                  </tr>
-                ))}
-                {cvhtRecords.length === 0 && (
-                    <tr><td colSpan={5} className="text-center py-8 text-gray-400 italic">Chưa có dữ liệu</td></tr>
-                )}
-              </tbody>
-            </table>
+                        </td>
+                    </tr>
+                    ))}
+                    {cvhtRecords.length === 0 && (
+                        <tr><td colSpan={5} className="text-center py-8 text-gray-400 italic">Chưa có dữ liệu</td></tr>
+                    )}
+                </tbody>
+                </table>
+            </div>
           </div>
         );
       case 'ADJUST':
         const filteredAdjust = adjustments.filter(a => adjustFilter === 'All' || a.status === adjustFilter);
         return (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="flex bg-gray-100 p-1 rounded-lg w-fit">
+          <div className="space-y-6 animate-in fade-in duration-300 h-full flex flex-col">
+            <div className="flex bg-white/50 p-1 rounded-xl w-fit shadow-sm border border-white/60 backdrop-blur-sm">
                {['All', 'Signed', 'Unsigned'].map(f => (
-                 <button key={f} onClick={() => setAdjustFilter(f as any)} className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${adjustFilter === f ? 'bg-white shadow-sm text-primary' : 'text-gray-500'}`}>
+                 <button key={f} onClick={() => setAdjustFilter(f as any)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${adjustFilter === f ? 'bg-white shadow text-purple-600' : 'text-gray-500 hover:text-gray-700'}`}>
                    {f === 'All' ? 'Tất cả' : f === 'Signed' ? 'Đã ký' : 'Chưa ký'}
                  </button>
                ))}
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <table className="w-full text-left">
-                    <thead className="text-[10px] font-bold text-gray-400 uppercase bg-gray-50/50 border-b border-gray-100">
-                        <tr><th className="px-6 py-4">Số Biên Bản</th><th className="px-6 py-4">Ngày lập</th><th className="px-6 py-4">Trạng thái</th><th className="px-6 py-4 text-right">Thao tác</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                        {filteredAdjust.map(item => (
-                            <tr key={item.id} className="hover:bg-gray-50/50 transition">
-                                <td className="px-6 py-4 font-mono text-sm font-bold text-gray-700">{item.bl}</td>
-                                <td className="px-6 py-4 text-gray-500 text-sm">{item.date}</td>
-                                <td className="px-6 py-4">
-                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${item.status === 'Signed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                        {item.status === 'Signed' ? 'Đã ký điện tử' : 'Chưa ký'}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                    <div className="flex justify-end gap-2">
-                                        <button onClick={() => handlePreview(item.fileName, 'BBDC')} className="text-gray-400 hover:text-primary transition" title="Xem trước">
-                                            <Eye size={18} />
-                                        </button>
-                                        <button onClick={() => handleDownload(item.fileName, 'BBDC')} className="text-gray-400 hover:text-blue-500 transition" title="Tải xuống">
-                                            <Download size={18} />
-                                        </button>
-                                        {userRole === 'admin' && (
-                                          <button onClick={() => handleDeleteAdjustment(item.id)} className="text-gray-400 hover:text-red-500 transition" title="Xóa">
-                                              <Trash2 size={18} />
-                                          </button>
-                                        )}
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                        {filteredAdjust.length === 0 && (
-                            <tr><td colSpan={4} className="text-center py-8 text-gray-400 italic">Chưa có biên bản nào.</td></tr>
-                        )}
-                    </tbody>
-                </table>
+            <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 overflow-hidden flex-1 flex flex-col ring-1 ring-white/40">
+                <div className="overflow-auto flex-1 p-2">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white/50 sticky top-0 z-10 backdrop-blur-md">
+                            <tr><th className="px-6 py-4 rounded-l-xl">Số Biên Bản</th><th className="px-6 py-4">Ngày lập</th><th className="px-6 py-4">Trạng thái</th><th className="px-6 py-4 text-right rounded-r-xl">Thao tác</th></tr>
+                        </thead>
+                        <tbody className="text-sm">
+                            {filteredAdjust.map(item => (
+                                <tr key={item.id} className="hover:bg-white/60 transition border-b border-dashed border-gray-200/50 last:border-0">
+                                    <td className="px-6 py-4 font-mono text-sm font-bold text-gray-700">{item.bl}</td>
+                                    <td className="px-6 py-4 text-gray-500 text-sm">{item.date}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${item.status === 'Signed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                            {item.status === 'Signed' ? 'Đã ký điện tử' : 'Chưa ký'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <button onClick={() => handlePreview(item.fileName, 'BBDC')} className="text-gray-400 hover:text-purple-600 transition" title="Xem trước">
+                                                <Eye size={18} />
+                                            </button>
+                                            <button onClick={() => handleDownload(item.fileName, 'BBDC')} className="text-gray-400 hover:text-blue-500 transition" title="Tải xuống">
+                                                <Download size={18} />
+                                            </button>
+                                            {userRole === 'admin' && (
+                                            <button onClick={() => handleDeleteAdjustment(item.id)} className="text-gray-400 hover:text-red-500 transition" title="Xóa">
+                                                <Trash2 size={18} />
+                                            </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            {filteredAdjust.length === 0 && (
+                                <tr><td colSpan={4} className="text-center py-8 text-gray-400 italic">Chưa có biên bản nào.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
           </div>
         );
@@ -539,18 +561,23 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
         const employeeOthers = employeeFiles.filter(f => f.type !== 'REPORT' && f.type !== 'QUOTATION');
 
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-300">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-300 h-full">
             {/* List */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden h-fit">
-              <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-gray-800 flex items-center"><Users size={18} className="mr-2 text-primary" /> Đội ngũ nhân viên</div>
-              <div className="divide-y divide-gray-50 max-h-[600px] overflow-y-auto">
+            <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 overflow-hidden flex flex-col h-full max-h-full ring-1 ring-white/40">
+              <div className="p-4 bg-white/40 border-b border-white/30 font-bold text-gray-800 flex items-center flex-shrink-0"><Users size={18} className="mr-2 text-blue-600" /> Đội ngũ nhân viên</div>
+              <div className="overflow-y-auto flex-1 p-2 space-y-1">
                 {employeeList.map(emp => (
-                  <div key={emp.id} onClick={() => setSelectedEmployee(getMockEmployeeDetails(emp))} className={`p-4 cursor-pointer hover:bg-orange-50 transition-colors flex items-center justify-between group ${selectedEmployee?.id === emp.id ? 'bg-orange-50 border-r-4 border-primary' : ''}`}>
-                    <div>
-                      <h4 className="font-bold text-gray-800 text-sm group-hover:text-primary transition-colors">{emp.name}</h4>
-                      <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">{emp.role}</p>
+                  <div key={emp.id} onClick={() => setSelectedEmployee(getMockEmployeeDetails(emp))} className={`p-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between group ${selectedEmployee?.id === emp.id ? 'bg-blue-50/80 border border-blue-200 shadow-sm' : 'hover:bg-white/60 hover:shadow-sm'}`}>
+                    <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-white ${selectedEmployee?.id === emp.id ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                            {emp.name.charAt(0)}
+                        </div>
+                        <div>
+                            <h4 className={`font-bold text-sm transition-colors ${selectedEmployee?.id === emp.id ? 'text-blue-700' : 'text-gray-700'}`}>{emp.name}</h4>
+                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">{emp.role}</p>
+                        </div>
                     </div>
-                    <ChevronRight size={16} className={`text-gray-300 group-hover:text-primary transition-transform ${selectedEmployee?.id === emp.id ? 'rotate-90 translate-x-1' : ''}`} />
+                    <ChevronRight size={16} className={`text-gray-300 transition-transform ${selectedEmployee?.id === emp.id ? 'rotate-90 text-blue-500' : ''}`} />
                   </div>
                 ))}
                 {employeeList.length === 0 && (
@@ -562,13 +589,15 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
             </div>
 
             {/* Detail View */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className="lg:col-span-2 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
               {selectedEmployee ? (
                 <>
                   {/* Summary */}
-                  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between animate-in fade-in slide-in-from-right-4 duration-300">
+                  <div className="bg-white/70 backdrop-blur-xl p-6 rounded-[2rem] border border-white/60 shadow-xl flex items-center justify-between animate-in fade-in slide-in-from-right-4 duration-300 ring-1 ring-white/40">
                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary font-black text-xl">{selectedEmployee.name.split(' ').pop()?.charAt(0)}</div>
+                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-blue-200">
+                            {selectedEmployee.name.split(' ').pop()?.charAt(0)}
+                        </div>
                         <div>
                             <h2 className="text-xl font-black text-gray-800">{selectedEmployee.name}</h2>
                             <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">{selectedEmployee.role}</p>
@@ -576,11 +605,11 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                         </div>
                     </div>
                     <div className="flex gap-4">
-                        <div className="text-center bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
-                            <span className="block text-xl font-black text-primary">{selectedEmployee.shipments.length}</span>
+                        <div className="text-center bg-white/50 px-4 py-2 rounded-xl border border-white/60 shadow-sm">
+                            <span className="block text-xl font-black text-indigo-600">{selectedEmployee.shipments.length}</span>
                             <span className="text-[10px] font-bold text-gray-400 uppercase">Lô hàng</span>
                         </div>
-                        <div className="text-center bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
+                        <div className="text-center bg-white/50 px-4 py-2 rounded-xl border border-white/60 shadow-sm">
                             <span className="block text-xl font-black text-blue-600">{employeeReports.length}</span>
                             <span className="text-[10px] font-bold text-gray-400 uppercase">Báo cáo</span>
                         </div>
@@ -588,22 +617,22 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                   </div>
 
                   {/* Shipments Detail */}
-                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-100">
-                    <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-sm text-gray-700 flex items-center"><Package size={16} className="mr-2" /> Các lô hàng đang quản lý</div>
-                    <div className="p-0 overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-white border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase">
-                                <tr><th className="px-6 py-3">Mã lô</th><th className="px-6 py-3">Hàng hóa</th><th className="px-6 py-3">Trạng thái</th><th className="px-6 py-3"></th></tr>
+                  <div className="bg-white/60 backdrop-blur-lg rounded-[2rem] border border-white/50 shadow-lg overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-100 ring-1 ring-white/30">
+                    <div className="p-4 bg-white/40 border-b border-white/30 font-bold text-sm text-gray-700 flex items-center"><Package size={16} className="mr-2" /> Các lô hàng đang quản lý</div>
+                    <div className="p-2 overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white/50">
+                                <tr><th className="px-6 py-3 rounded-l-lg">Mã lô</th><th className="px-6 py-3">Hàng hóa</th><th className="px-6 py-3">Trạng thái</th><th className="px-6 py-3 rounded-r-lg"></th></tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50">
+                            <tbody className="text-sm">
                                 {selectedEmployee.shipments.map((s, idx) => (
-                                    <tr key={idx} className="hover:bg-gray-50/30">
-                                        <td className="px-6 py-4 font-mono text-xs font-bold">{s.code}</td>
+                                    <tr key={idx} className="hover:bg-white/60 transition border-b border-dashed border-gray-200/50 last:border-0">
+                                        <td className="px-6 py-4 font-mono text-xs font-bold text-gray-700">{s.code}</td>
                                         <td className="px-6 py-4 text-sm font-medium text-gray-600">{s.commodity}</td>
                                         <td className="px-6 py-4">
-                                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{s.status}</span>
+                                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">{s.status}</span>
                                         </td>
-                                        <td className="px-6 py-4 text-right"><button className="text-gray-400 hover:text-primary"><Eye size={16} /></button></td>
+                                        <td className="px-6 py-4 text-right"><button className="text-gray-400 hover:text-blue-600 transition"><Eye size={16} /></button></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -612,17 +641,17 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                   </div>
 
                   {/* Weekly Reports */}
-                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200">
-                    <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-sm text-gray-700 flex items-center"><BarChart2 size={16} className="mr-2" /> File báo cáo tuần</div>
+                  <div className="bg-white/60 backdrop-blur-lg rounded-[2rem] border border-white/50 shadow-lg overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200 ring-1 ring-white/30">
+                    <div className="p-4 bg-white/40 border-b border-white/30 font-bold text-sm text-gray-700 flex items-center"><BarChart2 size={16} className="mr-2" /> File báo cáo tuần</div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
                         {employeeReports.map((r, idx) => (
                             <div 
                                 key={r.id} 
                                 onClick={() => handlePreview(r.fileName, 'REPORTS')}
-                                className="border border-gray-100 p-4 rounded-xl hover:bg-orange-50 transition cursor-pointer flex items-center justify-between group"
+                                className="bg-white/80 p-4 rounded-xl border border-white/60 hover:border-blue-200 hover:shadow-md transition cursor-pointer flex items-center justify-between group backdrop-blur-sm"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="bg-white p-2 rounded shadow-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                                    <div className="bg-blue-50 text-blue-600 p-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
                                         <FileText size={20} />
                                     </div>
                                     <div>
@@ -630,61 +659,23 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                                         <span className="text-[10px] text-gray-400 font-mono">{r.fileName}</span>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button onClick={(e) => { e.stopPropagation(); handleDeleteFile(r.id); }} className="text-gray-300 hover:text-red-500"><Trash2 size={16} /></button>
                                 </div>
                             </div>
                         ))}
-                        {employeeReports.length === 0 && <p className="text-sm text-gray-400 italic col-span-2">Chưa có báo cáo nào.</p>}
+                        {employeeReports.length === 0 && <p className="text-sm text-gray-400 italic col-span-2 text-center py-4">Chưa có báo cáo nào.</p>}
                     </div>
                   </div>
 
-                  {/* REAL: Quotation Files (PDF) */}
-                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200">
-                    <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-sm text-gray-700 flex items-center"><FileOutput size={16} className="mr-2" /> Lịch sử Báo giá (PDF)</div>
-                    <div className="p-0 overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-white border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase">
-                                <tr><th className="px-6 py-3">File Báo giá</th><th className="px-6 py-3">Khách hàng</th><th className="px-6 py-3">Ngày tạo</th><th className="px-6 py-3 text-right">Thao tác</th></tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {employeeQuotes.map((q) => (
-                                    <tr key={q.id} className="hover:bg-gray-50/30">
-                                        <td 
-                                            className="px-6 py-4 font-mono text-xs font-bold text-blue-600 flex items-center cursor-pointer hover:underline"
-                                            onClick={() => handlePreview(q.fileName, 'QUOTATION')} 
-                                        >
-                                            <FileText size={14} className="mr-2 text-red-500" />
-                                            {q.fileName}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600 font-bold">{q.customer || 'Unknown'}</td>
-                                        <td className="px-6 py-4 text-xs text-gray-500">{q.date}</td>
-                                        <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                            <button onClick={() => handleDownload(q.fileName, 'QUOTATION')} className="text-gray-400 hover:text-green-600 transition" title="Tải xuống">
-                                                <Download size={16} />
-                                            </button>
-                                            <button onClick={() => handleDeleteFile(q.id)} className="text-gray-400 hover:text-red-500 transition" title="Xóa file">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {employeeQuotes.length === 0 && (
-                                    <tr><td colSpan={4} className="px-6 py-4 text-sm text-gray-400 italic text-center">Chưa có báo giá nào được tạo.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                  </div>
-
-                  {/* REAL: Other Files (Leave Requests, etc.) */}
-                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200">
-                    <div className="p-4 bg-gray-50 border-b border-gray-100 font-bold text-sm text-gray-700 flex items-center"><FolderOpen size={16} className="mr-2" /> Hồ sơ khác & Đơn từ</div>
+                  {/* Other Files */}
+                  <div className="bg-white/60 backdrop-blur-lg rounded-[2rem] border border-white/50 shadow-lg overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200 ring-1 ring-white/30">
+                    <div className="p-4 bg-white/40 border-b border-white/30 font-bold text-sm text-gray-700 flex items-center"><FolderOpen size={16} className="mr-2" /> Hồ sơ khác & Đơn từ</div>
                     <div className="grid grid-cols-1 gap-3 p-6">
                         {employeeOthers.map((f) => (
-                            <div key={f.id} className="border border-gray-100 p-3 rounded-lg hover:bg-gray-50 transition flex items-center justify-between group">
+                            <div key={f.id} className="bg-white/80 p-3 rounded-xl border border-white/60 hover:shadow-sm transition flex items-center justify-between group backdrop-blur-sm">
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-lg ${f.type === 'LEAVE' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
+                                    <div className={`p-2 rounded-lg ${f.type === 'LEAVE' ? 'bg-orange-100 text-orange-600' : 'bg-purple-100 text-purple-600'}`}>
                                         {f.type === 'LEAVE' ? <Calendar size={18} /> : <FileText size={18} />}
                                     </div>
                                     <div>
@@ -694,25 +685,25 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={() => handlePreview(f.fileName, f.type === 'LEAVE' ? 'LEAVE' : 'UPLOADS')} className="p-2 bg-white border border-gray-200 rounded text-gray-400 hover:text-primary hover:border-primary transition shadow-sm">
+                                    <button onClick={() => handlePreview(f.fileName, f.type === 'LEAVE' ? 'LEAVE' : 'UPLOADS')} className="p-2 bg-gray-50 rounded-lg text-gray-400 hover:text-blue-600 transition">
                                         <Eye size={16} />
                                     </button>
-                                    <button onClick={() => handleDeleteFile(f.id)} className="p-2 bg-white border border-gray-200 rounded text-gray-400 hover:text-red-500 hover:border-red-200 transition shadow-sm">
+                                    <button onClick={() => handleDeleteFile(f.id)} className="p-2 bg-gray-50 rounded-lg text-gray-400 hover:text-red-500 transition">
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
                             </div>
                         ))}
-                        {employeeOthers.length === 0 && <p className="text-sm text-gray-400 italic">Chưa có hồ sơ khác.</p>}
+                        {employeeOthers.length === 0 && <p className="text-sm text-gray-400 italic text-center py-4">Chưa có hồ sơ khác.</p>}
                     </div>
                   </div>
 
                 </>
               ) : (
-                <div className="h-full flex items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl py-20">
+                <div className="h-full flex items-center justify-center bg-white/40 backdrop-blur-sm border-2 border-dashed border-white/50 rounded-3xl py-20">
                     <div className="text-center text-gray-400">
-                        <Users size={48} className="mx-auto mb-4 opacity-20" />
-                        <p className="font-bold">Chọn một nhân viên để xem chi tiết hoạt động</p>
+                        <Users size={48} className="mx-auto mb-4 opacity-30" />
+                        <p className="font-bold text-gray-500">Chọn một nhân viên để xem chi tiết hoạt động</p>
                     </div>
                 </div>
               )}
@@ -724,75 +715,88 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sidebar-like Top Navigation */}
-      <div className="bg-[#1e2a3b] text-white py-6 px-8 sticky top-0 z-40 shadow-xl border-b border-white/5">
-        <div className="container mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center space-x-6">
-            <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-full transition"><ArrowLeft size={24} /></button>
-            <div className="flex items-center space-x-3">
-              <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="LH Logo" className="h-10 w-auto object-contain shadow-lg" />
-              <div>
-                <span className="font-black uppercase tracking-tighter text-lg leading-none block">Management <span className="text-primary">Portal</span></span>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{userRole} access authorized</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/5 overflow-x-auto max-w-full">
-            {[
-              { id: 'EMPLOYEES', label: 'Nhân viên', icon: Users },
-              { id: 'CONTRACTS', label: 'Hợp đồng', icon: Briefcase },
-              { id: 'GUQ', label: 'GUQ', icon: FileText },
-              { id: 'CVHC', label: 'CVHC', icon: FileCheck },
-              { id: 'CVHT', label: 'CVHT', icon: CreditCard },
-              { id: 'ADJUST', label: 'Biên bản', icon: ShieldCheck }
-            ].map(tab => (
-              <button 
-                key={tab.id}
-                onClick={() => setActiveSection(tab.id as ManagementSection)}
-                className={`flex items-center space-x-2 px-5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${activeSection === tab.id ? 'bg-primary text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
-              >
-                <tab.icon size={14} />
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+    <div className="flex h-screen overflow-hidden font-sans relative">
+      {/* Background Layer */}
+      <div className="absolute inset-0 z-0">
+          <img src={BG_IMAGE} alt="Glassmorphism Background" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-white/20 backdrop-blur-[5px]"></div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 max-w-7xl">
-        <div className="mb-8 flex justify-between items-end">
-            <div>
-                <h2 className="text-3xl font-black text-gray-800 tracking-tight uppercase">
-                    {activeSection === 'EMPLOYEES' && 'Quản lý nhân sự'}
-                    {activeSection === 'CONTRACTS' && 'Quản lý hợp đồng'}
-                    {activeSection === 'GUQ' && 'Giấy ủy quyền'}
-                    {activeSection === 'CVHC' && 'Hoàn cược'}
-                    {activeSection === 'CVHT' && 'Hoàn tiền'}
-                    {activeSection === 'ADJUST' && 'Điều chỉnh & Thay thế'}
-                </h2>
-                <div className="h-1 w-12 bg-primary mt-2"></div>
+      {/* SIDEBAR NAVIGATION - Ultra Glass */}
+      <aside className="w-72 bg-white/40 backdrop-blur-2xl border-r border-white/40 flex flex-col flex-shrink-0 shadow-xl z-20">
+        <div className="h-24 flex items-center px-8 border-b border-white/30">
+            <div className="w-10 h-10 bg-gradient-to-tr from-teal-400 to-emerald-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-teal-100">
+                M
             </div>
-            <div className="text-right hidden sm:block">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-1">Cập nhật lúc</p>
-                <p className="text-sm font-black text-gray-700">{new Date().toLocaleTimeString()}</p>
+            <div className="ml-3">
+                <h1 className="font-black text-xl tracking-tight text-gray-800">MANAGER</h1>
+                <p className="text-[10px] font-bold text-teal-600 tracking-widest uppercase">Portal</p>
+            </div>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-2 custom-scrollbar">
+            {menuItems.map(item => (
+                <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id as ManagementSection)}
+                    className={`w-full flex items-center px-4 py-4 rounded-2xl transition-all duration-300 group ${
+                        activeSection === item.id 
+                        ? 'bg-white/80 shadow-lg shadow-blue-100 text-slate-900 font-bold scale-100 border border-white/50' 
+                        : 'text-gray-500 hover:bg-white/40 hover:text-gray-900 font-medium hover:shadow-sm'
+                    }`}
+                >
+                    <div className={`p-2 rounded-xl mr-3 transition-colors ${activeSection === item.id ? item.bg + ' ' + item.color : 'bg-white/50 text-gray-400 group-hover:text-gray-600'}`}>
+                        <item.icon size={20} />
+                    </div>
+                    <span className="text-sm flex-1 text-left">{item.label}</span>
+                    {activeSection === item.id && <ChevronRight size={16} className="text-gray-400" />}
+                </button>
+            ))}
+        </nav>
+
+        {/* Footer User Info */}
+        <div className="p-6 border-t border-white/30 bg-white/20">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-gray-700 to-gray-900 flex items-center justify-center text-white font-bold shadow-md ring-2 ring-white/50">
+                    {userRole === 'admin' ? 'A' : 'M'}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-800 truncate">Management</p>
+                    <p className="text-[10px] text-gray-500 truncate">{userRole === 'admin' ? 'System Administrator' : 'Department Manager'}</p>
+                </div>
+            </div>
+            <button 
+                onClick={onClose}
+                className="w-full flex items-center justify-center px-4 py-3 bg-white/70 hover:bg-red-50 text-gray-500 hover:text-red-500 rounded-xl text-xs font-bold transition-all shadow-sm border border-white/60 hover:border-red-100 hover:shadow-md backdrop-blur-sm"
+            >
+                <Trash2 size={14} className="mr-2" /> Thoát ứng dụng
+            </button>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT - Transparent */}
+      <main className="flex-1 overflow-hidden relative flex flex-col z-10">
+        <div className="flex-1 overflow-hidden p-6 md:p-10">
+            <div className="max-w-7xl mx-auto h-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {renderSection()}
             </div>
         </div>
         
-        {renderSection()}
-      </div>
+        <div className="py-4 text-center text-xs text-gray-500 font-medium bg-white/30 backdrop-blur-sm border-t border-white/20">
+            Hệ thống Quản trị Long Hoang Logistics • Authorized Access Only
+        </div>
+      </main>
 
       {/* FILE PREVIEW MODAL */}
       {previewFile && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewFile(null)}>
-            <div className="bg-white w-full max-w-5xl h-[85vh] rounded-xl flex flex-col shadow-2xl animate-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
-                <div className="flex justify-between items-center p-4 border-b border-gray-100">
+            <div className="bg-white w-full max-w-5xl h-[85vh] rounded-2xl flex flex-col shadow-2xl animate-in zoom-in duration-200 overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
                     <h3 className="font-bold text-gray-800 flex items-center truncate">
-                        <FileText className="mr-2 text-primary" /> {previewFile.name}
+                        <FileText className="mr-2 text-blue-600" /> {previewFile.name}
                     </h3>
                     <div className="flex items-center space-x-2">
-                        <a href={previewFile.url} download target="_blank" rel="noreferrer" className="p-2 bg-gray-100 hover:bg-primary hover:text-white rounded-lg transition" title="Tải xuống">
+                        <a href={previewFile.url} download target="_blank" rel="noreferrer" className="p-2 bg-white hover:bg-blue-50 text-gray-500 hover:text-blue-600 rounded-lg transition border border-gray-200" title="Tải xuống">
                             <Download size={20} />
                         </a>
                         <button onClick={() => setPreviewFile(null)} className="p-2 hover:bg-red-50 hover:text-red-500 rounded-lg transition">
@@ -809,7 +813,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                          <div className="flex flex-col items-center justify-center h-full text-gray-400">
                              <FileText size={64} className="mb-4 opacity-50" />
                              <p className="font-bold">Không thể xem trước định dạng này.</p>
-                             <a href={previewFile.url} download className="mt-4 px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primaryDark transition shadow-md">
+                             <a href={previewFile.url} download className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-md">
                                  Tải xuống để xem
                              </a>
                          </div>

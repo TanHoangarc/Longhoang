@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, FileText, RefreshCw, CreditCard, PenTool, Info, ChevronDown } from 'lucide-react';
+import { ArrowLeft, FileText, RefreshCw, CreditCard, PenTool, Info, ChevronDown, Search, Plus } from 'lucide-react';
 // Use type import to avoid circular dependency
 import type { GUQRecord, UserAccount, AdjustmentRecord, CVHCRecord, CVHTRecord } from '../App';
 import FinanceGuq from './finance/FinanceGuq';
@@ -159,10 +159,10 @@ const FinancePage: React.FC<FinancePageProps> = ({ onClose, guqRecords, onUpdate
   const [subAction, setSubAction] = useState<ActionType>('lookup');
 
   const tabs = [
-    { id: 'GUQ', label: 'Giấy Ủy Quyền', icon: FileText, hasSub: false },
-    { id: 'CVHC', label: 'Hoàn Cược', icon: RefreshCw, hasSub: true, subLabelCreate: 'Lập CVHC' },
-    { id: 'CVHT', label: 'Hoàn Tiền', icon: CreditCard, hasSub: true, subLabelCreate: 'Lập CVHT' },
-    { id: 'ADJUST', label: 'Điều Chỉnh HĐ', icon: PenTool, hasSub: true, subLabelCreate: 'Lập Biên bản' },
+    { id: 'GUQ', label: 'Giấy Ủy Quyền', icon: FileText, desc: 'Tra cứu & Cập nhật' },
+    { id: 'CVHC', label: 'Hoàn Cược', icon: RefreshCw, hasSub: true, subLabelCreate: 'Lập CVHC', desc: 'Quản lý cược vỏ' },
+    { id: 'CVHT', label: 'Hoàn Tiền', icon: CreditCard, hasSub: true, subLabelCreate: 'Lập CVHT', desc: 'Xử lý hoàn tiền' },
+    { id: 'ADJUST', label: 'Điều Chỉnh HĐ', icon: PenTool, hasSub: true, subLabelCreate: 'Lập Biên bản', desc: 'Hóa đơn điện tử' },
   ];
 
   const handleTabClick = (tabId: string) => {
@@ -194,122 +194,104 @@ const FinancePage: React.FC<FinancePageProps> = ({ onClose, guqRecords, onUpdate
   };
 
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-800 relative">
+    <div className="min-h-screen bg-gray-50 font-sans text-slate-800">
       
-      {/* 1. TOP BACKGROUND SECTION (Blue-gray) - Fixed Height */}
-      <div className="absolute top-0 left-0 w-full h-[450px] bg-[#dce5eb] z-0">
-          {/* Decorative Arrows (Top Left) */}
-          <div className="absolute top-12 left-10 opacity-20 hidden md:block">
-              <div className="flex space-x-2">
-                  {[...Array(5)].map((_, i) => (
-                      <div key={i} className="w-3 h-3 border-t-2 border-r-2 border-slate-900 transform rotate-45"></div>
-                  ))}
-              </div>
+      {/* 1. HERO SECTION (Replaces previous gray block) */}
+      <div className="relative h-[400px] w-full bg-[#111827] overflow-hidden">
+          {/* Background Image */}
+          <div className="absolute inset-0">
+              <img 
+                  src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=2072&auto=format&fit=crop" 
+                  alt="Finance Banner" 
+                  className="w-full h-full object-cover opacity-40"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#111827] to-transparent"></div>
           </div>
-          {/* Decorative Arrows (Bottom Right of colored section) */}
-          <div className="absolute bottom-20 right-10 opacity-20 hidden md:block">
-              <div className="flex space-x-2">
-                  {[...Array(5)].map((_, i) => (
-                      <div key={i} className="w-3 h-3 border-t-2 border-r-2 border-slate-900 transform rotate-45"></div>
-                  ))}
+
+          {/* Content */}
+          <div className="relative z-10 container mx-auto px-4 h-full flex flex-col justify-center pb-16">
+              <button 
+                  onClick={onClose} 
+                  className="absolute top-8 left-4 text-white/70 hover:text-white flex items-center transition group"
+              >
+                  <div className="bg-white/10 p-2 rounded-full mr-3 group-hover:bg-white/20">
+                      <ArrowLeft size={20} />
+                  </div>
+                  <span className="text-sm font-bold uppercase tracking-wider">Back to Home</span>
+              </button>
+
+              <div className="max-w-3xl animate-in slide-in-from-bottom-8 duration-700">
+                  <h1 className="text-4xl md:text-6xl font-black text-white mb-6 leading-tight">
+                      Finance <span className="text-primary">Portal</span>
+                  </h1>
+                  <p className="text-lg text-gray-300 max-w-xl leading-relaxed">
+                      Hệ thống quản lý tài chính tập trung. Tra cứu, lập hồ sơ và theo dõi trạng thái xử lý các nghiệp vụ tài chính Logistics.
+                  </p>
               </div>
           </div>
       </div>
 
-      {/* 2. HEADER CONTENT (Fixed Height 450px to push flow down) */}
-      <div className="relative z-10 h-[450px] flex flex-col justify-center items-center text-center px-6">
-         {/* Back Button */}
-         <button 
-            onClick={onClose} 
-            className="absolute left-6 top-10 group flex items-center text-slate-500 hover:text-slate-900 transition-colors font-bold text-sm"
-         >
-            <div className="w-8 h-8 rounded-full bg-white/50 border border-slate-300 flex items-center justify-center mr-2 shadow-sm group-hover:bg-white">
-                <ArrowLeft size={16} />
-            </div>
-            Back
-         </button>
-
-         <div className="mt-8">
-             <h1 className="text-6xl md:text-7xl font-black text-black tracking-tight mb-4">Finance</h1>
-             
-             {/* Wavy Line Decoration */}
-             <div className="flex justify-center mb-6 opacity-60">
-                <svg width="80" height="15" viewBox="0 0 80 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2 7.5C12 7.5 12 2.5 22 2.5C32 2.5 32 7.5 42 7.5C52 7.5 52 2.5 62 2.5C72 2.5 72 7.5 82 7.5" stroke="#000" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-             </div>
-
-             <p className="text-slate-500 font-medium text-xs md:text-sm max-w-lg mx-auto leading-relaxed uppercase tracking-wider">
-                Hệ thống xử lý nghiệp vụ tài chính chuyên nghiệp
-             </p>
-         </div>
-      </div>
-
-      {/* 3. NAVIGATION BAR (Flush Left, Vertically Centered on Division Line) */}
-      {/* -translate-y-1/2 pulls it up by 50% of its height. Since it starts after the 450px header, it sits exactly on the line. */}
-      <div className="relative z-30 transform -translate-y-1/2">
-         <div className="inline-flex bg-white rounded-r-[3rem] py-4 pl-8 pr-16 border-t border-r border-slate-100 shadow-sm relative">
-             <div className="flex items-center gap-4">
-                {tabs.map((tab) => (
+      {/* 2. NAVIGATION BAR (Overlapping Cards Style) */}
+      <div className="container mx-auto px-4 relative z-20 -mt-16">
+          <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-2 grid grid-cols-1 md:grid-cols-4 gap-2">
+              {tabs.map((tab) => (
                   <div key={tab.id} className="relative group">
-                      <button 
-                        onClick={() => handleTabClick(tab.id)}
-                        className={`flex items-center gap-2 px-4 py-3 font-black text-xs md:text-sm uppercase tracking-widest transition-all duration-300 border-b-2 ${
-                            activeTab === tab.id 
-                            ? 'text-slate-900 border-slate-900' 
-                            : 'text-slate-400 border-transparent hover:text-slate-600 hover:border-slate-200'
-                        }`}
+                      <button
+                          onClick={() => handleTabClick(tab.id)}
+                          className={`w-full flex items-center md:flex-col md:items-start md:justify-center p-4 rounded-lg transition-all duration-300 ${
+                              activeTab === tab.id 
+                              ? 'bg-primary text-white shadow-md ring-2 ring-primary ring-offset-2' 
+                              : 'bg-white hover:bg-gray-50 text-slate-600'
+                          }`}
                       >
-                          <tab.icon size={18} className={activeTab === tab.id ? 'text-slate-900' : 'text-slate-400'} />
-                          {tab.label}
-                          {tab.hasSub && <ChevronDown size={12} className="ml-1 opacity-50 group-hover:opacity-100 transition-opacity" />}
+                          <div className={`p-3 rounded-lg mb-0 md:mb-3 mr-4 md:mr-0 ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-gray-100 text-slate-500 group-hover:text-primary group-hover:bg-orange-50'}`}>
+                              <tab.icon size={24} />
+                          </div>
+                          <div className="text-left">
+                              <span className={`block font-bold text-sm uppercase tracking-wider ${activeTab === tab.id ? 'text-white' : 'text-slate-800'}`}>{tab.label}</span>
+                              <span className={`text-xs ${activeTab === tab.id ? 'text-white/80' : 'text-slate-400'}`}>{tab.desc}</span>
+                          </div>
+                          
+                          {/* Chevron for mobile or indication of sub-options */}
+                          {tab.hasSub && (
+                              <ChevronDown size={16} className={`absolute right-4 top-1/2 -translate-y-1/2 md:top-4 md:translate-y-0 opacity-50 ${activeTab === tab.id ? 'text-white' : 'text-slate-400'}`} />
+                          )}
                       </button>
-                      
-                      {/* Submenu Dropdown on Hover */}
+
+                      {/* Dropdown for Sub-actions (Hover) */}
                       {tab.hasSub && (
-                          <div className="absolute left-0 top-full pt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                              <div className="bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden flex flex-col py-1">
+                          <div className="absolute left-0 right-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                              <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1">
                                   <button 
-                                    onClick={(e) => handleSubClick(e, tab.id, 'lookup')}
-                                    className="px-4 py-3 text-left text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-primary transition-colors flex items-center"
+                                      onClick={(e) => handleSubClick(e, tab.id, 'lookup')}
+                                      className="w-full px-4 py-3 text-left text-xs font-bold text-slate-600 hover:bg-gray-50 hover:text-primary transition-colors flex items-center"
                                   >
-                                      <SearchIcon className="mr-2" size={14} /> Tra cứu
+                                      <Search size={14} className="mr-3 text-slate-400" /> Tra cứu
                                   </button>
-                                  <div className="h-px bg-slate-50 mx-2"></div>
+                                  <div className="h-px bg-gray-50 mx-2"></div>
                                   <button 
-                                    onClick={(e) => handleSubClick(e, tab.id, 'create')}
-                                    className="px-4 py-3 text-left text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-primary transition-colors flex items-center"
+                                      onClick={(e) => handleSubClick(e, tab.id, 'create')}
+                                      className="w-full px-4 py-3 text-left text-xs font-bold text-slate-600 hover:bg-gray-50 hover:text-primary transition-colors flex items-center"
                                   >
-                                      <PlusIcon className="mr-2" size={14} /> {tab.subLabelCreate}
+                                      <Plus size={14} className="mr-3 text-slate-400" /> {tab.subLabelCreate}
                                   </button>
                               </div>
                           </div>
                       )}
                   </div>
-                ))}
-             </div>
-         </div>
+              ))}
+          </div>
       </div>
 
-      {/* 4. MAIN CONTENT AREA (White Background) */}
-      <div className="relative z-20 bg-white min-h-[500px]">
-         <div className="container mx-auto px-4 md:px-20 pb-16">
-            <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-                {renderContent()}
-            </div>
-         </div>
+      {/* 3. MAIN CONTENT */}
+      <div className="container mx-auto px-4 py-12 min-h-[500px]">
+          <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
+              {renderContent()}
+          </div>
       </div>
 
     </div>
   );
 };
-
-// Simple Icons for submenu
-const SearchIcon = ({ className, size }: { className?: string, size?: number }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size || 24} height={size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-);
-const PlusIcon = ({ className, size }: { className?: string, size?: number }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size || 24} height={size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-);
 
 export default FinancePage;

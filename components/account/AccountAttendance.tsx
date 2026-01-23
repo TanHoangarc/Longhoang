@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Download, X, User, Save, FileText, Settings, Briefcase, Calendar, Paperclip, Eye, Upload } from 'lucide-react';
-import { AttendanceRecord, UserAccount, EmploymentStatus, SystemNotification } from '../../App';
+import { AttendanceRecord, UserAccount, LeaveFormDetails, SystemNotification } from '../../App';
 import { API_BASE_URL } from '../../constants';
 
 interface AccountAttendanceProps {
@@ -9,7 +9,7 @@ interface AccountAttendanceProps {
   users: UserAccount[];
   onUpdate: (records: AttendanceRecord[]) => void;
   onUpdateUser: (user: UserAccount) => void;
-  notifications: SystemNotification[]; // Received notifications
+  notifications: SystemNotification[];
 }
 
 type AttendanceStatus = 'Present' | 'Late' | 'Absent' | 'On Leave' | 'Unpaid Leave';
@@ -66,7 +66,7 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
       return Array.from({ length: days }, (_, i) => i + 1);
   }, [selectedMonth, selectedYear]);
 
-  // Filter users based on search (Fixed: Safe check for strings)
+  // Filter users based on search
   const filteredUsers = users.filter(u => 
       (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
       (u.role || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -163,8 +163,8 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
       {/* Header Controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
         <div className="text-center md:text-left">
-          <h3 className="text-2xl font-bold text-gray-800 uppercase">BẢNG CHẤM CÔNG THÁNG {selectedMonth}/{selectedYear}</h3>
-          <p className="text-sm text-gray-500">Quản lý ngày công nhân sự</p>
+          <h3 className="text-2xl font-bold text-gray-800 uppercase">BẢNG CHẤM CÔNG</h3>
+          <p className="text-sm text-gray-500">Tháng {selectedMonth}/{selectedYear}</p>
         </div>
         
         <div className="flex flex-wrap gap-3 items-center">
@@ -197,13 +197,13 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
             </select>
 
             <button className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center hover:bg-green-700 transition shadow-md">
-                <Download size={16} className="mr-2" /> Xuất Excel
+                <Download size={16} className="mr-2" /> Excel
             </button>
         </div>
       </div>
 
-      {/* Grid Table */}
-      <div className="bg-white border border-gray-300 shadow-md rounded-lg overflow-hidden w-full">
+      {/* VIEW: ATTENDANCE GRID */}
+      <div className="bg-white border border-gray-300 shadow-md rounded-lg overflow-hidden w-full animate-in fade-in">
         <table className="w-full border-collapse table-fixed">
             <thead>
                 <tr className="bg-[#8cc63f] text-white text-xs font-bold uppercase tracking-wider text-center h-12">
@@ -242,9 +242,7 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                                 
                                 // --- CHECK FOR PUBLIC HOLIDAYS (GLOBAL) ---
                                 const isGlobalHoliday = notifications.some(notif => {
-                                    // Check if title contains holiday keywords
                                     const isHolidayTopic = /nghỉ lễ|tết|holiday|giỗ|quốc khánh|thống nhất|hùng vương/i.test(notif.title);
-                                    // Check if date falls within range
                                     if (isHolidayTopic && notif.startDate && notif.expiryDate) {
                                         return dateStr >= notif.startDate && dateStr <= notif.expiryDate;
                                     }
@@ -257,31 +255,17 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
 
                                 if (user.employmentStatus?.type && user.employmentStatus.startDate) {
                                     const { type, startDate, endDate } = user.employmentStatus;
-                                    
-                                    if (type === 'Resignation') {
-                                        // Lock if cell date is >= start date
-                                        if (dateStr >= startDate) {
-                                            isLocked = true;
-                                            lockTitle = 'Đã nghỉ việc';
-                                        }
-                                    } else if (type === 'Maternity') {
-                                        // Lock if cell date is >= start date AND (no end date OR cell date <= end date)
-                                        if (dateStr >= startDate && (!endDate || dateStr <= endDate)) {
-                                            isLocked = true;
-                                            lockTitle = 'Nghỉ thai sản';
-                                        }
+                                    if (type === 'Resignation' && dateStr >= startDate) {
+                                        isLocked = true;
+                                        lockTitle = 'Đã nghỉ việc';
+                                    } else if (type === 'Maternity' && dateStr >= startDate && (!endDate || dateStr <= endDate)) {
+                                        isLocked = true;
+                                        lockTitle = 'Nghỉ thai sản';
                                     }
                                 }
 
-                                // 1. Check Individual Locks (Higher Priority for display logic usually)
                                 if (isLocked) {
-                                    return (
-                                        <td 
-                                            key={day} 
-                                            className="border border-gray-300 bg-gray-100 cursor-not-allowed" 
-                                            title={lockTitle}
-                                        ></td>
-                                    );
+                                    return <td key={day} className="border border-gray-300 bg-gray-100 cursor-not-allowed" title={lockTitle}></td>;
                                 }
 
                                 const record = getRecord(user.id, day);
@@ -292,25 +276,12 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                                 if (record?.status === 'Late') totalPresent += 1; 
                                 
                                 // Count Leave (Partial)
-                                if (record?.status === 'On Leave') {
-                                    totalLeave += (record.leaveDuration || 1);
-                                }
-                                if (record?.status === 'Unpaid Leave' || record?.status === 'Absent') {
-                                    totalUnpaid += (record.leaveDuration || 1);
-                                }
+                                if (record?.status === 'On Leave') totalLeave += (record.leaveDuration || 1);
+                                if (record?.status === 'Unpaid Leave' || record?.status === 'Absent') totalUnpaid += (record.leaveDuration || 1);
 
-                                // 2. Check Global Holiday
-                                // If no specific record is present (user didn't check in), show holiday color
+                                // Check Global Holiday if no record
                                 if (isGlobalHoliday && !record) {
-                                    return (
-                                        <td 
-                                            key={day} 
-                                            className="border border-gray-300 bg-red-500 text-white font-bold text-center cursor-default" 
-                                            title="Nghỉ Lễ"
-                                        >
-                                            Lễ
-                                        </td>
-                                    );
+                                    return <td key={day} className="border border-gray-300 bg-red-500 text-white font-bold text-center cursor-default" title="Nghỉ Lễ">Lễ</td>;
                                 }
 
                                 return (

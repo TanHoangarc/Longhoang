@@ -1,7 +1,34 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { MapPin, Phone } from 'lucide-react';
 
-const ContactForm = () => {
+interface ContactFormProps {
+  onSubmitRequest?: (name: string, phone: string, content: string) => boolean;
+}
+
+const ContactForm: React.FC<ContactFormProps> = ({ onSubmitRequest }) => {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [content, setContent] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !phone || !content) {
+        alert('Vui lòng điền đầy đủ thông tin (Tên, Số điện thoại, Nội dung)!');
+        return;
+    }
+
+    if (onSubmitRequest) {
+        const success = onSubmitRequest(name, phone, content);
+        if (success) {
+            alert('Yêu cầu của bạn đã được gửi thành công! Nhân viên kinh doanh sẽ liên hệ sớm nhất.');
+            setName('');
+            setPhone('');
+            setContent('');
+        }
+    }
+  };
+
   return (
     <section id="contact" className="relative py-24 bg-gray-900">
       {/* Map Background */}
@@ -72,27 +99,33 @@ const ContactForm = () => {
                  <h3 className="text-xl font-bold text-white">Yêu cầu gọi lại tư vấn</h3>
              </div>
              <div className="bg-white p-2 rounded-lg shadow-2xl">
-                <form className="flex flex-col md:flex-row gap-2">
+                <form className="flex flex-col md:flex-row gap-2" onSubmit={handleSubmit}>
                     <input 
-                    type="text" 
-                    placeholder="Tên của bạn" 
-                    className="flex-1 bg-gray-50 px-6 py-4 outline-none focus:bg-white focus:ring-2 focus:ring-primary/50 transition rounded text-gray-700"
+                        type="text" 
+                        placeholder="Tên của bạn" 
+                        className="flex-1 bg-gray-50 px-6 py-4 outline-none focus:bg-white focus:ring-2 focus:ring-primary/50 transition rounded text-gray-700"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                     />
                     <input 
-                    type="text" 
-                    placeholder="Số điện thoại" 
-                    className="flex-1 bg-gray-50 px-6 py-4 outline-none focus:bg-white focus:ring-2 focus:ring-primary/50 transition rounded text-gray-700"
+                        type="text" 
+                        placeholder="Số điện thoại" 
+                        className="flex-1 bg-gray-50 px-6 py-4 outline-none focus:bg-white focus:ring-2 focus:ring-primary/50 transition rounded text-gray-700"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
                     />
                      <input 
-                    type="text" 
-                    placeholder="Nội dung cần tư vấn" 
-                    className="flex-1 bg-gray-50 px-6 py-4 outline-none focus:bg-white focus:ring-2 focus:ring-primary/50 transition rounded text-gray-700"
+                        type="text" 
+                        placeholder="Nội dung cần tư vấn" 
+                        className="flex-1 bg-gray-50 px-6 py-4 outline-none focus:bg-white focus:ring-2 focus:ring-primary/50 transition rounded text-gray-700"
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
                     />
                     <button 
-                    type="submit" 
-                    className="bg-primary hover:bg-primaryDark text-white font-bold px-8 py-4 rounded transition shadow-md whitespace-nowrap"
+                        type="submit" 
+                        className="bg-primary hover:bg-primaryDark text-white font-bold px-8 py-4 rounded transition shadow-md whitespace-nowrap"
                     >
-                    GỬI YÊU CẦU
+                        GỬI YÊU CẦU
                     </button>
                 </form>
              </div>

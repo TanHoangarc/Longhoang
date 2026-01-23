@@ -42,6 +42,25 @@ export interface UserAccount {
   department?: string;
   position?: string;
   employmentStatus?: EmploymentStatus; // New field for detailed status
+  // Personal Info fields
+  phone?: string;
+  bankAccount?: string;
+  bankName?: string;
+}
+
+// Global Definitions for Settings
+export interface CustomerDef {
+  id: number;
+  name: string;
+  taxId: string;
+  address: string;
+}
+
+export interface FeeDef {
+  id: number;
+  name: string;
+  vat: number;
+  type: 'SERVICE' | 'ON_BEHALF'; // Added type classification
 }
 
 export interface SystemNotification {
@@ -245,9 +264,57 @@ export interface AdjustmentRecord {
   fileName: string;
 }
 
+// Interface for Quotation Request (Yêu cầu báo giá)
+export interface QuotationRequest {
+  id: number;
+  customerName: string;
+  phone: string;
+  content: string;
+  date: string; // Creation date
+  status: 'Pending' | 'Contacted'; // Chưa liên hệ | Đã liên hệ
+  assignedToId: number; // ID of the Sales staff
+  assignedToName: string; // Name of the Sales staff
+}
+
+// Interface for Debit Note Item
+export interface DebitNoteItem {
+  id: number;
+  description: string;
+  qty: number;
+  unit: string;
+  price: number;
+  vat: number;
+  currency: 'USD' | 'VND';
+  type: 'SERVICE' | 'ON_BEHALF'; // Logistics Charge or Pay On Behalf
+}
+
+// Interface for Debit Note Record
+export interface DebitNoteRecord {
+  id: number;
+  date: string; // Creation date
+  jobNo: string;
+  customerName: string;
+  customerTaxId: string;
+  customerAddress: string;
+  
+  // Shipment Details
+  carrier: string;
+  etd: string;
+  hbl: string;
+  pol: string;
+  pod: string;
+  volume: string;
+  roe: number;
+  roeCurrency?: string; // Changed: Added currency type for ROE
+  note: string;
+  
+  items: DebitNoteItem[];
+}
+
 // Default data in case server is offline
 const INITIAL_USERS: UserAccount[] = [
   { id: 1, name: 'Nguyễn Văn A', englishName: 'Mr. A', role: 'Sales', email: 'sales1@longhoanglogistics.com', password: '123', status: 'Active', failedAttempts: 0, department: 'Sales', position: 'Nhân viên kinh doanh' },
+  { id: 2, name: 'Trần Thị B', englishName: 'Ms. B', role: 'Sales', email: 'sales2@longhoanglogistics.com', password: '123', status: 'Active', failedAttempts: 0, department: 'Sales', position: 'Nhân viên kinh doanh' },
   { id: 7, name: 'Administrator', englishName: 'Admin', role: 'Admin', email: 'admin@longhoanglogistics.com', password: 'admin', status: 'Active', failedAttempts: 0, department: 'Board', position: 'Admin' },
 ];
 
@@ -450,6 +517,28 @@ function App() {
   const [adjustments, setAdjustments] = useState<AdjustmentRecord[]>(INITIAL_ADJUSTMENTS);
   const [contracts, setContracts] = useState<ContractRecord[]>([]);
   
+  // Quotation Requests State
+  const [quotationRequests, setQuotationRequests] = useState<QuotationRequest[]>([]);
+  // Sales Round Robin State
+  const [salesQueue, setSalesQueue] = useState<number[]>([]);
+
+  // Debit Notes State
+  const [debitNotes, setDebitNotes] = useState<DebitNoteRecord[]>([]);
+
+  // Global Config Data (Customers & Fees)
+  const [customerDefs, setCustomerDefs] = useState<CustomerDef[]>([]);
+  const [feeDefs, setFeeDefs] = useState<FeeDef[]>([
+      { id: 1, name: 'Ocean Freight (OF)', vat: 0, type: 'SERVICE' },
+      { id: 2, name: 'Terminal Handling Charge (THC)', vat: 5.26, type: 'SERVICE' },
+      { id: 3, name: 'D/O Fee', vat: 8, type: 'SERVICE' },
+      { id: 4, name: 'Cleaning Fee', vat: 8, type: 'SERVICE' },
+      { id: 5, name: 'Handling Fee', vat: 8, type: 'SERVICE' },
+      { id: 6, name: 'CIC', vat: 8, type: 'SERVICE' },
+      { id: 7, name: 'Trucking Fee', vat: 8, type: 'SERVICE' },
+      { id: 8, name: 'Customs Fee', vat: 8, type: 'SERVICE' },
+      { id: 9, name: 'Lift On/Off', vat: 8, type: 'SERVICE' }
+  ]);
+
   // Server connection status
   const [isServerOnline, setIsServerOnline] = useState(true);
 
@@ -490,6 +579,10 @@ function App() {
       milestones,
       adjustments,
       contracts,
+      quotationRequests,
+      debitNotes, 
+      customerDefs, // Added
+      feeDefs, // Added
       ...overrides
     };
   };
@@ -520,6 +613,10 @@ function App() {
           if (db.milestones && db.milestones.length > 0) setMilestones(db.milestones);
           if (db.adjustments && db.adjustments.length > 0) setAdjustments(db.adjustments);
           if (db.contracts && db.contracts.length > 0) setContracts(db.contracts);
+          if (db.quotationRequests) setQuotationRequests(db.quotationRequests);
+          if (db.debitNotes) setDebitNotes(db.debitNotes);
+          if (db.customerDefs) setCustomerDefs(db.customerDefs);
+          if (db.feeDefs) setFeeDefs(db.feeDefs);
           setIsServerOnline(true);
         } else {
             console.warn("Server responded but with error. Using local defaults.");
@@ -639,6 +736,76 @@ function App() {
     syncToServer(getFullState({ contracts: newContracts }));
   };
 
+  const handleUpdateQuotationRequests = (newRequests: QuotationRequest[]) => {
+    setQuotationRequests(newRequests);
+    syncToServer(getFullState({ quotationRequests: newRequests }));
+  };
+
+  const handleUpdateDebitNotes = (newDebitNotes: DebitNoteRecord[]) => {
+    setDebitNotes(newDebitNotes);
+    syncToServer(getFullState({ debitNotes: newDebitNotes }));
+  };
+
+  const handleUpdateCustomerDefs = (newDefs: CustomerDef[]) => {
+    setCustomerDefs(newDefs);
+    syncToServer(getFullState({ customerDefs: newDefs }));
+  };
+
+  const handleUpdateFeeDefs = (newDefs: FeeDef[]) => {
+    setFeeDefs(newDefs);
+    syncToServer(getFullState({ feeDefs: newDefs }));
+  };
+
+  // --- SALES ROUND ROBIN ASSIGNMENT LOGIC ---
+  const handleNewQuotationRequest = (name: string, phone: string, content: string) => {
+    // 1. Get all sales users
+    const salesUsers = users.filter(u => u.role === 'Sales' && u.status === 'Active');
+    
+    if (salesUsers.length === 0) {
+      alert('Không có nhân viên kinh doanh nào đang hoạt động!');
+      return false;
+    }
+
+    let currentQueue = [...salesQueue];
+    
+    // 2. If queue is empty, refill it with shuffled Sales IDs
+    if (currentQueue.length === 0) {
+      const salesIds = salesUsers.map(u => u.id);
+      // Shuffle array (Fisher-Yates)
+      for (let i = salesIds.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [salesIds[i], salesIds[j]] = [salesIds[j], salesIds[i]];
+      }
+      currentQueue = salesIds;
+    }
+
+    // 3. Pop one user from queue
+    const assignedId = currentQueue.pop();
+    const assignedUser = salesUsers.find(u => u.id === assignedId);
+    
+    // Update queue state
+    setSalesQueue(currentQueue);
+
+    if (!assignedUser) {
+        // Fallback (should ideally not happen if logic is correct)
+        return false; 
+    }
+
+    const newRequest: QuotationRequest = {
+        id: Date.now(),
+        customerName: name,
+        phone: phone,
+        content: content,
+        date: new Date().toLocaleDateString('vi-VN'),
+        status: 'Pending',
+        assignedToId: assignedUser.id,
+        assignedToName: assignedUser.name
+    };
+
+    handleUpdateQuotationRequests([newRequest, ...quotationRequests]);
+    return true;
+  };
+
   // --- AUTHENTICATION ---
   const handleLogin = (role: UserRole, user?: UserAccount, remember: boolean = false) => {
     setUserRole(role);
@@ -674,7 +841,14 @@ function App() {
       }
       return u;
     });
+    // Update both global state and current session user if applicable
     handleUpdateUsers(newUsers);
+    if (currentUser && currentUser.id === updatedUser.id) {
+        setCurrentUser(updatedUser);
+        // Also update storage to persist changes across refreshes
+        const storage = localStorage.getItem('lh_current_user') ? localStorage : sessionStorage;
+        storage.setItem('lh_current_user', JSON.stringify(updatedUser));
+    }
   };
 
   const handleDeleteUser = (id: number) => handleUpdateUsers(users.filter(u => u.id !== id));
@@ -752,6 +926,13 @@ function App() {
                 onUpdateUserFiles={handleUpdateUserFiles}
                 contracts={contracts}
                 onUpdateContracts={handleUpdateContracts}
+                quotationRequests={quotationRequests}
+                onUpdateQuotationRequests={handleUpdateQuotationRequests}
+                galleryAlbums={galleryAlbums} // Pass gallery props
+                onUpdateGallery={handleUpdateGallery} // Pass gallery props
+                milestones={milestones} // Pass milestone props
+                onUpdateMilestones={handleUpdateMilestones} // Pass milestone props
+                onUpdateUser={handleUpdateUserSingle} // Pass user update handler
             />
         );
       case 'account':
@@ -767,6 +948,12 @@ function App() {
                 notifications={notifications}
                 carriers={carriers} 
                 onUpdateCarriers={handleUpdateCarriers} 
+                debitNotes={debitNotes}
+                onUpdateDebitNotes={handleUpdateDebitNotes}
+                customerDefs={customerDefs}
+                onUpdateCustomerDefs={handleUpdateCustomerDefs}
+                feeDefs={feeDefs}
+                onUpdateFeeDefs={handleUpdateFeeDefs}
             />
         );
       case 'management':
@@ -801,6 +988,12 @@ function App() {
             onUpdateUser={handleUpdateUserSingle}
             onDeleteUser={handleDeleteUser}
             currentUser={currentUser}
+            customerDefs={customerDefs}
+            onUpdateCustomerDefs={handleUpdateCustomerDefs}
+            feeDefs={feeDefs}
+            onUpdateFeeDefs={handleUpdateFeeDefs}
+            carriers={carriers}
+            onUpdateCarriers={handleUpdateCarriers}
           />
         );
       default:
@@ -829,7 +1022,7 @@ function App() {
             <News />
             <Testimonials />
             <Partners />
-            <ContactForm />
+            <ContactForm onSubmitRequest={handleNewQuotationRequest} />
           </>
         );
     }
