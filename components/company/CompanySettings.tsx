@@ -236,7 +236,7 @@ const CompanySettings: React.FC<CompanySettingsProps> = ({ currentUser, onUpdate
         <div className="p-10 md:p-16 overflow-x-auto flex justify-center bg-[#fafafa]">
            {/* THE ACTUAL SIGNATURE CONTENT TO BE COPIED */}
            <div ref={signatureRef} className="bg-white p-8 shadow-sm rounded-lg border border-white">
-              <p style={{ color: '#003366', fontSize: '14px', fontWeight: 'bold', fontStyle: 'italic', marginBottom: '5px', fontFamily: 'Arial, sans-serif' }}>Thanks and Regards!</p>
+              <p style={{ color: '#003366', fontSize: '14px', fontWeight: 'bold', fontStyle: 'italic', marginBottom: '15px', fontFamily: 'Arial, sans-serif' }}>Thanks and Regards!</p>
               <div style={{ width: '100%', height: '1.5px', background: 'red', marginBottom: '15px' }}></div>
               
               <table style={{ fontFamily: 'Arial, sans-serif', borderCollapse: 'collapse', minWidth: '600px' }}>
@@ -319,7 +319,7 @@ const CompanySettings: React.FC<CompanySettingsProps> = ({ currentUser, onUpdate
               <h4 className="font-bold text-blue-800 text-sm mb-1">Hướng dẫn cài đặt chữ ký:</h4>
               <p className="text-[12px] text-blue-700 leading-relaxed">
                 1. Nhấn nút <b>"SAO CHÉP CHỮ KÝ"</b> bên trên. <br/>
-                2. Mở ứng dụng Outlook, vào menu <b>File > Options > Mail > Signatures</b>. <br/>
+                2. Mở ứng dụng Outlook, vào menu <b>File &gt; Options &gt; Mail &gt; Signatures</b>. <br/>
                 3. Tạo chữ ký mới (New), nhấn <b>Ctrl+V</b> để dán nội dung vào ô soạn thảo. <br/>
                 4. Nhấn <b>OK</b> để lưu lại. Hệ thống sẽ tự động hiển thị chữ ký này trong mỗi email mới của bạn.
               </p>
