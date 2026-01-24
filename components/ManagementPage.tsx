@@ -3,7 +3,9 @@ import React, { useState } from 'react';
 import { 
   X, FileText, Search, Download, Users, FileCheck, CreditCard, 
   ArrowLeft, Eye, ShieldCheck, Filter, ChevronRight, Package, 
-  Ship, Truck, BarChart2, Briefcase, FileOutput, FolderOpen, Calendar, Trash2, Upload, Paperclip
+  Ship, Truck, BarChart2, Briefcase, FileOutput, FolderOpen, Calendar, Trash2, Upload, Paperclip,
+  // Add missing LogOut icon import
+  LogOut
 } from 'lucide-react';
 // Use type import to avoid circular dependency
 import type { UserRole, UserAccount, GUQRecord, UserFileRecord, AdjustmentRecord, CVHCRecord, CVHTRecord, ContractRecord } from '../App';
@@ -93,12 +95,10 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
 
       if (typeof fileData === 'string') {
           name = fileData;
-          // Assume generic path for strings
           url = `${API_BASE_URL}/files/${defaultCategory}/${fileData}`;
       } else {
           name = fileData.fileName;
           if (fileData.path) {
-               // If path is provided by server record (e.g. GUQRecord)
                url = `${API_BASE_URL}/files/${fileData.path}`;
           } else {
                url = `${API_BASE_URL}/files/${defaultCategory}/${fileData.fileName}`;
@@ -176,7 +176,6 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
       formData.append('file', file);
       
       try {
-          // Use 'CVHC' category for both, or separate if needed. Keeping simple.
           const category = type === 'CVHC' ? 'CVHC' : 'CVHT';
           const res = await fetch(`${API_BASE_URL}/api/upload?category=${category}`, {
               method: 'POST',
@@ -207,7 +206,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
       { id: 'CONTRACTS', label: 'Hợp đồng', icon: Briefcase, color: 'text-teal-500', bg: 'bg-teal-50' },
       { id: 'GUQ', label: 'Giấy Ủy Quyền', icon: FileText, color: 'text-indigo-500', bg: 'bg-indigo-50' },
       { id: 'CVHC', label: 'Hoàn cược', icon: FileCheck, color: 'text-green-500', bg: 'bg-green-50' },
-      { id: 'CVHT', label: 'Hoàn tiền', icon: CreditCard, color: 'text-orange-500', bg: 'bg-orange-50' },
+      { id: 'CVHT', label: 'Hoàn tiền', icon: CreditCard, color: 'text-orange-500', bg: 'bg-orange-100' },
       { id: 'ADJUST', label: 'Điều chỉnh HĐ', icon: ShieldCheck, color: 'text-purple-500', bg: 'bg-purple-50' },
   ];
 
@@ -217,7 +216,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
         return (
           <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 overflow-hidden animate-in fade-in duration-300 h-full flex flex-col ring-1 ring-white/40">
             <div className="p-6 border-b border-white/30 flex justify-between items-center bg-white/40">
-                <h3 className="font-bold text-gray-800 flex items-center"><Briefcase className="mr-2 text-teal-600" size={20} /> Danh sách Hợp đồng Vận chuyển</h3>
+                <h3 className="font-bold text-black flex items-center"><Briefcase className="mr-2 text-teal-600" size={20} /> Danh sách Hợp đồng Vận chuyển</h3>
                 <div className="relative">
                     <Search className="absolute left-3 top-2.5 text-gray-300" size={16} />
                     <input 
@@ -258,7 +257,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     {userRole === 'admin' && (
-                                        <button onClick={() => handleDeleteContract(c.id)} className="p-2 text-gray-400 hover:text-red-500 transition hover:bg-white/50 rounded-lg" title="Xóa hợp đồng">
+                                        <button onClick={() => handleDeleteContract(c.id)} className="p-2 text-gray-400 hover:text-red-500 transition hover:bg-white/5 rounded-lg" title="Xóa hợp đồng">
                                             <Trash2 size={16} />
                                         </button>
                                     )}
@@ -278,7 +277,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
         return (
           <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 overflow-hidden animate-in fade-in duration-300 h-full flex flex-col ring-1 ring-white/40">
             <div className="p-6 border-b border-white/30 flex justify-between items-center bg-white/40">
-                <h3 className="font-bold text-gray-800 flex items-center"><FileText className="mr-2 text-indigo-600" size={20} /> Danh sách Giấy ủy quyền</h3>
+                <h3 className="font-bold text-black flex items-center"><FileText className="mr-2 text-indigo-600" size={20} /> Danh sách Giấy ủy quyền</h3>
                 <div className="relative">
                     <Search className="absolute left-3 top-2.5 text-gray-300" size={16} />
                     <input 
@@ -309,14 +308,14 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                         </td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-2">
-                                <button onClick={() => handlePreview(item, 'GUQ')} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white/50 rounded-lg transition" title="Xem">
+                                <button onClick={() => handlePreview(item, 'GUQ')} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white/5 rounded-lg transition" title="Xem">
                                     <Eye size={18} />
                                 </button>
-                                <button onClick={() => handleDownload(item, 'GUQ')} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-white/50 rounded-lg transition" title="Tải xuống">
+                                <button onClick={() => handleDownload(item, 'GUQ')} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-white/5 rounded-lg transition" title="Tải xuống">
                                     <Download size={18} />
                                 </button>
                                 {userRole === 'admin' && (
-                                    <button onClick={() => handleDeleteGuq(item.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-white/50 rounded-lg transition" title="Xóa">
+                                    <button onClick={() => handleDeleteGuq(item.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-lg transition" title="Xóa">
                                         <Trash2 size={18} />
                                     </button>
                                 )}
@@ -335,7 +334,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
       case 'CVHC':
         return (
           <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 overflow-hidden animate-in fade-in duration-300 h-full flex flex-col ring-1 ring-white/40">
-            <div className="p-6 border-b border-white/30 bg-white/40"><h3 className="font-bold text-gray-800 flex items-center"><FileCheck className="mr-2 text-green-500" size={20} /> Công văn Hoàn cược</h3></div>
+            <div className="p-6 border-b border-white/30 bg-white/40"><h3 className="font-bold text-black flex items-center"><FileCheck className="mr-2 text-green-500" size={20} /> Công văn Hoàn cược</h3></div>
             <div className="overflow-auto flex-1 p-2">
                 <table className="w-full text-left border-collapse">
                 <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white/50 sticky top-0 z-10 backdrop-blur-md">
@@ -422,7 +421,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
       case 'CVHT':
         return (
           <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 overflow-hidden animate-in fade-in duration-300 h-full flex flex-col ring-1 ring-white/40">
-            <div className="p-6 border-b border-white/30 bg-white/40"><h3 className="font-bold text-gray-800 flex items-center"><CreditCard className="mr-2 text-blue-500" size={20} /> Công văn Hoàn tiền</h3></div>
+            <div className="p-6 border-b border-white/30 bg-white/40"><h3 className="font-bold text-black flex items-center"><CreditCard className="mr-2 text-blue-500" size={20} /> Công văn Hoàn tiền</h3></div>
             <div className="overflow-auto flex-1 p-2">
                 <table className="w-full text-left border-collapse">
                 <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white/50 sticky top-0 z-10 backdrop-blur-md">
@@ -515,12 +514,19 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                 <div className="overflow-auto flex-1 p-2">
                     <table className="w-full text-left border-collapse">
                         <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white/50 sticky top-0 z-10 backdrop-blur-md">
-                            <tr><th className="px-6 py-4 rounded-l-xl">Số Biên Bản</th><th className="px-6 py-4">Ngày lập</th><th className="px-6 py-4">Trạng thái</th><th className="px-6 py-4 text-right rounded-r-xl">Thao tác</th></tr>
+                            <tr>
+                                <th className="px-6 py-4 rounded-l-xl">Số Biên Bản</th>
+                                <th className="px-6 py-4">Tên công ty</th>
+                                <th className="px-6 py-4">Ngày lập</th>
+                                <th className="px-6 py-4">Trạng thái</th>
+                                <th className="px-6 py-4 text-right rounded-r-xl">Thao tác</th>
+                            </tr>
                         </thead>
                         <tbody className="text-sm">
                             {filteredAdjust.map(item => (
                                 <tr key={item.id} className="hover:bg-white/60 transition border-b border-dashed border-gray-200/50 last:border-0">
                                     <td className="px-6 py-4 font-mono text-sm font-bold text-gray-700">{item.bl}</td>
+                                    <td className="px-6 py-4 font-bold text-slate-800">{item.companyName || '—'}</td>
                                     <td className="px-6 py-4 text-gray-500 text-sm">{item.date}</td>
                                     <td className="px-6 py-4">
                                         <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${item.status === 'Signed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -545,7 +551,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                                 </tr>
                             ))}
                             {filteredAdjust.length === 0 && (
-                                <tr><td colSpan={4} className="text-center py-8 text-gray-400 italic">Chưa có biên bản nào.</td></tr>
+                                <tr><td colSpan={5} className="text-center py-8 text-gray-400 italic">Chưa có biên bản nào.</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -554,17 +560,15 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
           </div>
         );
       case 'EMPLOYEES':
-        // Filter files for selected employee
         const employeeFiles = selectedEmployee ? userFiles.filter(f => f.userId === selectedEmployee.id) : [];
         const employeeReports = employeeFiles.filter(f => f.type === 'REPORT');
-        const employeeQuotes = employeeFiles.filter(f => f.type === 'QUOTATION');
         const employeeOthers = employeeFiles.filter(f => f.type !== 'REPORT' && f.type !== 'QUOTATION');
+        const isSales = selectedEmployee?.role === 'Sales';
 
         return (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-300 h-full">
-            {/* List */}
             <div className="bg-white/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl border border-white/50 overflow-hidden flex flex-col h-full max-h-full ring-1 ring-white/40">
-              <div className="p-4 bg-white/40 border-b border-white/30 font-bold text-gray-800 flex items-center flex-shrink-0"><Users size={18} className="mr-2 text-blue-600" /> Đội ngũ nhân viên</div>
+              <div className="p-4 bg-white/40 border-b border-white/30 font-bold text-black flex items-center flex-shrink-0"><Users size={18} className="mr-2 text-blue-600" /> Đội ngũ nhân viên</div>
               <div className="overflow-y-auto flex-1 p-2 space-y-1">
                 {employeeList.map(emp => (
                   <div key={emp.id} onClick={() => setSelectedEmployee(getMockEmployeeDetails(emp))} className={`p-3 rounded-2xl cursor-pointer transition-all flex items-center justify-between group ${selectedEmployee?.id === emp.id ? 'bg-blue-50/80 border border-blue-200 shadow-sm' : 'hover:bg-white/60 hover:shadow-sm'}`}>
@@ -588,27 +592,27 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
               </div>
             </div>
 
-            {/* Detail View */}
             <div className="lg:col-span-2 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
               {selectedEmployee ? (
                 <>
-                  {/* Summary */}
                   <div className="bg-white/70 backdrop-blur-xl p-6 rounded-[2rem] border border-white/60 shadow-xl flex items-center justify-between animate-in fade-in slide-in-from-right-4 duration-300 ring-1 ring-white/40">
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-blue-200">
                             {selectedEmployee.name.split(' ').pop()?.charAt(0)}
                         </div>
                         <div>
-                            <h2 className="text-xl font-black text-gray-800">{selectedEmployee.name}</h2>
+                            <h2 className="text-xl font-black text-black">{selectedEmployee.name}</h2>
                             <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">{selectedEmployee.role}</p>
                             <p className="text-xs text-gray-400 mt-1">{selectedEmployee.email}</p>
                         </div>
                     </div>
                     <div className="flex gap-4">
-                        <div className="text-center bg-white/50 px-4 py-2 rounded-xl border border-white/60 shadow-sm">
-                            <span className="block text-xl font-black text-indigo-600">{selectedEmployee.shipments.length}</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase">Lô hàng</span>
-                        </div>
+                        {isSales && (
+                            <div className="text-center bg-white/50 px-4 py-2 rounded-xl border border-white/60 shadow-sm">
+                                <span className="block text-xl font-black text-indigo-600">{selectedEmployee.shipments.length}</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase">Lô hàng</span>
+                            </div>
+                        )}
                         <div className="text-center bg-white/50 px-4 py-2 rounded-xl border border-white/60 shadow-sm">
                             <span className="block text-xl font-black text-blue-600">{employeeReports.length}</span>
                             <span className="text-[10px] font-bold text-gray-400 uppercase">Báo cáo</span>
@@ -616,33 +620,33 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                     </div>
                   </div>
 
-                  {/* Shipments Detail */}
-                  <div className="bg-white/60 backdrop-blur-lg rounded-[2rem] border border-white/50 shadow-lg overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-100 ring-1 ring-white/30">
-                    <div className="p-4 bg-white/40 border-b border-white/30 font-bold text-sm text-gray-700 flex items-center"><Package size={16} className="mr-2" /> Các lô hàng đang quản lý</div>
-                    <div className="p-2 overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white/50">
-                                <tr><th className="px-6 py-3 rounded-l-lg">Mã lô</th><th className="px-6 py-3">Hàng hóa</th><th className="px-6 py-3">Trạng thái</th><th className="px-6 py-3 rounded-r-lg"></th></tr>
-                            </thead>
-                            <tbody className="text-sm">
-                                {selectedEmployee.shipments.map((s, idx) => (
-                                    <tr key={idx} className="hover:bg-white/60 transition border-b border-dashed border-gray-200/50 last:border-0">
-                                        <td className="px-6 py-4 font-mono text-xs font-bold text-gray-700">{s.code}</td>
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-600">{s.commodity}</td>
-                                        <td className="px-6 py-4">
-                                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">{s.status}</span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right"><button className="text-gray-400 hover:text-blue-600 transition"><Eye size={16} /></button></td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                  {isSales && (
+                    <div className="bg-white/60 backdrop-blur-lg rounded-[2rem] border border-white/50 shadow-lg overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-100 ring-1 ring-white/30">
+                        <div className="p-4 bg-white/40 border-b border-white/30 font-bold text-sm text-black flex items-center"><Package size={16} className="mr-2" /> Các lô hàng đang quản lý (Sales)</div>
+                        <div className="p-2 overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="text-[10px] font-bold text-gray-400 uppercase bg-white/50">
+                                    <tr><th className="px-6 py-3 rounded-l-lg">Mã lô</th><th className="px-6 py-3">Hàng hóa</th><th className="px-6 py-3">Trạng thái</th><th className="px-6 py-3 rounded-r-lg"></th></tr>
+                                </thead>
+                                <tbody className="text-sm">
+                                    {selectedEmployee.shipments.map((s, idx) => (
+                                        <tr key={idx} className="hover:bg-white/60 transition border-b border-dashed border-gray-200/50 last:border-0">
+                                            <td className="px-6 py-4 font-mono text-xs font-bold text-gray-700">{s.code}</td>
+                                            <td className="px-6 py-4 text-sm font-medium text-gray-600">{s.commodity}</td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">{s.status}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right"><button className="text-gray-400 hover:text-blue-600 transition"><Eye size={16} /></button></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Weekly Reports */}
                   <div className="bg-white/60 backdrop-blur-lg rounded-[2rem] border border-white/50 shadow-lg overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200 ring-1 ring-white/30">
-                    <div className="p-4 bg-white/40 border-b border-white/30 font-bold text-sm text-gray-700 flex items-center"><BarChart2 size={16} className="mr-2" /> File báo cáo tuần</div>
+                    <div className="p-4 bg-white/40 border-b border-white/30 font-bold text-sm text-black flex items-center"><BarChart2 size={16} className="mr-2" /> File báo cáo tuần</div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
                         {employeeReports.map((r, idx) => (
                             <div 
@@ -668,9 +672,8 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                     </div>
                   </div>
 
-                  {/* Other Files */}
                   <div className="bg-white/60 backdrop-blur-lg rounded-[2rem] border border-white/50 shadow-lg overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500 delay-200 ring-1 ring-white/30">
-                    <div className="p-4 bg-white/40 border-b border-white/30 font-bold text-sm text-gray-700 flex items-center"><FolderOpen size={16} className="mr-2" /> Hồ sơ khác & Đơn từ</div>
+                    <div className="p-4 bg-white/40 border-b border-white/30 font-bold text-sm text-black flex items-center"><FolderOpen size={16} className="mr-2" /> Hồ sơ khác & Đơn từ</div>
                     <div className="grid grid-cols-1 gap-3 p-6">
                         {employeeOthers.map((f) => (
                             <div key={f.id} className="bg-white/80 p-3 rounded-xl border border-white/60 hover:shadow-sm transition flex items-center justify-between group backdrop-blur-sm">
@@ -679,7 +682,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                                         {f.type === 'LEAVE' ? <Calendar size={18} /> : <FileText size={18} />}
                                     </div>
                                     <div>
-                                        <span className="block text-xs font-bold text-gray-800">{f.type === 'LEAVE' ? 'ĐƠN XIN NGHỈ PHÉP' : f.type}</span>
+                                        <span className="block text-xs font-bold text-black">{f.type === 'LEAVE' ? 'ĐƠN XIN NGHỈ PHÉP' : f.type}</span>
                                         <span className="text-[10px] text-gray-500">{f.description || f.fileName} - {f.date}</span>
                                         <p onClick={() => handlePreview(f.fileName, f.type === 'LEAVE' ? 'LEAVE' : 'UPLOADS')} className="text-[10px] text-blue-500 underline mt-0.5 cursor-pointer hover:text-blue-700">{f.fileName}</p>
                                     </div>
@@ -697,7 +700,6 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                         {employeeOthers.length === 0 && <p className="text-sm text-gray-400 italic text-center py-4">Chưa có hồ sơ khác.</p>}
                     </div>
                   </div>
-
                 </>
               ) : (
                 <div className="h-full flex items-center justify-center bg-white/40 backdrop-blur-sm border-2 border-dashed border-white/50 rounded-3xl py-20">
@@ -716,20 +718,18 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
 
   return (
     <div className="flex h-screen overflow-hidden font-sans relative">
-      {/* Background Layer */}
       <div className="absolute inset-0 z-0">
-          <img src={BG_IMAGE} alt="Glassmorphism Background" className="w-full h-full object-cover" />
+          <img src={BG_IMAGE} alt="Background" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-white/20 backdrop-blur-[5px]"></div>
       </div>
 
-      {/* SIDEBAR NAVIGATION - Ultra Glass */}
       <aside className="w-72 bg-white/40 backdrop-blur-2xl border-r border-white/40 flex flex-col flex-shrink-0 shadow-xl z-20">
         <div className="h-24 flex items-center px-8 border-b border-white/30">
             <div className="w-10 h-10 bg-gradient-to-tr from-teal-400 to-emerald-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-teal-100">
                 M
             </div>
             <div className="ml-3">
-                <h1 className="font-black text-xl tracking-tight text-gray-800">MANAGER</h1>
+                <h1 className="font-black text-xl tracking-tight text-black uppercase">MANAGER</h1>
                 <p className="text-[10px] font-bold text-teal-600 tracking-widest uppercase">Portal</p>
             </div>
         </div>
@@ -749,32 +749,30 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                         <item.icon size={20} />
                     </div>
                     <span className="text-sm flex-1 text-left">{item.label}</span>
-                    {activeSection === item.id && <ChevronRight size={16} className="text-gray-400" />}
+                    {activeSection === item.id && <ChevronRight size={16} className="text-slate-400" />}
                 </button>
             ))}
         </nav>
 
-        {/* Footer User Info */}
         <div className="p-6 border-t border-white/30 bg-white/20">
             <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-gray-700 to-gray-900 flex items-center justify-center text-white font-bold shadow-md ring-2 ring-white/50">
                     {userRole === 'admin' ? 'A' : 'M'}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-800 truncate">Management</p>
-                    <p className="text-[10px] text-gray-500 truncate">{userRole === 'admin' ? 'System Administrator' : 'Department Manager'}</p>
+                    <p className="text-sm font-bold text-black truncate">Management</p>
+                    <p className="text-[10px] text-gray-500 truncate uppercase">{userRole === 'admin' ? 'System Admin' : 'Manager'}</p>
                 </div>
             </div>
             <button 
                 onClick={onClose}
                 className="w-full flex items-center justify-center px-4 py-3 bg-white/70 hover:bg-red-50 text-gray-500 hover:text-red-500 rounded-xl text-xs font-bold transition-all shadow-sm border border-white/60 hover:border-red-100 hover:shadow-md backdrop-blur-sm"
             >
-                <Trash2 size={14} className="mr-2" /> Thoát ứng dụng
+                <LogOut size={14} className="mr-2" /> Thoát ứng dụng
             </button>
         </div>
       </aside>
 
-      {/* MAIN CONTENT - Transparent */}
       <main className="flex-1 overflow-hidden relative flex flex-col z-10">
         <div className="flex-1 overflow-hidden p-6 md:p-10">
             <div className="max-w-7xl mx-auto h-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -787,7 +785,6 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
         </div>
       </main>
 
-      {/* FILE PREVIEW MODAL */}
       {previewFile && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewFile(null)}>
             <div className="bg-white w-full max-w-5xl h-[85vh] rounded-2xl flex flex-col shadow-2xl animate-in zoom-in duration-200 overflow-hidden" onClick={e => e.stopPropagation()}>

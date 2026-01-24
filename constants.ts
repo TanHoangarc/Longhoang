@@ -10,10 +10,10 @@ export const NAV_LINKS = [
   { name: 'Dịch vụ', href: '#services' },
   { name: 'Tin tức', href: '#news' },
   { name: 'Liên hệ', href: '#contact' },
-  { name: 'Finance', href: 'finance' },
-  { name: 'Company', href: 'company' },
+  { name: 'Customer', href: 'finance' },
+  { name: 'Staff', href: 'company' },
   { name: 'Account', href: 'account' },
-  { name: 'Cài đặt', href: 'settings' },
+  { name: 'Setting', href: 'settings' },
 ];
 
 export const FEATURES = [

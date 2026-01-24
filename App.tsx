@@ -44,6 +44,7 @@ export interface UserAccount {
   employmentStatus?: EmploymentStatus; // New field for detailed status
   // Personal Info fields
   phone?: string;
+  line?: string; // Added extension line
   bankAccount?: string;
   bankName?: string;
 }
@@ -259,6 +260,7 @@ export interface Milestone {
 export interface AdjustmentRecord {
   id: number;
   bl: string;
+  companyName?: string; // Added company name
   date: string;
   status: 'Signed' | 'Unsigned';
   fileName: string;
@@ -443,9 +445,9 @@ const INITIAL_MILESTONES: Milestone[] = [
 ];
 
 const INITIAL_ADJUSTMENTS: AdjustmentRecord[] = [
-  { id: 1, bl: 'LH-BL-5521', date: '12/05/2024', status: 'Signed', fileName: 'BB_Adjust_5521_Signed.pdf' },
-  { id: 2, bl: 'LH-BL-6632', date: '11/05/2024', status: 'Unsigned', fileName: 'BB_Adjust_6632.pdf' },
-  { id: 3, bl: 'LH-BL-7711', date: '09/05/2024', status: 'Signed', fileName: 'BB_Adjust_7711_Signed.pdf' },
+  { id: 1, bl: 'LH-BL-5521', companyName: 'Samsung Vina Electronics', date: '12/05/2024', status: 'Signed', fileName: 'BB_Adjust_5521_Signed.pdf' },
+  { id: 2, bl: 'LH-BL-6632', companyName: 'Vinfast Trading & Service', date: '11/05/2024', status: 'Unsigned', fileName: 'BB_Adjust_6632.pdf' },
+  { id: 3, bl: 'LH-BL-7711', companyName: 'Thang Loi Textile', date: '09/05/2024', status: 'Signed', fileName: 'BB_Adjust_7711_Signed.pdf' },
 ];
 
 function App() {
@@ -1039,6 +1041,7 @@ function App() {
         users={users} 
         onLoginAttempt={handleLoginAttempt}
         onRegister={handleRegisterUser}
+        activePage={activePage}
       />
       <main>
         {renderActivePage()}

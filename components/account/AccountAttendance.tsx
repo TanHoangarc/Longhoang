@@ -42,6 +42,13 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
   // File Preview State
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  // Dynamic Year Options from Current Year onwards
+  const yearOptions = useMemo(() => {
+    const current = new Date().getFullYear();
+    // Generate current year + next 4 years
+    return Array.from({ length: 5 }, (_, i) => current + i);
+  }, []);
+
   // Initialize Settings Modal when a user is selected
   useEffect(() => {
       if (settingsUser) {
@@ -192,8 +199,9 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
             >
-                <option value={2024}>2024</option>
-                <option value={2025}>2025</option>
+                {yearOptions.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
             </select>
 
             <button className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center hover:bg-green-700 transition shadow-md">

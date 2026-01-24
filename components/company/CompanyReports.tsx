@@ -124,20 +124,28 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
   const deleteCustomer = (id: number) => setCustomers(customers.filter(c => c.id !== id));
   const deleteExistingCustomer = (id: number) => setExistingCustomers(existingCustomers.filter(c => c.id !== id));
 
-  const filterData = <T extends { week: number; month: number; year: number }>(data: T[]) => {
-      return data.filter(item => {
-          const matchYear = item.year === reportFilter.year;
-          const matchMonth = item.month === reportFilter.month;
-          const matchWeek = reportFilter.week === 'All' || item.week === Number(reportFilter.week);
-          return matchYear && matchMonth && matchWeek;
-      });
-  };
+  // Explicit filtering with useMemo to maintain strong typing and avoid inference issues
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(item => {
+        const matchYear = item.year === reportFilter.year;
+        const matchMonth = item.month === reportFilter.month;
+        const matchWeek = reportFilter.week === 'All' || item.week === Number(reportFilter.week);
+        return matchYear && matchMonth && matchWeek;
+    });
+  }, [customers, reportFilter]);
 
-  const filteredCustomers = filterData(customers);
-  const filteredExistingCustomers = filterData(existingCustomers);
+  const filteredExistingCustomers = useMemo(() => {
+    return existingCustomers.filter(item => {
+        const matchYear = item.year === reportFilter.year;
+        const matchMonth = item.month === reportFilter.month;
+        const matchWeek = reportFilter.week === 'All' || item.week === Number(reportFilter.week);
+        return matchYear && matchMonth && matchWeek;
+    });
+  }, [existingCustomers, reportFilter]);
 
   const stats = useMemo(() => {
       const bookingCount = filteredExistingCustomers.length;
+      // Fixed: filteredExistingCustomers is now correctly typed as ExistingCustomer[]
       const profitSum = filteredExistingCustomers.reduce((sum, c) => sum + c.profit, 0);
       const shippingCount = existingCustomers.filter(c => 
           c.month === reportFilter.month && 
@@ -156,16 +164,14 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
       setShowReportPreview(false);
   };
 
-  // --- DYNAMIC PAGINATION LOGIC ---
+  // --- DYNAMIC PAGINATION ALGORITHM ---
   const generatePages = () => {
-    // Height constants (in estimated pixels - based on A4 96DPI approx 1123px height)
-    // Usable height = 1123 - (20mm * 2 padding) ≈ 950px
     const PAGE_HEIGHT = 950; 
     const HEADER_HEIGHT = 120;
     const SECTION_TITLE_HEIGHT = 50;
     const TABLE_HEADER_HEIGHT = 40;
     const ROW_HEIGHT = 45;
-    const INPUT_BLOCK_HEIGHT = 120; // Title + TextArea
+    const INPUT_BLOCK_HEIGHT = 120; 
     const SIGNATURE_HEIGHT = 200;
     const TOTAL_ROW_HEIGHT = 50;
 
@@ -173,14 +179,12 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
     let currentPage: React.ReactNode[] = [];
     let currentHeight = 0;
 
-    // Helper to start new page
     const startNewPage = () => {
       pages.push(currentPage);
       currentPage = [];
       currentHeight = 0;
     };
 
-    // 1. Add Report Header (Only on Page 1)
     currentPage.push(
       <div key="header" className="flex justify-between items-center mb-8 border-b-2 border-gray-900 pb-4 h-[120px]">
           <div>
@@ -195,7 +199,6 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
     );
     currentHeight += HEADER_HEIGHT;
 
-    // --- SECTION 1: EXISTING CUSTOMERS ---
     const renderExistingTableHead = () => (
       <thead key="thead-existing">
           <tr className="bg-gray-100">
@@ -209,35 +212,29 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
       </thead>
     );
 
-    // Add Section Title
     if (currentHeight + SECTION_TITLE_HEIGHT + TABLE_HEADER_HEIGHT + ROW_HEIGHT > PAGE_HEIGHT) startNewPage();
     currentPage.push(
       <h3 key="title-1" className="text-lg font-bold uppercase mb-4 border-l-4 border-black pl-3 h-[50px]">1. Khách hàng hiện tại</h3>
     );
     currentHeight += SECTION_TITLE_HEIGHT;
 
-    // Process Table Rows
     let existingRowsBuffer: React.ReactNode[] = [];
-    
-    // Add Table Header to start
     existingRowsBuffer.push(renderExistingTableHead());
     currentHeight += TABLE_HEADER_HEIGHT;
 
     filteredExistingCustomers.forEach((c, i) => {
        if (currentHeight + ROW_HEIGHT > PAGE_HEIGHT) {
-           // Push current buffer to page
            currentPage.push(
              <table key={`table-exist-${pages.length}`} className="w-full border-collapse border border-gray-300 text-sm mb-4">
                 {existingRowsBuffer}
              </table>
            );
            startNewPage();
-           // Reset buffer for new page with header
            existingRowsBuffer = [renderExistingTableHead()];
            currentHeight += TABLE_HEADER_HEIGHT;
        }
        existingRowsBuffer.push(
-          <tbody key={`row-exist-${i}`}>
+          <tbody key={`row-exist-${c.id}`}>
             <tr>
                 <td className="border border-gray-300 p-2 text-center">{i + 1}</td>
                 <td className="border border-gray-300 p-2 text-center">W{c.week}/T{c.month}</td>
@@ -251,7 +248,6 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
        currentHeight += ROW_HEIGHT;
     });
 
-    // Add Total Row
     if (currentHeight + TOTAL_ROW_HEIGHT > PAGE_HEIGHT) {
       currentPage.push(<table key={`table-exist-end`} className="w-full border-collapse border border-gray-300 text-sm mb-4">{existingRowsBuffer}</table>);
       startNewPage();
@@ -275,11 +271,8 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
       existingRowsBuffer.push(<tbody><tr><td colSpan={6} className="border border-gray-300 p-2 text-center italic">Không có dữ liệu</td></tr></tbody>);
     }
 
-    // Flush remaining rows
     currentPage.push(<table key={`table-exist-final`} className="w-full border-collapse border border-gray-300 text-sm mb-4">{existingRowsBuffer}</table>);
 
-
-    // --- SECTION 2: NEW CUSTOMERS ---
     const renderNewTableHead = () => (
       <thead key="thead-new">
           <tr className="bg-gray-100">
@@ -315,7 +308,7 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
             currentHeight += TABLE_HEADER_HEIGHT;
         }
         newRowsBuffer.push(
-           <tbody key={`row-new-${i}`}>
+           <tbody key={`row-new-${c.id}`}>
              <tr>
                  <td className="border border-gray-300 p-2 text-center">{i + 1}</td>
                  <td className="border border-gray-300 p-2 text-center">W{c.week}/T{c.month}</td>
@@ -334,8 +327,6 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
      }
      currentPage.push(<table key={`table-new-final`} className="w-full border-collapse border border-gray-300 text-sm mb-4">{newRowsBuffer}</table>);
 
-
-    // --- SECTION 3, 4, 5, 6: INPUTS ---
     const inputSections = [
         { title: '3. Khó khăn & Các bộ phận liên quan', value: reportInputs.difficulties },
         { title: '4. Khách hàng bị mất', value: reportInputs.lostCustomers },
@@ -356,7 +347,6 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
         currentHeight += INPUT_BLOCK_HEIGHT;
     });
 
-    // --- SIGNATURE ---
     if (currentHeight + SIGNATURE_HEIGHT > PAGE_HEIGHT) startNewPage();
     currentPage.push(
         <div key="signature" className="mt-8 text-right h-[200px]">
@@ -367,9 +357,7 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
         </div>
     );
 
-    // Push final page
     if (currentPage.length > 0) pages.push(currentPage);
-
     return pages;
   };
 
@@ -412,7 +400,6 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
         `}
       </style>
 
-      {/* Toolbar */}
       <div className="flex gap-2 mb-6 print-hidden w-full max-w-[210mm] px-4" onClick={(e) => e.stopPropagation()}>
          <div className="flex-1 text-white font-bold text-lg flex items-center">
             <FileText className="mr-2" /> Xem trước báo cáo
@@ -437,7 +424,6 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
           </button>
       </div>
 
-      {/* Scrollable Area for Pages */}
       <div className="flex-1 w-full overflow-y-auto scroll-container pb-20" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col items-center space-y-8 print:space-y-0">
             {reportPages.map((pageContent, index) => (
@@ -446,19 +432,14 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
                     className="report-page bg-white w-[210mm] h-[297mm] shadow-2xl relative p-[20mm] text-gray-900 flex flex-col"
                     style={{ fontFamily: '"Times New Roman", Times, serif' }}
                 >
-                    {/* Header continuation hint for pages > 1 */}
                     {index > 0 && (
                         <div className="mb-8 border-b border-gray-300 pb-2 text-right text-xs italic text-gray-500">
                              Báo cáo công việc (Tiếp theo - Trang {index + 1})
                         </div>
                     )}
-
-                    {/* Page Content */}
                     <div className="flex-1">
                         {pageContent}
                     </div>
-                    
-                    {/* Footer */}
                     <div className="mt-auto pt-4 text-center text-xs text-gray-400 border-t border-gray-100">
                         Trang {index + 1} / {reportPages.length}
                     </div>
@@ -528,7 +509,6 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
           </div>
       </div>
 
-      {/* --- EXISTING CUSTOMERS TABLE --- */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex flex-wrap justify-between items-center bg-gray-50/50 gap-4">
           <div className="flex items-center space-x-3">
@@ -643,7 +623,6 @@ const CompanyReports: React.FC<CompanyReportsProps> = ({ currentUser }) => {
         </div>
       </div>
 
-      {/* --- NEW CUSTOMERS TABLE --- */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex flex-wrap justify-between items-center bg-gray-50/50 gap-4">
           <div className="flex items-center space-x-3">

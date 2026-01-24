@@ -6,6 +6,7 @@ import { Search, Printer, Download, Save, X, PenTool, Eye, RefreshCcw, CheckSqua
 interface AdjustmentRecord {
   id: number;
   bl: string;
+  companyName?: string;
   date: string;
   status: 'Signed' | 'Unsigned';
   fileName: string;
@@ -107,6 +108,7 @@ const FinanceAdjust: React.FC<FinanceAdjustProps> = ({ adjustments = [], onAddAd
           const newRecord: AdjustmentRecord = {
               id: Date.now(),
               bl: generatedReportNo, // Use generatedReportNo as the identifier
+              companyName: formData.companyB, // Added company name
               date: new Date().toLocaleDateString('en-GB'),
               status: signType === 'digital' ? 'Signed' : 'Unsigned',
               fileName: `BB_Adjust_${generatedReportNo.replace(/\//g, '-')}.pdf`
@@ -197,7 +199,10 @@ const FinanceAdjust: React.FC<FinanceAdjustProps> = ({ adjustments = [], onAddAd
                                     {foundAdjustments.map((item, idx) => (
                                         <div key={item.id} className="bg-white/10 p-4 rounded-2xl border border-white/10">
                                             <div className="flex justify-between items-start mb-2">
-                                                <span className="font-mono font-bold text-lg">{item.bl}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="font-mono font-bold text-lg">{item.bl}</span>
+                                                    <span className="text-[10px] uppercase text-white/60 mt-0.5">{item.companyName}</span>
+                                                </div>
                                                 <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${item.status === 'Signed' ? 'bg-green-400 text-white' : 'bg-gray-200 text-gray-600'}`}>
                                                     {item.status === 'Signed' ? 'Đã ký' : 'Chưa ký'}
                                                 </span>

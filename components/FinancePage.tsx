@@ -196,7 +196,7 @@ const FinancePage: React.FC<FinancePageProps> = ({ onClose, guqRecords, onUpdate
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-slate-800">
       
-      {/* 1. HERO SECTION (Replaces previous gray block) */}
+      {/* 1. HERO SECTION */}
       <div className="relative h-[400px] w-full bg-[#111827] overflow-hidden">
           {/* Background Image */}
           <div className="absolute inset-0">
@@ -231,49 +231,48 @@ const FinancePage: React.FC<FinancePageProps> = ({ onClose, guqRecords, onUpdate
           </div>
       </div>
 
-      {/* 2. NAVIGATION BAR (Overlapping Cards Style) */}
-      <div className="container mx-auto px-4 relative z-20 -mt-16">
-          <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-2 grid grid-cols-1 md:grid-cols-4 gap-2">
+      {/* 2. NAVIGATION BAR (Taller -> Shorter by half) */}
+      <div className="container mx-auto px-4 relative z-20 -mt-10">
+          <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 grid grid-cols-1 md:grid-cols-4 gap-1.5">
               {tabs.map((tab) => (
                   <div key={tab.id} className="relative group">
                       <button
                           onClick={() => handleTabClick(tab.id)}
-                          className={`w-full flex items-center md:flex-col md:items-start md:justify-center p-4 rounded-lg transition-all duration-300 ${
+                          className={`w-full flex items-center p-2.5 rounded-lg transition-all duration-300 ${
                               activeTab === tab.id 
                               ? 'bg-primary text-white shadow-md ring-2 ring-primary ring-offset-2' 
                               : 'bg-white hover:bg-gray-50 text-slate-600'
                           }`}
                       >
-                          <div className={`p-3 rounded-lg mb-0 md:mb-3 mr-4 md:mr-0 ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-gray-100 text-slate-500 group-hover:text-primary group-hover:bg-orange-50'}`}>
-                              <tab.icon size={24} />
+                          <div className={`p-2 rounded-lg mr-3 ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-gray-100 text-slate-500 group-hover:text-primary group-hover:bg-orange-50'}`}>
+                              <tab.icon size={20} />
                           </div>
                           <div className="text-left">
-                              <span className={`block font-bold text-sm uppercase tracking-wider ${activeTab === tab.id ? 'text-white' : 'text-slate-800'}`}>{tab.label}</span>
-                              <span className={`text-xs ${activeTab === tab.id ? 'text-white/80' : 'text-slate-400'}`}>{tab.desc}</span>
+                              <span className={`block font-bold text-xs uppercase tracking-wider ${activeTab === tab.id ? 'text-white' : 'text-slate-800'}`}>{tab.label}</span>
+                              <span className={`text-[10px] hidden md:block ${activeTab === tab.id ? 'text-white/80' : 'text-slate-400'}`}>{tab.desc}</span>
                           </div>
                           
-                          {/* Chevron for mobile or indication of sub-options */}
                           {tab.hasSub && (
-                              <ChevronDown size={16} className={`absolute right-4 top-1/2 -translate-y-1/2 md:top-4 md:translate-y-0 opacity-50 ${activeTab === tab.id ? 'text-white' : 'text-slate-400'}`} />
+                              <ChevronDown size={14} className={`absolute right-3 top-1/2 -translate-y-1/2 opacity-50 ${activeTab === tab.id ? 'text-white' : 'text-slate-400'}`} />
                           )}
                       </button>
 
                       {/* Dropdown for Sub-actions (Hover) */}
                       {tab.hasSub && (
-                          <div className="absolute left-0 right-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                          <div className="absolute left-0 right-0 top-full pt-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                               <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1">
                                   <button 
                                       onClick={(e) => handleSubClick(e, tab.id, 'lookup')}
-                                      className="w-full px-4 py-3 text-left text-xs font-bold text-slate-600 hover:bg-gray-50 hover:text-primary transition-colors flex items-center"
+                                      className="w-full px-4 py-2 text-left text-[11px] font-bold text-slate-600 hover:bg-gray-50 hover:text-primary transition-colors flex items-center"
                                   >
-                                      <Search size={14} className="mr-3 text-slate-400" /> Tra cứu
+                                      <Search size={12} className="mr-3 text-slate-400" /> Tra cứu
                                   </button>
                                   <div className="h-px bg-gray-50 mx-2"></div>
                                   <button 
                                       onClick={(e) => handleSubClick(e, tab.id, 'create')}
-                                      className="w-full px-4 py-3 text-left text-xs font-bold text-slate-600 hover:bg-gray-50 hover:text-primary transition-colors flex items-center"
+                                      className="w-full px-4 py-2 text-left text-[11px] font-bold text-slate-600 hover:bg-gray-50 hover:text-primary transition-colors flex items-center"
                                   >
-                                      <Plus size={14} className="mr-3 text-slate-400" /> {tab.subLabelCreate}
+                                      <Plus size={12} className="mr-3 text-slate-400" /> {tab.subLabelCreate}
                                   </button>
                               </div>
                           </div>

@@ -13,9 +13,10 @@ interface HeaderProps {
   users: UserAccount[];
   onLoginAttempt?: (email: string, isSuccess: boolean) => void;
   onRegister?: (user: UserAccount) => boolean;
+  activePage: string | null;
 }
 
-const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogout, onOpenPage, users, onLoginAttempt, onRegister }) => {
+const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogout, onOpenPage, users, onLoginAttempt, onRegister, activePage }) => {
   const [isOpen, setIsOpen] = useState(false);
   
   // Login Modal State
@@ -72,24 +73,20 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
             if (onLoginAttempt) onLoginAttempt(targetUser.email, true);
             
             let role: UserRole = 'staff';
-            let redirectPage = 'company';
 
             if (targetUser.role === 'Admin') {
                 role = 'admin';
-                redirectPage = 'settings';
             } else if (targetUser.role === 'Accounting' || targetUser.role === 'Manager') {
                 role = 'manager';
-                redirectPage = 'account';
             } else if (targetUser.role === 'Sales' || targetUser.role === 'Document' || targetUser.role === 'Staff') {
                 role = 'staff';
-                redirectPage = 'company';
             } else if (targetUser.role === 'Customer') {
                 role = 'customer';
-                redirectPage = 'finance';
             }
 
             onLogin(role, targetUser, rememberMe);
-            onOpenPage(redirectPage as any);
+            // Changed: Always redirect to home (null) instead of a specific dashboard
+            onOpenPage(null);
             setShowLoginModal(false);
             return;
         } else {
@@ -248,16 +245,19 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center">
               <nav className="flex items-center space-x-6">
-                {filteredLinks.map((link) => (
-                  <a 
-                    key={link.name} 
-                    href={link.href}
-                    onClick={(e) => handleNavClick(e, link.href)}
-                    className={`text-gray-600 font-bold hover:text-primary transition text-xs uppercase tracking-wider ${link.href === 'management' ? 'text-blue-600' : ''}`}
-                  >
-                    {link.name}
-                  </a>
-                ))}
+                {filteredLinks.map((link) => {
+                  const isActive = activePage === link.href;
+                  return (
+                    <a 
+                      key={link.name} 
+                      href={link.href}
+                      onClick={(e) => handleNavClick(e, link.href)}
+                      className={`font-bold hover:text-blue-600 transition text-xs uppercase tracking-wider ${isActive ? 'text-blue-600' : 'text-gray-600'}`}
+                    >
+                      {link.name}
+                    </a>
+                  );
+                })}
 
                 {/* Login/User Button */}
                 <div className="relative ml-4 pl-4 border-l border-gray-100">
@@ -303,16 +303,19 @@ const Header: React.FC<HeaderProps> = ({ userRole, currentUser, onLogin, onLogou
       {isOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-2xl animate-in slide-in-from-top duration-300 z-40">
           <nav className="flex flex-col p-6 space-y-4">
-            {filteredLinks.map((link) => (
-              <a 
-                key={link.name} 
-                href={link.href}
-                onClick={(e) => handleNavClick(e, link.href)}
-                className="text-gray-600 font-bold hover:text-primary py-2 border-b border-gray-50"
-              >
-                {link.name}
-              </a>
-            ))}
+            {filteredLinks.map((link) => {
+               const isActive = activePage === link.href;
+               return (
+                  <a 
+                    key={link.name} 
+                    href={link.href}
+                    onClick={(e) => handleNavClick(e, link.href)}
+                    className={`font-bold hover:text-blue-600 py-2 border-b border-gray-50 ${isActive ? 'text-blue-600' : 'text-gray-600'}`}
+                  >
+                    {link.name}
+                  </a>
+               );
+            })}
             
             <div className="pt-4 space-y-2">
               {!userRole ? (
