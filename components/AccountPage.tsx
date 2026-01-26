@@ -11,7 +11,7 @@ import AccountDebitNote from './account/AccountDebitNote';
 import AccountOverview from './account/AccountOverview';
 import AccountWCA from './account/AccountWCA';
 import AccountSalary from './account/AccountSalary';
-import { StatementData, AttendanceRecord, UserAccount, SystemNotification, DebitNoteRecord, CustomerDef, FeeDef } from '../App';
+import { StatementData, AttendanceRecord, UserAccount, SystemNotification, DebitNoteRecord, CustomerDef, FeeDef, AttendanceConfig } from '../App';
 
 interface AccountPageProps {
   onClose: () => void;
@@ -31,6 +31,8 @@ interface AccountPageProps {
   onUpdateCustomerDefs?: (defs: CustomerDef[]) => void;
   feeDefs?: FeeDef[];
   onUpdateFeeDefs?: (defs: FeeDef[]) => void;
+  attendanceConfig: AttendanceConfig;
+  onUpdateAttendanceConfig: (config: AttendanceConfig) => void;
 }
 
 type ViewType = 'dashboard' | 'statement_list' | 'statement_edit' | 'attendance' | 'debit_list' | 'debit_edit' | 'wca' | 'salary';
@@ -40,7 +42,8 @@ const AccountPage: React.FC<AccountPageProps> = ({
   onUpdateAttendance, onUpdateUser, notifications, carriers, onUpdateCarriers,
   debitNotes = [], onUpdateDebitNotes, 
   customerDefs = [], onUpdateCustomerDefs = (_defs: CustomerDef[]) => {},
-  feeDefs = [], onUpdateFeeDefs = (_defs: FeeDef[]) => {}
+  feeDefs = [], onUpdateFeeDefs = (_defs: FeeDef[]) => {},
+  attendanceConfig, onUpdateAttendanceConfig
 }) => {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [selectedStatement, setSelectedStatement] = useState<StatementData | undefined>(undefined);
@@ -341,7 +344,18 @@ const AccountPage: React.FC<AccountPageProps> = ({
             />
         );
       
-      case 'attendance': return <AccountAttendance attendanceRecords={attendanceRecords} users={users} onUpdate={onUpdateAttendance} onUpdateUser={onUpdateUser} notifications={notifications} />;
+      case 'attendance': 
+        return (
+            <AccountAttendance 
+                attendanceRecords={attendanceRecords} 
+                users={users} 
+                onUpdate={onUpdateAttendance} 
+                onUpdateUser={onUpdateUser} 
+                notifications={notifications}
+                config={attendanceConfig}
+                onSaveConfig={onUpdateAttendanceConfig}
+            />
+        );
       case 'salary': return <AccountSalary users={users} attendanceRecords={attendanceRecords} />;
       case 'wca': return <AccountWCA />;
       

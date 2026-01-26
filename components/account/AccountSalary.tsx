@@ -418,7 +418,6 @@ const AccountSalary: React.FC<AccountSalaryProps> = ({ users, attendanceRecords 
                 </thead>
                 <tbody className="text-sm font-medium text-gray-700">
                     {filteredUsers.map((u, idx) => {
-                        // FIX: Provide complete default object to avoid property access errors when user has no payroll data entry
                         const d = payrollData[u.id] || { 
                             basic: 0, 
                             kpiCurrent: 0, 
@@ -506,7 +505,38 @@ const AccountSalary: React.FC<AccountSalaryProps> = ({ users, attendanceRecords 
                             </div>
                         </div>
                         <input type="number" className="w-full border rounded-lg p-2 text-lg font-bold" value={newMoneyConfig.amount} onChange={(e) => setNewMoneyConfig({...newMoneyConfig, amount: Number(e.target.value)})} />
-                        <button onClick={handleAddMoneyConfig} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold">Thêm mới</button>
+                        
+                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex justify-between items-center text-xs text-blue-700 font-bold">
+                            <span>Áp dụng cho: Tháng {selectedMonth}/{selectedYear}</span>
+                            <button 
+                                onClick={handleAddMoneyConfig}
+                                className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition flex items-center"
+                            >
+                                <Plus size={14} className="mr-1" /> Thêm mới
+                            </button>
+                        </div>
+
+                        {/* List */}
+                        <div className="mt-4 max-h-60 overflow-y-auto">
+                            <label className="text-xs font-bold text-gray-400 uppercase block mb-2">Danh sách đã cấu hình (Tháng {selectedMonth}/{selectedYear})</label>
+                            <div className="space-y-2">
+                                {moneyConfigs.filter(c => c.month === selectedMonth && c.year === selectedYear).map(config => (
+                                    <div key={config.id} className="flex justify-between items-center p-3 border rounded-lg bg-gray-50 hover:bg-white transition">
+                                        <div>
+                                            <p className="font-bold text-sm text-gray-800">{config.name}</p>
+                                            <p className="text-xs text-gray-500 uppercase">{config.type}</p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="font-bold text-indigo-600">{formatMoney(config.amount)}</span>
+                                            <button onClick={() => handleDeleteMoneyConfig(config.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {moneyConfigs.filter(c => c.month === selectedMonth && c.year === selectedYear).length === 0 && (
+                                    <p className="text-center text-gray-400 italic text-sm py-4">Chưa có cấu hình nào.</p>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -514,20 +544,183 @@ const AccountSalary: React.FC<AccountSalaryProps> = ({ users, attendanceRecords 
 
         {editingMember !== null && editFormData && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setEditingMember(null)}>
-                <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[85vh] overflow-y-auto shadow-2xl animate-in zoom-in duration-200 border border-gray-100" onClick={e => e.stopPropagation()}>
+                <div className="bg-white rounded-3xl w-full max-w-7xl max-h-[85vh] overflow-y-auto shadow-2xl animate-in zoom-in duration-200 border border-gray-100" onClick={e => e.stopPropagation()}>
                     <div className="p-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex justify-between items-center sticky top-0 z-10 shadow-md">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30"><User size={24} /></div>
-                            <div><h3 className="text-xl font-bold">{editingUserObj?.name}</h3><p className="text-xs opacity-75">{editingUserObj?.role}</p></div>
+                            <div>
+                                <h3 className="text-xl font-bold">{editingUserObj?.name}</h3>
+                                <div className="flex items-center gap-3 text-xs font-medium text-blue-100 mt-1">
+                                    <span className="bg-white/20 px-2 py-0.5 rounded flex items-center"><Briefcase size={12} className="mr-1" /> {editingUserObj?.role}</span>
+                                    <span className="bg-white/20 px-2 py-0.5 rounded flex items-center"><Calendar size={12} className="mr-1" /> Tháng {selectedMonth}/{selectedYear}</span>
+                                </div>
+                            </div>
                         </div>
-                        <button onClick={() => setEditingMember(null)}><X size={24} /></button>
+                        <div className="flex items-center gap-4">
+                            {/* Contract Toggle */}
+                            <div className="flex items-center bg-white/10 rounded-full p-1 border border-white/20">
+                                <button 
+                                    onClick={() => handleEditFormChange('isContractSigned', false)}
+                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition ${!editFormData.isContractSigned ? 'bg-white text-blue-600 shadow' : 'text-blue-100 hover:text-white'}`}
+                                >
+                                    Thử việc / CTV
+                                </button>
+                                <button 
+                                    onClick={() => handleEditFormChange('isContractSigned', true)}
+                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition flex items-center ${editFormData.isContractSigned ? 'bg-green-500 text-white shadow' : 'text-blue-100 hover:text-white'}`}
+                                >
+                                    <ShieldCheck size={12} className="mr-1" /> Đã ký HĐLĐ
+                                </button>
+                            </div>
+                            <button onClick={() => setEditingMember(null)} className="text-white/70 hover:text-white p-2 hover:bg-white/10 rounded-full transition"><X size={24} /></button>
+                        </div>
                     </div>
-                    <div className="p-8 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div><label className="text-xs font-bold uppercase text-gray-400">Lương cơ bản</label><input type="text" className="w-full border p-2 rounded-lg" value={editFormData.basic} onChange={e => handleEditFormChange('basic', e.target.value)} /></div>
-                            <div><label className="text-xs font-bold uppercase text-gray-400">KPI Tháng</label><input type="text" className="w-full border p-2 rounded-lg" value={editFormData.kpiCurrent} onChange={e => handleEditFormChange('kpiCurrent', e.target.value)} /></div>
+                    
+                    <div className="p-5 bg-gray-50">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
+                            
+                            {/* COL 1: INCOME CORE */}
+                            <div className="flex flex-col h-full">
+                                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex-1 h-full">
+                                    <h4 className="text-xs font-bold text-gray-800 uppercase mb-3 flex items-center">
+                                        <div className="w-6 h-1 bg-green-500 mr-2 rounded-full"></div> Nguồn thu nhập chính
+                                    </h4>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-gray-500 block mb-1">Lương Cơ Bản</label>
+                                            <input type="text" className="w-full border border-gray-200 rounded-xl p-2.5 text-lg font-bold text-gray-800 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 outline-none transition" value={formatMoney(editFormData.basic)} onChange={e => handleEditFormChange('basic', e.target.value)} />
+                                        </div>
+                                        
+                                        {/* KPI Section */}
+                                        <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 mt-2">
+                                            <label className="text-[10px] font-bold text-orange-700 uppercase block mb-2">Lương Khoán (KPI)</label>
+                                            <div className="space-y-2">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <label className="text-[10px] text-gray-500">Tháng này</label>
+                                                        <input type="text" className="w-full border border-gray-200 rounded-lg p-2 text-sm font-bold text-blue-600 bg-white" value={formatMoney(editFormData.kpiCurrent)} onChange={e => handleEditFormChange('kpiCurrent', e.target.value)} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[10px] text-gray-500">Tạm giữ</label>
+                                                        <input type="text" className="w-full border border-gray-200 rounded-lg p-2 text-sm font-bold text-red-500 bg-white" value={formatMoney(editFormData.kpiHold)} onChange={e => handleEditFormChange('kpiHold', e.target.value)} />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] text-gray-500">Trả lại (Tháng trước)</label>
+                                                    <input type="text" className="w-full border border-gray-200 rounded-lg p-2 text-sm font-bold text-green-600 bg-white" value={formatMoney(editFormData.kpiReturn)} onChange={e => handleEditFormChange('kpiReturn', e.target.value)} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* COL 2: BENEFITS & BONUSES */}
+                            <div className="flex flex-col h-full">
+                                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex-1 h-full">
+                                    <h4 className="text-xs font-bold text-gray-800 uppercase mb-3 flex items-center">
+                                        <div className="w-6 h-1 bg-blue-500 mr-2 rounded-full"></div> Phụ cấp & Chế độ
+                                    </h4>
+                                    <div className="space-y-3">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <div className="flex justify-between mb-1"><label className="text-[10px] font-bold text-gray-500">Phụ cấp Gửi xe</label><button onClick={() => applyPresetValue('parking', 'parking')} className="text-[10px] text-blue-500 font-bold hover:underline">Áp dụng</button></div>
+                                                <input type="text" className="w-full border border-gray-200 rounded-lg p-2 text-sm font-bold" value={formatMoney(editFormData.parking)} onChange={e => handleEditFormChange('parking', e.target.value)} />
+                                            </div>
+                                            <div>
+                                                <div className="flex justify-between mb-1"><label className="text-[10px] font-bold text-gray-500">Thưởng (Bonus)</label><button onClick={() => applyPresetValue('bonus', 'bonus')} className="text-[10px] text-blue-500 font-bold hover:underline">Áp dụng</button></div>
+                                                <input type="text" className="w-full border border-gray-200 rounded-lg p-2 text-sm font-bold" value={formatMoney(editFormData.bonus)} onChange={e => handleEditFormChange('bonus', e.target.value)} />
+                                            </div>
+                                        </div>
+
+                                        {editFormData.isContractSigned ? (
+                                            <div className="grid grid-cols-2 gap-3 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                                <div>
+                                                    <div className="flex justify-between mb-1"><label className="text-[10px] font-bold text-blue-700">Lương T13</label><button onClick={() => applyPresetValue('salary13', 'salary13')} className="text-[10px] text-blue-500 font-bold hover:underline">Áp dụng</button></div>
+                                                    <input type="text" className="w-full border border-blue-200 rounded-lg p-2 text-sm font-bold text-blue-600 bg-white" value={formatMoney(editFormData.salary13)} onChange={e => handleEditFormChange('salary13', e.target.value)} />
+                                                </div>
+                                                <div>
+                                                    <div className="flex justify-between mb-1"><label className="text-[10px] font-bold text-blue-700">Thưởng Lễ</label><button onClick={() => applyPresetValue('holidayBonus', 'holidayBonus')} className="text-[10px] text-blue-500 font-bold hover:underline">Áp dụng</button></div>
+                                                    <input type="text" className="w-full border border-blue-200 rounded-lg p-2 text-sm font-bold text-blue-600 bg-white" value={formatMoney(editFormData.holidayBonus)} onChange={e => handleEditFormChange('holidayBonus', e.target.value)} />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-gray-50 p-3 rounded-lg border border-dashed border-gray-300 text-center text-xs text-gray-400 italic">
+                                                Chế độ Lương T13 & Thưởng Lễ chỉ áp dụng khi ký HĐLĐ.
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <label className="text-[10px] font-bold text-red-500 block mb-1">Tạm ứng / Trừ lương khác</label>
+                                            <input type="text" className="w-full bg-red-50 border border-red-200 rounded-lg p-2 text-sm font-bold text-red-600" value={formatMoney(editFormData.advance)} onChange={e => handleEditFormChange('advance', e.target.value)} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* COL 3: DEDUCTIONS & INFO */}
+                            <div className="flex flex-col h-full space-y-5">
+                                {/* Bank Info Card - Condensed & Dynamic Color */}
+                                <div className={`${getBankStyle(editingUserObj?.bankName)} p-4 rounded-2xl text-white shadow-lg relative overflow-hidden transition-colors`}>
+                                    <div className="absolute right-0 top-0 p-3 opacity-10"><CreditCard size={64} /></div>
+                                    <div className="relative z-10 flex items-center gap-3">
+                                        <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm"><CreditCard size={20} /></div>
+                                        <div>
+                                            <p className="text-[10px] font-bold text-white/70 uppercase">Tài khoản nhận lương</p>
+                                            {editingUserObj?.bankAccount ? (
+                                                <>
+                                                    <p className="font-mono font-bold text-lg tracking-wider text-white">{editingUserObj.bankAccount}</p>
+                                                    <p className="text-[10px] text-white/90 font-bold uppercase">{editingUserObj.bankName}</p>
+                                                </>
+                                            ) : (
+                                                <p className="text-xs italic text-white/50">Chưa cập nhật</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className={`bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex-1 ${!editFormData.isContractSigned ? 'opacity-70 grayscale' : ''}`}>
+                                    <h4 className="text-xs font-bold text-gray-800 uppercase mb-3 flex items-center justify-between">
+                                        <div className="flex items-center"><div className="w-6 h-1 bg-red-500 mr-2 rounded-full"></div> Nghĩa vụ & Khấu trừ</div>
+                                        {!editFormData.isContractSigned && <span className="text-[9px] bg-gray-100 px-2 py-0.5 rounded text-gray-500">N/A</span>}
+                                    </h4>
+                                    
+                                    <div className={`space-y-3 ${!editFormData.isContractSigned ? 'pointer-events-none' : ''}`}>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-gray-500 block mb-1">Lương đóng BHXH</label>
+                                            <input type="text" className="w-full border border-gray-200 rounded-lg p-2 text-sm font-bold" value={formatMoney(editFormData.insuranceBase)} onChange={e => handleEditFormChange('insuranceBase', e.target.value)} />
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div>
+                                                <label className="text-[9px] font-bold text-gray-400 block">Quỹ Cty</label>
+                                                <input type="text" className="w-full bg-gray-50 border border-gray-200 rounded p-1.5 text-xs font-bold" value={formatMoney(editFormData.companyFund)} onChange={e => handleEditFormChange('companyFund', e.target.value)} />
+                                            </div>
+                                            <div>
+                                                <label className="text-[9px] font-bold text-gray-400 block">KPCĐ</label>
+                                                <input type="text" className="w-full bg-gray-50 border border-gray-200 rounded p-1.5 text-xs font-bold" value={formatMoney(editFormData.unionFee)} onChange={e => handleEditFormChange('unionFee', e.target.value)} />
+                                            </div>
+                                            <div>
+                                                <label className="text-[9px] font-bold text-gray-400 block">GT Gia cảnh</label>
+                                                <input type="text" className="w-full bg-gray-50 border border-gray-200 rounded p-1.5 text-xs font-bold" value={formatMoney(editFormData.familyDeduction)} onChange={e => handleEditFormChange('familyDeduction', e.target.value)} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-500 block mb-1">Ghi chú</label>
+                                    <textarea className="w-full border border-gray-200 rounded-lg p-2 text-sm h-16 resize-none focus:border-blue-500 outline-none transition" value={editFormData.note} onChange={e => handleEditFormChange('note', e.target.value)}></textarea>
+                                </div>
+                            </div>
                         </div>
-                        <button onClick={handleSaveEdit} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Lưu thay đổi</button>
+                    </div>
+
+                    <div className="p-5 border-t border-gray-100 bg-white sticky bottom-0 z-10 flex justify-end gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                        <button onClick={() => setEditingMember(null)} className="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition text-sm">Hủy bỏ</button>
+                        <button onClick={handleSaveEdit} className="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center transform active:scale-95 text-sm">
+                            <Save size={16} className="mr-2" /> Lưu cập nhật
+                        </button>
                     </div>
                 </div>
             </div>

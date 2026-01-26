@@ -152,6 +152,16 @@ export interface AttendanceRecord {
   leaveReason?: string; // Lý do ngắn gọn
 }
 
+export interface AttendanceConfig {
+    startTimes: {
+        Sales: string;
+        Document: string;
+        Accounting: string;
+        [key: string]: string;
+    };
+    exemptUserIds: number[];
+}
+
 // Interface for GUQ Record
 export interface GUQRecord {
   id: number;
@@ -541,6 +551,15 @@ function App() {
       { id: 9, name: 'Lift On/Off', vat: 8, type: 'SERVICE' }
   ]);
 
+  const [attendanceConfig, setAttendanceConfig] = useState<AttendanceConfig>({
+      startTimes: {
+          'Sales': '08:00',
+          'Document': '08:00',
+          'Accounting': '08:00'
+      },
+      exemptUserIds: []
+  });
+
   // Server connection status
   const [isServerOnline, setIsServerOnline] = useState(true);
 
@@ -585,6 +604,7 @@ function App() {
       debitNotes, 
       customerDefs, // Added
       feeDefs, // Added
+      attendanceConfig,
       ...overrides
     };
   };
@@ -619,6 +639,7 @@ function App() {
           if (db.debitNotes) setDebitNotes(db.debitNotes);
           if (db.customerDefs) setCustomerDefs(db.customerDefs);
           if (db.feeDefs) setFeeDefs(db.feeDefs);
+          if (db.attendanceConfig) setAttendanceConfig(db.attendanceConfig);
           setIsServerOnline(true);
         } else {
             console.warn("Server responded but with error. Using local defaults.");
@@ -665,6 +686,11 @@ function App() {
   const handleUpdateAttendance = (newRecords: AttendanceRecord[]) => {
     setAttendanceRecords(newRecords);
     syncToServer(getFullState({ attendanceRecords: newRecords }));
+  };
+
+  const handleUpdateAttendanceConfig = (newConfig: AttendanceConfig) => {
+    setAttendanceConfig(newConfig);
+    syncToServer(getFullState({ attendanceConfig: newConfig }));
   };
 
   const handleUpdateGuq = (newGuq: GUQRecord[]) => {
@@ -956,6 +982,8 @@ function App() {
                 onUpdateCustomerDefs={handleUpdateCustomerDefs}
                 feeDefs={feeDefs}
                 onUpdateFeeDefs={handleUpdateFeeDefs}
+                attendanceConfig={attendanceConfig}
+                onUpdateAttendanceConfig={handleUpdateAttendanceConfig}
             />
         );
       case 'management':
