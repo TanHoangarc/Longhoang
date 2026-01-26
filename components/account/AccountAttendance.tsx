@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Download, X, User, Save, FileText, Settings, Briefcase, Calendar, Paperclip, Eye, Upload } from 'lucide-react';
+import { Search, Download, X, User, Save, FileText, Settings, Briefcase, Calendar, Paperclip, Eye, Upload, FileSpreadsheet, Clock } from 'lucide-react';
 import { AttendanceRecord, UserAccount, LeaveFormDetails, SystemNotification } from '../../App';
 import { API_BASE_URL } from '../../constants';
+import * as XLSX from 'xlsx';
 
 interface AccountAttendanceProps {
   attendanceRecords: AttendanceRecord[];
@@ -38,9 +39,15 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
   const [editStatus, setEditStatus] = useState<AttendanceStatus | ''>('');
   const [editReason, setEditReason] = useState('');
   const [editFile, setEditFile] = useState('');
+  // New fields for manual time editing
+  const [editCheckIn, setEditCheckIn] = useState('');
+  const [editCheckOut, setEditCheckOut] = useState('');
 
   // File Preview State
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Loading state for Excel import
+  const [isImporting, setIsImporting] = useState(false);
 
   // Dynamic Year Options from Current Year onwards
   const yearOptions = useMemo(() => {
@@ -64,6 +71,8 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
           setEditStatus(selectedCell.record?.status || '');
           setEditReason(selectedCell.record?.leaveReason || '');
           setEditFile(selectedCell.record?.leaveFile || '');
+          setEditCheckIn(selectedCell.record?.checkIn || '');
+          setEditCheckOut(selectedCell.record?.checkOut || '');
       }
   }, [selectedCell]);
 
@@ -95,7 +104,10 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
       }
 
       switch (record.status) {
-          case 'Present': return { symbol: '+', color: 'text-green-600 font-bold bg-green-50' };
+          case 'Present': 
+            // If we have check-in/out times, maybe show a small dot or different shade?
+            // For now keeping it simple as requested '+'
+            return { symbol: '+', color: 'text-green-600 font-bold bg-green-50' };
           case 'Late': return { symbol: 'M', color: 'text-orange-500 font-bold bg-orange-50' };
           case 'On Leave': return { symbol: 'P', color: 'text-blue-600 font-bold bg-blue-50' };
           case 'Unpaid Leave': return { symbol: 'KP', color: 'text-red-500 font-bold bg-red-50' };
@@ -118,8 +130,8 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
           userId: selectedCell.user.id,
           userName: selectedCell.user.name,
           date: selectedCell.date,
-          checkIn: selectedCell.record?.checkIn || null,
-          checkOut: selectedCell.record?.checkOut || null,
+          checkIn: editCheckIn || null,   // Save edited time
+          checkOut: editCheckOut || null, // Save edited time
           status: editStatus as AttendanceStatus,
           leaveReason: editStatus === 'On Leave' ? editReason : undefined,
           leaveFile: editStatus === 'On Leave' ? editFile : undefined,
@@ -165,6 +177,178 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
       setPreviewUrl(`${API_BASE_URL}/files/LEAVE/${fileName}`);
   };
 
+  // --- EXCEL IMPORT LOGIC ---
+  const normalizeName = (name: string) => {
+      return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, ' ').trim();
+  };
+
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setIsImporting(true);
+      const reader = new FileReader();
+      
+      reader.onload = (evt) => {
+          try {
+              const bstr = evt.target?.result;
+              const wb = XLSX.read(bstr, { type: 'binary' });
+              const wsName = wb.SheetNames[0];
+              const ws = wb.Sheets[wsName];
+              
+              // Get data with raw: false to ensure dates/times are strings
+              const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false }) as any[][];
+              
+              if (data.length < 15) {
+                  alert('File Excel không đúng định dạng hoặc quá ít dữ liệu.');
+                  setIsImporting(false);
+                  return;
+              }
+
+              // --- CONFIGURATION ---
+              const HEADER_ROW_INDEX = 9; // Row 10 (index 9) contains days: 1, 2, 3...
+              const NAME_COL_INDEX = 3;   // Column D (index 3) contains employee names
+              // ---------------------
+
+              // 1. Map Days to Column Indices (Scan Row 10)
+              const dateRow = data[HEADER_ROW_INDEX];
+              const dayColMap: Record<number, number> = {}; // Day Number -> Column Index (In)
+
+              if (!dateRow) {
+                  alert('Không tìm thấy dòng ngày (Hàng 10). Vui lòng kiểm tra lại file.');
+                  setIsImporting(false);
+                  return;
+              }
+
+              dateRow.forEach((cell, idx) => {
+                  // Handle cases like "1" or "1 | T5" - extract the leading number
+                  const cellStr = String(cell).trim();
+                  const match = cellStr.match(/^(\d+)/);
+                  if (match) {
+                      const dayNum = parseInt(match[1]);
+                      if (dayNum >= 1 && dayNum <= 31) {
+                          // The date column is usually the 'In' column, 'Out' is next to it
+                          dayColMap[dayNum] = idx;
+                      }
+                  }
+              });
+
+              if (Object.keys(dayColMap).length === 0) {
+                  alert('Không xác định được các cột ngày trong Hàng 10. Vui lòng kiểm tra lại file.');
+                  setIsImporting(false);
+                  return;
+              }
+
+              const newRecords: AttendanceRecord[] = [];
+              
+              // 2. Group Rows by Employee Name (Column D)
+              // We start scanning from a few rows after the header to find people
+              const START_DATA_ROW = HEADER_ROW_INDEX + 2; // e.g. Row 12/13
+              const employeeRows: Record<string, any[]> = {};
+
+              for (let i = START_DATA_ROW; i < data.length; i++) {
+                  const row = data[i];
+                  // Safe check if row is empty
+                  if (!row) continue;
+
+                  const rawName = String(row[NAME_COL_INDEX] || '').trim();
+                  
+                  // Skip empty names or header-like rows repeated
+                  if (!rawName || rawName.includes('Tên nhân viên')) continue;
+
+                  if (!employeeRows[rawName]) {
+                      employeeRows[rawName] = [];
+                  }
+                  employeeRows[rawName].push(row);
+              }
+
+              // 3. Process Each Employee
+              Object.keys(employeeRows).forEach(rawName => {
+                  // Find matching user in system
+                  const matchedUser = users.find(u => 
+                      normalizeName(u.name) === normalizeName(rawName) || 
+                      normalizeName(u.englishName || '') === normalizeName(rawName)
+                  );
+
+                  if (!matchedUser) return; // Skip if user not found in system
+
+                  const userRows = employeeRows[rawName];
+
+                  // Iterate through days 1 to 31
+                  for (let d = 1; d <= 31; d++) {
+                      const colIn = dayColMap[d];
+                      if (colIn === undefined) continue;
+                      
+                      const colOut = colIn + 1; // Assumption: Out is always next to In
+
+                      // Find best time pair from the multiple rows for this user
+                      let bestIn = '';
+                      let bestOut = '';
+
+                      // Heuristic: Look for time format HH:mm in the rows
+                      // Priority: Find a row that has a valid time string
+                      for (const row of userRows) {
+                          const valIn = String(row[colIn] || '').trim();
+                          const valOut = String(row[colOut] || '').trim();
+
+                          // Time Regex (simple HH:mm or H:mm)
+                          const isTime = (str: string) => /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(str);
+
+                          if (isTime(valIn) && !bestIn) bestIn = valIn;
+                          if (isTime(valOut) && !bestOut) bestOut = valOut;
+                      }
+
+                      // If we found at least one time, create a record
+                      if (bestIn || bestOut) {
+                          const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                          
+                          let status: AttendanceStatus = 'Present';
+                          
+                          // Simple Late Logic
+                          if (bestIn) {
+                              const [h, m] = bestIn.split(':').map(Number);
+                              if (h > 8 || (h === 8 && m > 20)) status = 'Late';
+                          }
+
+                          newRecords.push({
+                              id: Date.now() + Math.random(),
+                              userId: matchedUser.id,
+                              userName: matchedUser.name,
+                              date: dateStr,
+                              checkIn: bestIn || null,
+                              checkOut: bestOut || null,
+                              status: status
+                          });
+                      }
+                  }
+              });
+
+              if (newRecords.length > 0) {
+                  // CLEAR DATA LOGIC: Remove all records for the selected Month/Year before adding new ones
+                  const keptRecords = attendanceRecords.filter(r => {
+                      const [y, m] = r.date.split('-').map(Number);
+                      // Keep record if it belongs to a different Year OR different Month
+                      return y !== selectedYear || m !== selectedMonth;
+                  });
+                  
+                  onUpdate([...keptRecords, ...newRecords]);
+                  alert(`Đã xóa dữ liệu cũ và import thành công ${newRecords.length} dòng chấm công cho tháng ${selectedMonth}/${selectedYear}.`);
+              } else {
+                  alert('Không tìm thấy dữ liệu thời gian (HH:mm) hợp lệ cho nhân viên nào.');
+              }
+
+          } catch (error) {
+              console.error(error);
+              alert('Lỗi khi đọc file Excel. Vui lòng kiểm tra định dạng.');
+          } finally {
+              setIsImporting(false);
+              e.target.value = '';
+          }
+      };
+      
+      reader.readAsBinaryString(file);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Controls */}
@@ -175,6 +359,25 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
         </div>
         
         <div className="flex flex-wrap gap-3 items-center">
+            {/* Excel Upload Button */}
+            <div className="relative group">
+                <input 
+                    type="file" 
+                    id="excel-upload" 
+                    className="hidden" 
+                    accept=".xlsx, .xls" 
+                    onChange={handleExcelUpload}
+                    disabled={isImporting}
+                />
+                <label 
+                    htmlFor="excel-upload" 
+                    className={`bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center hover:bg-green-700 transition shadow-md cursor-pointer ${isImporting ? 'opacity-70 cursor-wait' : ''}`}
+                >
+                    <FileSpreadsheet size={16} className="mr-2" /> 
+                    {isImporting ? 'Đang xử lý...' : 'Load Excel'}
+                </label>
+            </div>
+
             <div className="relative">
                 <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
                 <input 
@@ -204,8 +407,8 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                 ))}
             </select>
 
-            <button className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center hover:bg-green-700 transition shadow-md">
-                <Download size={16} className="mr-2" /> Excel
+            <button className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center hover:bg-gray-900 transition shadow-md">
+                <Download size={16} className="mr-2" /> Xuất Báo Cáo
             </button>
         </div>
       </div>
@@ -297,7 +500,7 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                                         key={day} 
                                         className={`border border-gray-300 text-center cursor-pointer hover:brightness-95 transition-all ${color}`}
                                         onClick={() => handleCellClick(user, day)}
-                                        title={record?.note || ''}
+                                        title={record ? `${record.note || ''}\n${record.checkIn ? `Vào: ${record.checkIn}` : ''}\n${record.checkOut ? `Ra: ${record.checkOut}` : ''}` : ''}
                                     >
                                         {symbol}
                                     </td>
@@ -467,6 +670,31 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                   </div>
                   
                   <div className="p-6 space-y-5">
+                      {/* Time Check-In/Out Inputs */}
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 space-y-3">
+                          <h4 className="text-[10px] font-bold text-gray-500 uppercase flex items-center"><Clock size={12} className="mr-1"/> Giờ chấm công</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                  <label className="text-[10px] font-bold text-gray-400 block mb-1">Giờ Vào (In)</label>
+                                  <input 
+                                    type="time" 
+                                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-mono font-bold text-center"
+                                    value={editCheckIn}
+                                    onChange={(e) => setEditCheckIn(e.target.value)}
+                                  />
+                              </div>
+                              <div>
+                                  <label className="text-[10px] font-bold text-gray-400 block mb-1">Giờ Ra (Out)</label>
+                                  <input 
+                                    type="time" 
+                                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm font-mono font-bold text-center"
+                                    value={editCheckOut}
+                                    onChange={(e) => setEditCheckOut(e.target.value)}
+                                  />
+                              </div>
+                          </div>
+                      </div>
+
                       {/* Status Selector */}
                       <div>
                           <label className="text-xs font-bold text-gray-500 uppercase block mb-3">Chọn trạng thái</label>

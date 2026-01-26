@@ -28,11 +28,15 @@ const CompanyRequests: React.FC<CompanyRequestsProps> = ({ requests, onUpdateReq
   }, [requests, currentUser]);
 
   // Then filter based on Search Term
-  const filteredRequests = visibleRequests.filter(req => 
-    req.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    req.phone.includes(searchTerm) ||
-    req.assignedToName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRequests = visibleRequests.filter(req => {
+    if (!req) return false;
+    const customerName = (req.customerName || '').toLowerCase();
+    const phone = (req.phone || '');
+    const assignedTo = (req.assignedToName || '').toLowerCase();
+    const term = searchTerm.toLowerCase();
+
+    return customerName.includes(term) || phone.includes(searchTerm) || assignedTo.includes(term);
+  });
 
   const toggleStatus = (id: number) => {
     const updated = requests.map(req => {
@@ -103,7 +107,7 @@ const CompanyRequests: React.FC<CompanyRequestsProps> = ({ requests, onUpdateReq
                                 <td className="px-6 py-4">
                                     <div className="flex items-center">
                                         <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-[10px] font-bold mr-2">
-                                            {req.assignedToName.charAt(0)}
+                                            {(req.assignedToName || '?').charAt(0)}
                                         </div>
                                         <span className="text-sm font-medium text-gray-700">
                                             {req.assignedToId === currentUser?.id ? 'Bạn' : req.assignedToName}
