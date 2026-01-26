@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Download, X, User, Save, FileText, Settings, Briefcase, Calendar, Paperclip, Eye, Upload, FileSpreadsheet, Clock, CheckCircle, Shield, ChevronDown } from 'lucide-react';
 import { AttendanceRecord, UserAccount, LeaveFormDetails, SystemNotification, AttendanceConfig } from '../../App';
@@ -93,10 +94,11 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
       return Array.from({ length: days }, (_, i) => i + 1);
   }, [selectedMonth, selectedYear]);
 
-  // Filter users based on search
+  // Filter users based on search (Exclude Customers)
   const filteredUsers = users.filter(u => 
-      (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (u.role || '').toLowerCase().includes(searchTerm.toLowerCase())
+      ((u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (u.role || '').toLowerCase().includes(searchTerm.toLowerCase())) &&
+      u.role !== 'Customer'
   );
 
   const getRecord = (userId: number, day: number) => {
@@ -341,6 +343,7 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                   );
 
                   if (!matchedUser) return; // Skip if user not found in system
+                  if (matchedUser.role === 'Customer') return; // Skip customers
 
                   // Get role-based start time
                   const roleKey = matchedUser.role === 'Accounting' ? 'Accounting' : matchedUser.role;
@@ -860,7 +863,7 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                               />
                           </div>
                           <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100 custom-scrollbar">
-                              {users.filter(u => u.name.toLowerCase().includes(configSearchTerm.toLowerCase())).map(u => (
+                              {users.filter(u => u.name.toLowerCase().includes(configSearchTerm.toLowerCase()) && u.role !== 'Customer').map(u => (
                                   <div key={u.id} className="flex items-center justify-between p-2 hover:bg-gray-50">
                                       <div className="flex items-center gap-2">
                                           <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-[10px] font-bold text-gray-600">{u.name.charAt(0)}</div>
