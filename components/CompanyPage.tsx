@@ -465,14 +465,14 @@ const CompanyPage: React.FC<CompanyPageProps> = ({
         </aside>
 
         {/* MAIN CONTENT AREA */}
-        <main className="flex-1 overflow-y-auto relative p-6 md:p-10 z-10">
-            <div className="max-w-7xl mx-auto h-full flex flex-col">
+        <main className="flex-1 overflow-y-auto relative p-3 md:p-4 z-10">
+            <div className="max-w-[98%] w-full mx-auto h-full flex flex-col">
                 {/* Content Container - Glass Card */}
-                <div className="flex-1 bg-white/60 backdrop-blur-xl border border-white/50 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col relative animate-in fade-in slide-in-from-bottom-4 duration-500 ring-1 ring-white/40 p-6 md:p-10 overflow-y-auto custom-scrollbar">
+                <div className="flex-1 bg-white/60 backdrop-blur-xl border border-white/50 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col relative animate-in fade-in slide-in-from-bottom-4 duration-500 ring-1 ring-white/40 p-4 md:p-6 overflow-y-auto custom-scrollbar">
                     {renderContent()}
                 </div>
                 
-                <div className="py-4 text-center text-xs text-slate-500 font-medium bg-white/30 backdrop-blur-sm border-t border-white/20 mt-4 rounded-xl">
+                <div className="py-2 text-center text-xs text-slate-500 font-medium bg-white/30 backdrop-blur-sm border-t border-white/20 mt-3 rounded-xl">
                     Hệ thống Quản lý Nội bộ Long Hoang Logistics v3.2.0 • {new Date().getFullYear()}
                 </div>
             </div>
