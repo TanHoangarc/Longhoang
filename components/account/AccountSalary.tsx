@@ -223,7 +223,7 @@ const AccountSalary: React.FC<AccountSalaryProps> = ({ users, attendanceRecords,
   const currentYearBase = new Date().getFullYear();
   const yearOptions = [currentYearBase - 1, currentYearBase, currentYearBase + 1];
 
-  const handleEditFormChange = (field: string, val: string | boolean) => {
+  const handleEditFormChange = (field: string, val: string | boolean | number) => {
       if (field === 'note' || field === 'isContractSigned') {
           setEditFormData({ ...editFormData, [field]: val });
       } else {
@@ -249,12 +249,21 @@ const AccountSalary: React.FC<AccountSalaryProps> = ({ users, attendanceRecords,
       setMoneyConfigs(moneyConfigs.filter(c => c.id !== id));
   };
 
-  const applyPresetValue = (field: string, type: MoneyConfigType) => {
-      const config = moneyConfigs.find(c => c.type === type && c.month === selectedMonth && c.year === selectedYear);
-      if (config) {
-          setEditFormData({ ...editFormData, [field]: config.amount });
+  // Replace applyPresetValue with Toggle Logic
+  const handleToggleMoney = (field: string, type: MoneyConfigType) => {
+      const currentValue = editFormData[field] || 0;
+      
+      if (currentValue > 0) {
+          // Toggle OFF
+          handleEditFormChange(field, 0);
       } else {
-          alert(`Chưa có cấu hình khoản tiền "${newMoneyConfig.name}" cho Tháng ${selectedMonth}/${selectedYear}.`);
+          // Toggle ON
+          const config = moneyConfigs.find(c => c.type === type && c.month === selectedMonth && c.year === selectedYear);
+          if (config) {
+              handleEditFormChange(field, config.amount);
+          } else {
+              alert(`Chưa có cấu hình khoản tiền "${type}" cho Tháng ${selectedMonth}/${selectedYear}.`);
+          }
       }
   };
 
@@ -657,11 +666,27 @@ const AccountSalary: React.FC<AccountSalaryProps> = ({ users, attendanceRecords,
                                     <div className="space-y-3">
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
-                                                <div className="flex justify-between mb-1"><label className="text-[10px] font-bold text-gray-500">Phụ cấp Gửi xe</label><button onClick={() => applyPresetValue('parking', 'parking')} className="text-[10px] text-blue-500 font-bold hover:underline">Áp dụng</button></div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="text-[10px] font-bold text-gray-500">Phụ cấp Gửi xe</label>
+                                                    <button
+                                                        onClick={() => handleToggleMoney('parking', 'parking')}
+                                                        className={`w-9 h-5 rounded-full p-1 transition-colors duration-200 ease-in-out flex items-center ${editFormData.parking > 0 ? 'bg-green-500' : 'bg-gray-300'}`}
+                                                    >
+                                                        <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${editFormData.parking > 0 ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                    </button>
+                                                </div>
                                                 <input type="text" className="w-full border border-gray-200 rounded-lg p-2 text-sm font-bold" value={formatMoney(editFormData.parking)} onChange={e => handleEditFormChange('parking', e.target.value)} />
                                             </div>
                                             <div>
-                                                <div className="flex justify-between mb-1"><label className="text-[10px] font-bold text-gray-500">Thưởng (Bonus)</label><button onClick={() => applyPresetValue('bonus', 'bonus')} className="text-[10px] text-blue-500 font-bold hover:underline">Áp dụng</button></div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="text-[10px] font-bold text-gray-500">Thưởng (Bonus)</label>
+                                                    <button
+                                                        onClick={() => handleToggleMoney('bonus', 'bonus')}
+                                                        className={`w-9 h-5 rounded-full p-1 transition-colors duration-200 ease-in-out flex items-center ${editFormData.bonus > 0 ? 'bg-green-500' : 'bg-gray-300'}`}
+                                                    >
+                                                        <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${editFormData.bonus > 0 ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                    </button>
+                                                </div>
                                                 <input type="text" className="w-full border border-gray-200 rounded-lg p-2 text-sm font-bold" value={formatMoney(editFormData.bonus)} onChange={e => handleEditFormChange('bonus', e.target.value)} />
                                             </div>
                                         </div>
@@ -669,11 +694,27 @@ const AccountSalary: React.FC<AccountSalaryProps> = ({ users, attendanceRecords,
                                         {editFormData.isContractSigned ? (
                                             <div className="grid grid-cols-2 gap-3 bg-blue-50 p-3 rounded-lg border border-blue-100">
                                                 <div>
-                                                    <div className="flex justify-between mb-1"><label className="text-[10px] font-bold text-blue-700">Lương T13</label><button onClick={() => applyPresetValue('salary13', 'salary13')} className="text-[10px] text-blue-500 font-bold hover:underline">Áp dụng</button></div>
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <label className="text-[10px] font-bold text-blue-700">Lương T13</label>
+                                                        <button
+                                                            onClick={() => handleToggleMoney('salary13', 'salary13')}
+                                                            className={`w-9 h-5 rounded-full p-1 transition-colors duration-200 ease-in-out flex items-center ${editFormData.salary13 > 0 ? 'bg-blue-600' : 'bg-blue-200'}`}
+                                                        >
+                                                            <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${editFormData.salary13 > 0 ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                        </button>
+                                                    </div>
                                                     <input type="text" className="w-full border border-blue-200 rounded-lg p-2 text-sm font-bold text-blue-600 bg-white" value={formatMoney(editFormData.salary13)} onChange={e => handleEditFormChange('salary13', e.target.value)} />
                                                 </div>
                                                 <div>
-                                                    <div className="flex justify-between mb-1"><label className="text-[10px] font-bold text-blue-700">Thưởng Lễ</label><button onClick={() => applyPresetValue('holidayBonus', 'holidayBonus')} className="text-[10px] text-blue-500 font-bold hover:underline">Áp dụng</button></div>
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <label className="text-[10px] font-bold text-blue-700">Thưởng Lễ</label>
+                                                        <button
+                                                            onClick={() => handleToggleMoney('holidayBonus', 'holidayBonus')}
+                                                            className={`w-9 h-5 rounded-full p-1 transition-colors duration-200 ease-in-out flex items-center ${editFormData.holidayBonus > 0 ? 'bg-blue-600' : 'bg-blue-200'}`}
+                                                        >
+                                                            <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform duration-200 ease-in-out ${editFormData.holidayBonus > 0 ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                        </button>
+                                                    </div>
                                                     <input type="text" className="w-full border border-blue-200 rounded-lg p-2 text-sm font-bold text-blue-600 bg-white" value={formatMoney(editFormData.holidayBonus)} onChange={e => handleEditFormChange('holidayBonus', e.target.value)} />
                                                 </div>
                                             </div>
