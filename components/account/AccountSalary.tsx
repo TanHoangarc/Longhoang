@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Save, Download, Settings, X, CheckSquare, Square, ArrowUpDown, Filter, DollarSign, Plus, Trash2, User, ShieldCheck, Briefcase, Calendar, CreditCard } from 'lucide-react';
-import { UserAccount, AttendanceRecord } from '../../App';
+import { UserAccount, AttendanceRecord, AttendanceConfig } from '../../App';
 
 interface AccountSalaryProps {
   users: UserAccount[];
   attendanceRecords: AttendanceRecord[];
+  attendanceConfig: AttendanceConfig;
 }
 
 // Granular column keys
@@ -34,7 +35,7 @@ interface MoneyConfig {
     name: string; // Display name
 }
 
-const AccountSalary: React.FC<AccountSalaryProps> = ({ users, attendanceRecords }) => {
+const AccountSalary: React.FC<AccountSalaryProps> = ({ users, attendanceRecords, attendanceConfig }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -149,6 +150,46 @@ const AccountSalary: React.FC<AccountSalaryProps> = ({ users, attendanceRecords 
       return result;
   }, [users, searchTerm, roleFilter, sortDirection]);
 
+  // --- HELPER TO CALCULATE WORK DAYS (TC) ---
+  const calculateWorkDays = (userId: number) => {
+      const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+      let count = 0;
+
+      for (let d = 1; d <= daysInMonth; d++) {
+          const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const record = attendanceRecords.find(r => r.userId === userId && r.date === dateStr);
+          
+          let isPresent = false;
+
+          // Check if user is exempt
+          const isExempt = attendanceConfig.exemptUserIds.includes(userId);
+
+          if (isExempt) {
+              if (!record) {
+                  // If exempt and no record, assume present on weekdays
+                  const dateObj = new Date(selectedYear, selectedMonth - 1, d);
+                  const dayOfWeek = dateObj.getDay();
+                  if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                      isPresent = true;
+                  }
+              } else {
+                  // If record exists, respect the status
+                  if (record.status === 'Present' || record.status === 'Late') {
+                      isPresent = true;
+                  }
+              }
+          } else {
+              // Not exempt: Must have explicit Present/Late record
+              if (record && (record.status === 'Present' || record.status === 'Late')) {
+                  isPresent = true;
+              }
+          }
+
+          if (isPresent) count++;
+      }
+      return count;
+  };
+
   const handleSortToggle = () => {
       setSortDirection(prev => {
           if (prev === null) return 'asc';
@@ -178,17 +219,6 @@ const AccountSalary: React.FC<AccountSalaryProps> = ({ users, attendanceRecords 
   };
 
   const formatMoney = (num: number) => Math.round(num).toLocaleString('en-US');
-
-  const calculatePIT = (assessableIncome: number) => {
-      if (assessableIncome <= 0) return 0;
-      if (assessableIncome <= 5000000) return assessableIncome * 0.05;
-      if (assessableIncome <= 10000000) return assessableIncome * 0.1 - 250000;
-      if (assessableIncome <= 18000000) return assessableIncome * 0.15 - 750000;
-      if (assessableIncome <= 32000000) return assessableIncome * 0.2 - 1650000;
-      if (assessableIncome <= 52000000) return assessableIncome * 0.25 - 3250000;
-      if (assessableIncome <= 80000000) return assessableIncome * 0.3 - 5850000;
-      return assessableIncome * 0.35 - 9850000;
-  };
 
   const currentYearBase = new Date().getFullYear();
   const yearOptions = [currentYearBase - 1, currentYearBase, currentYearBase + 1];
@@ -435,7 +465,10 @@ const AccountSalary: React.FC<AccountSalaryProps> = ({ users, attendanceRecords 
                             note: '', 
                             isContractSigned: true 
                         };
-                        const workDays = attendanceRecords.filter(r => r.userId === u.id && new Date(r.date).getMonth() + 1 === selectedMonth).length;
+                        
+                        // USE HELPER FOR TC
+                        const workDays = calculateWorkDays(u.id);
+                        
                         const salaryTime = (d.basic / 26) * workDays;
                         const totalIncome = salaryTime + (d.kpiCurrent || 0) + (d.kpiReturn || 0) + (d.bonus || 0) + (d.parking || 0);
                         const netSalary = totalIncome - (d.advance || 0);

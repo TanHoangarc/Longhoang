@@ -11,7 +11,7 @@ interface AccountOverviewProps {
 const AccountOverview: React.FC<AccountOverviewProps> = ({ users, attendanceRecords }) => {
   const stats = [
     { label: 'Tổng nhân sự', value: users.filter(u => u.role !== 'Customer').length, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Quỹ WCA', value: '50,000,000', sub: 'VND', icon: Wallet, color: 'text-indigo-600', bg: 'bg-indigo-50' }
+    { label: 'Quỹ WCA', value: '0', sub: 'VND', icon: Wallet, color: 'text-indigo-600', bg: 'bg-indigo-50' }
   ];
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -89,17 +89,17 @@ const AccountOverview: React.FC<AccountOverviewProps> = ({ users, attendanceReco
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-xs font-bold text-gray-500">Quỹ WCA (Tháng hiện tại)</span>
-                  <span className="text-xs font-bold text-blue-600">85% hạn mức</span>
+                  <span className="text-xs font-bold text-blue-600">0% hạn mức</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '85%' }}></div>
+                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '0%' }}></div>
                 </div>
                 <div className="flex justify-between mt-4">
                   <div className="flex items-center text-xs text-green-600 font-bold">
-                    <ArrowUpRight size={14} className="mr-1" /> +12.5tr
+                    <ArrowUpRight size={14} className="mr-1" /> +0
                   </div>
                   <div className="flex items-center text-xs text-red-500 font-bold">
-                    <ArrowDownLeft size={14} className="mr-1" /> -4.2tr
+                    <ArrowDownLeft size={14} className="mr-1" /> -0
                   </div>
                 </div>
               </div>

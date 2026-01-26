@@ -356,7 +356,7 @@ const AccountPage: React.FC<AccountPageProps> = ({
                 onSaveConfig={onUpdateAttendanceConfig}
             />
         );
-      case 'salary': return <AccountSalary users={users} attendanceRecords={attendanceRecords} />;
+      case 'salary': return <AccountSalary users={users} attendanceRecords={attendanceRecords} attendanceConfig={attendanceConfig} />;
       case 'wca': return <AccountWCA />;
       
       default: return (

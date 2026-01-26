@@ -13,10 +13,7 @@ interface WCATransaction {
 }
 
 const AccountWCA: React.FC = () => {
-  const [transactions, setTransactions] = useState<WCATransaction[]>([
-    { id: 1, date: '2026-05-01', description: 'Nạp quỹ đầu tháng', amount: 50000000, type: 'in', pic: 'Admin' },
-    { id: 2, date: '2026-05-05', description: 'Thanh toán phí cảng Cát Lái (Job 102)', amount: 2500000, type: 'out', pic: 'Ops Team' }
-  ]);
+  const [transactions, setTransactions] = useState<WCATransaction[]>([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
