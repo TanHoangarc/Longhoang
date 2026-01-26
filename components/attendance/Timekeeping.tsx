@@ -395,8 +395,9 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
             <h3 className="font-bold text-gray-800 mb-4 flex items-center"><History size={16} className="mr-2" /> Thống kê tháng {currentMonth.getMonth() + 1}</h3>
             <div className="grid grid-cols-2 gap-4 text-center">
                 <div className="p-2 bg-green-50 rounded-lg">
-                    <p className="text-xl font-bold text-green-600">{currentMonthRecords.filter(r => r.status === 'Present').length}</p>
-                    <p className="text-[10px] text-gray-500 uppercase">Ngày công</p>
+                    {/* Count Present + Late as 'Worked' aka KPI */}
+                    <p className="text-xl font-bold text-green-600">{currentMonthRecords.filter(r => r.status === 'Present' || r.status === 'Late').length}</p>
+                    <p className="text-[10px] text-gray-500 uppercase">KPI (Công)</p>
                 </div>
                 <div className="p-2 bg-yellow-50 rounded-lg">
                     <p className="text-xl font-bold text-yellow-600">{currentMonthRecords.filter(r => r.status === 'Late').length}</p>

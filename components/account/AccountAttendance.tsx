@@ -134,7 +134,7 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
           return { symbol: `${record.status === 'On Leave' ? 'P' : 'KP'}(${label})`, color: `${baseColor} text-[10px] font-bold` };
       }
 
-      // --- DYNAMIC TIME CHECK LOGIC ---
+      // --- DYNAMIC TIME CHECK LOGIC (ROBUST MINUTES CALCULATION) ---
       // Nếu có giờ check-in, tính toán lại trạng thái dựa trên config hiện tại
       if (record.checkIn && user && record.status !== 'On Leave' && record.status !== 'Unpaid Leave') {
           const roleKey = user.role === 'Accounting' ? 'Accounting' : user.role;
@@ -143,13 +143,15 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
           const [checkH, checkM] = record.checkIn.split(':').map(Number);
           const [startH, startM] = startTime.split(':').map(Number);
 
+          // Convert all to minutes from midnight
+          const checkInMinutes = checkH * 60 + checkM;
+          const startMinutes = startH * 60 + startM;
+          
           // Grace period 15 minutes
-          const lateThresholdM = startM + 15;
-          const graceH = startH + Math.floor(lateThresholdM / 60);
-          const graceM = lateThresholdM % 60;
+          const lateThresholdMinutes = startMinutes + 15;
 
-          // Compare: If CheckIn > GraceTime => Late, Else => Present
-          const isLate = (checkH > graceH) || (checkH === graceH && checkM > graceM);
+          // Compare: If CheckIn Minutes > Threshold => Late
+          const isLate = checkInMinutes > lateThresholdMinutes;
 
           if (isLate) {
               return { symbol: 'M', color: 'text-orange-500 font-bold bg-orange-50', title: `Đi muộn (Vào: ${record.checkIn})` };
@@ -349,6 +351,7 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                   const roleKey = matchedUser.role === 'Accounting' ? 'Accounting' : matchedUser.role;
                   const startTime = config.startTimes[roleKey] || '08:00';
                   const [startH, startM] = startTime.split(':').map(Number);
+                  const startMinutes = startH * 60 + startM;
 
                   const userRows = employeeRows[rawName];
 
@@ -386,15 +389,12 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                           if (config.exemptUserIds.includes(matchedUser.id)) {
                               status = 'Present'; // Exempt users always present if data exists
                           } else if (bestIn) {
-                              // Standard Late Logic based on Config
+                              // Standard Late Logic based on Config (Minutes Calculation)
                               const [h, m] = bestIn.split(':').map(Number);
-                              
-                              // Check if late (Start Time + 15 mins grace period)
-                              const lateThresholdM = startM + 15;
-                              const graceH = startH + Math.floor(lateThresholdM / 60);
-                              const graceM = lateThresholdM % 60;
+                              const checkInMinutes = h * 60 + m;
+                              const lateThresholdMinutes = startMinutes + 15;
 
-                              if (h > graceH || (h === graceH && m > graceM)) {
+                              if (checkInMinutes > lateThresholdMinutes) {
                                   status = 'Late';
                               }
                           }
@@ -443,7 +443,7 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
       {/* Header Controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
         <div className="text-center md:text-left">
-          <h3 className="text-2xl font-bold text-gray-800 uppercase">BẢNG CHẤM CÔNG</h3>
+          <h3 className="text-2xl font-bold text-gray-800 uppercase">BẢNG CHẤM CÔNG & KPI</h3>
           <p className="text-sm text-gray-500">Tháng {selectedMonth}/{selectedYear}</p>
         </div>
         
@@ -525,7 +525,7 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                         <th key={day} className="border border-gray-400">{day}</th>
                     ))}
                     
-                    <th className="border border-gray-400 w-[3%] bg-yellow-400 text-black font-black">TC</th>
+                    <th className="border border-gray-400 w-[6%] bg-yellow-400 text-black font-black text-[10px] leading-tight">KPI (Công)</th>
                     <th className="border border-gray-400 w-[3%] bg-yellow-400 text-black font-black">P</th>
                     <th className="border border-gray-400 w-[3%] bg-yellow-400 text-black font-black">KP</th>
                     <th className="border border-gray-400 w-[10%] bg-[#8cc63f]">Ghi chú</th>
@@ -606,7 +606,7 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                             })}
                             
                             {/* Summary Columns */}
-                            <td className="border border-gray-300 text-center font-bold bg-yellow-50">{totalPresent}</td>
+                            <td className="border border-gray-300 text-center font-black bg-yellow-50 text-base">{totalPresent}</td>
                             <td className="border border-gray-300 text-center font-bold text-blue-600 bg-yellow-50">{totalLeave}</td>
                             <td className="border border-gray-300 text-center font-bold text-red-600 bg-yellow-50">{totalUnpaid}</td>
                             
@@ -635,8 +635,8 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
       {/* Legend */}
       <div className="flex flex-wrap gap-6 text-sm text-gray-600 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
           <div className="font-bold uppercase text-gray-400 mr-2">GHI CHÚ:</div>
-          <div className="flex items-center"><span className="font-bold text-green-600 bg-green-50 px-2 rounded mr-1">+</span> Có mặt</div>
-          <div className="flex items-center"><span className="font-bold text-orange-500 bg-orange-50 px-2 rounded mr-1">M</span> Đi muộn</div>
+          <div className="flex items-center"><span className="font-bold text-green-600 bg-green-50 px-2 rounded mr-1">+</span> Đúng giờ</div>
+          <div className="flex items-center"><span className="font-bold text-orange-500 bg-orange-50 px-2 rounded mr-1">M</span> Đi muộn (Vẫn tính công)</div>
           <div className="flex items-center"><span className="font-bold text-blue-600 bg-blue-50 px-2 rounded mr-1">P</span> Nghỉ phép</div>
           <div className="flex items-center"><span className="font-bold text-red-600 bg-red-50 px-2 rounded mr-1">KP</span> Nghỉ không lương</div>
           <div className="flex items-center"><span className="font-bold text-red-600 bg-red-100 px-2 rounded mr-1">V</span> Vắng mặt</div>
@@ -712,7 +712,7 @@ const AccountAttendance: React.FC<AccountAttendanceProps> = ({ attendanceRecords
                                 value={editStatus}
                                 onChange={(e) => setEditStatus(e.target.value as any)}
                             >
-                                <option value="Present">✅ Có mặt (Present)</option>
+                                <option value="Present">✅ Đúng giờ (Present)</option>
                                 <option value="Late">⚠️ Đi muộn (Late)</option>
                                 <option value="On Leave">🏖️ Nghỉ phép (On Leave)</option>
                                 <option value="Unpaid Leave">💸 Nghỉ không lương (Unpaid)</option>
