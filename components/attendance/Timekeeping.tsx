@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Clock, Calendar, UserCheck, MapPin, AlertCircle, History, ChevronLeft, ChevronRight, FileText, Upload, X, PenTool, Printer } from 'lucide-react';
+import { Clock, LogIn, LogOut, Calendar, UserCheck, MapPin, AlertCircle, History, ChevronLeft, ChevronRight, FileText, Upload, X, PenTool, Printer } from 'lucide-react';
 import { UserAccount, AttendanceRecord, LeaveFormDetails } from '../../App';
 import { API_BASE_URL } from '../../constants';
 
@@ -69,9 +69,35 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
       return Math.max(0, TOTAL_LEAVE_DAYS - usedDays);
   }, [attendanceRecords, currentUser]);
 
-  // --- ATTENDANCE ACTIONS (Removed CheckIn/CheckOut buttons as requested) ---
-  // const handleCheckIn = () => { ... };
-  // const handleCheckOut = () => { ... };
+  // --- ATTENDANCE ACTIONS ---
+  const handleCheckIn = () => {
+    if (!currentUser) return;
+    
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const isLate = (hours > 8) || (hours === 8 && minutes > 15);
+    
+    const newRecord: AttendanceRecord = {
+        id: Date.now(),
+        userId: currentUser.id,
+        userName: currentUser.name,
+        date: todayStr,
+        checkIn: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
+        checkOut: null,
+        status: isLate ? 'Late' : 'Present'
+    };
+
+    onUpdateAttendance([...attendanceRecords, newRecord]);
+  };
+
+  const handleCheckOut = () => {
+    if (!todayRecord) return;
+    const now = new Date();
+    const checkOutTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const updatedRecord = { ...todayRecord, checkOut: checkOutTime };
+    onUpdateAttendance(attendanceRecords.map(r => r.id === todayRecord.id ? updatedRecord : r));
+  };
 
   // --- LEAVE ACTIONS ---
   const handleOpenLeaveModal = (dateStr: string) => {
@@ -351,7 +377,7 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {/* LEFT: Clock & Info Panel */}
+      {/* LEFT: Clock & Check-in Panel */}
       <div className="lg:col-span-1 space-y-6">
         <div className="bg-gradient-to-br from-[#1e2a3b] to-[#111827] rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
@@ -368,22 +394,27 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
                 </div>
 
                 <div className="flex flex-col gap-3">
-                    {/* Display time only if data exists */}
-                    {todayRecord ? (
-                        <>
-                            <div className="bg-white/10 p-3 rounded-xl border border-white/10">
-                                <p className="text-xs text-gray-400 uppercase">Giờ vào</p>
-                                <p className="text-2xl font-bold text-green-400">{todayRecord.checkIn || '--:--'}</p>
-                            </div>
-                            
-                            <div className="bg-white/10 p-3 rounded-xl border border-white/10">
-                                <p className="text-xs text-gray-400 uppercase">Giờ ra</p>
-                                <p className="text-2xl font-bold text-orange-400">{todayRecord.checkOut || '--:--'}</p>
-                            </div>
-                        </>
+                    {!todayRecord ? (
+                        <button onClick={handleCheckIn} className="bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-xl font-bold shadow-lg transition flex items-center justify-center">
+                            <LogIn size={20} className="mr-2" /> Check In
+                        </button>
                     ) : (
-                        <div className="bg-white/5 p-4 rounded-xl border border-white/10 text-center text-gray-400 italic text-sm">
-                            Chưa có dữ liệu chấm công hôm nay.
+                        <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                            <p className="text-xs text-gray-400 uppercase">Giờ vào</p>
+                            <p className="text-2xl font-bold text-green-400">{todayRecord.checkIn}</p>
+                        </div>
+                    )}
+
+                    {todayRecord && !todayRecord.checkOut && (
+                        <button onClick={handleCheckOut} className="bg-red-500 hover:bg-red-600 text-white py-3 px-6 rounded-xl font-bold shadow-lg transition flex items-center justify-center">
+                            <LogOut size={20} className="mr-2" /> Check Out
+                        </button>
+                    )}
+
+                    {todayRecord && todayRecord.checkOut && (
+                         <div className="bg-white/10 p-3 rounded-xl border border-white/10">
+                            <p className="text-xs text-gray-400 uppercase">Giờ ra</p>
+                            <p className="text-2xl font-bold text-orange-400">{todayRecord.checkOut}</p>
                         </div>
                     )}
                 </div>
@@ -395,9 +426,8 @@ const Timekeeping: React.FC<TimekeepingProps> = ({ currentUser, attendanceRecord
             <h3 className="font-bold text-gray-800 mb-4 flex items-center"><History size={16} className="mr-2" /> Thống kê tháng {currentMonth.getMonth() + 1}</h3>
             <div className="grid grid-cols-2 gap-4 text-center">
                 <div className="p-2 bg-green-50 rounded-lg">
-                    {/* Count Present + Late as 'Worked' aka KPI */}
-                    <p className="text-xl font-bold text-green-600">{currentMonthRecords.filter(r => r.status === 'Present' || r.status === 'Late').length}</p>
-                    <p className="text-[10px] text-gray-500 uppercase">KPI (Công)</p>
+                    <p className="text-xl font-bold text-green-600">{currentMonthRecords.filter(r => r.status === 'Present').length}</p>
+                    <p className="text-[10px] text-gray-500 uppercase">Ngày công</p>
                 </div>
                 <div className="p-2 bg-yellow-50 rounded-lg">
                     <p className="text-xl font-bold text-yellow-600">{currentMonthRecords.filter(r => r.status === 'Late').length}</p>

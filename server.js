@@ -77,15 +77,7 @@ const INITIAL_DB = {
     notifications: [], 
     attendanceRecords: [],
     decrees: [],
-    carriers: [],
-    attendanceConfig: {
-        startTimes: {
-            'Sales': '08:00',
-            'Document': '08:00',
-            'Accounting': '08:00'
-        },
-        exemptUserIds: []
-    }
+    carriers: []
 };
 
 const readDB = () => {
