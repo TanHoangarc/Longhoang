@@ -9,11 +9,7 @@ export const NAV_LINKS = [
   { name: 'Giới thiệu', href: '#about' },
   { name: 'Dịch vụ', href: '#services' },
   { name: 'Tin tức', href: '#news' },
-  { name: 'Liên hệ', href: '#contact' },
-  { name: 'Customer', href: 'finance' },
-  { name: 'Staff', href: 'company' },
-  { name: 'Account', href: 'account' },
-  { name: 'Setting', href: 'settings' },
+  { name: 'Liên hệ', href: '#contact' }
 ];
 
 export const FEATURES = [

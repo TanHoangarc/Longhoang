@@ -301,7 +301,7 @@ const About: React.FC<AboutProps> = ({
             </div>
             {/* Experience Badge */}
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-4 shadow-xl rounded-lg text-center z-10 border-t-4 border-primary min-w-[150px] animate-bounce-slow">
-              <span className="block text-4xl font-extrabold text-primary">6+</span>
+              <span className="block text-4xl font-extrabold text-primary">{new Date().getFullYear() - 2020}+</span>
               <span className="text-sm font-semibold text-gray-600 uppercase">Năm kinh nghiệm</span>
             </div>
           </div>
