@@ -50,6 +50,9 @@ function App() {
   const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbum[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [manualNews, setManualNews] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [footerInfo, setFooterInfo] = useState<any>(null);
   const [activePage, setActivePage] = useState<string | null>(null);
   
   // Custom routing and auth
@@ -75,6 +78,9 @@ function App() {
         if (data.galleryAlbums) setGalleryAlbums(data.galleryAlbums);
         if (data.milestones) setMilestones(data.milestones);
         if (data.jobs) setJobs(data.jobs);
+        if (data.manualNews) setManualNews(data.manualNews);
+        if (data.branches) setBranches(data.branches);
+        if (data.footerInfo) setFooterInfo(data.footerInfo);
       })
       .catch(err => console.error("Failed to fetch data:", err));
       
@@ -122,6 +128,13 @@ function App() {
   const handleUpdateJobs = (newJobs: Job[]) => {
     setJobs(newJobs);
     updateBackend({ ...fullData, jobs: newJobs });
+  };
+
+  const handleUpdateSettings = (key: string, value: any) => {
+    if (key === 'manualNews') setManualNews(value);
+    if (key === 'branches') setBranches(value);
+    if (key === 'footerInfo') setFooterInfo(value);
+    updateBackend({ ...fullData, [key]: value });
   };
 
   const updateBackend = (dataToSave: any) => {
@@ -172,11 +185,11 @@ function App() {
           userRole={userRole}
         />
         <Services />
-        <News />
+        <News userRole={userRole} manualNews={manualNews} onUpdateNews={(v: any) => handleUpdateSettings('manualNews', v)} />
         <Jobs jobs={jobs} onUpdateJobs={handleUpdateJobs} userRole={userRole} />
-        <ContactForm onSubmitRequest={handleNewQuotationRequest} />
+        <ContactForm onSubmitRequest={handleNewQuotationRequest} userRole={userRole} branches={branches} onUpdateBranches={(v: any) => handleUpdateSettings('branches', v)} />
       </main>
-      <Footer />
+      <Footer userRole={userRole} footerInfo={footerInfo} onUpdateFooter={(v: any) => handleUpdateSettings('footerInfo', v)} />
     </div>
   );
 }
