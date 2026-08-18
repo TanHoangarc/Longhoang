@@ -134,7 +134,7 @@ const Jobs: React.FC<JobsProps> = ({ jobs, onUpdateJobs, userRole }) => {
                 <h4 className="font-bold text-gray-800 mb-2">Liên hệ tuyển dụng</h4>
                 <div className="space-y-2 text-sm text-gray-600">
                   <p><span className="font-bold">HCM:</span> teddy.diem@longhoanglogistics.com</p>
-                  <p><span className="font-bold">HPH:</span> Leo.nguyen@longhoanglogistics.com</p>
+                  <p><span className="font-bold">HPH:</span> Vincent@longhoanglogistics.com</p>
                 </div>
               </div>
            </div>
