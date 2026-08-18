@@ -9,6 +9,7 @@ export const NAV_LINKS = [
   { name: 'Giới thiệu', href: '#about' },
   { name: 'Dịch vụ', href: '#services' },
   { name: 'Tin tức', href: '#news' },
+  { name: 'Tuyển dụng', href: '#jobs' },
   { name: 'Liên hệ', href: '#contact' }
 ];
 

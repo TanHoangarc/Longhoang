@@ -45,47 +45,38 @@ const Services = () => {
         </div>
 
         {/* Grid Wrapper */}
-        <div className="bg-gray-700 gap-[1px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border border-gray-700">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {SERVICES.map((service, index) => (
             <div 
               key={index} 
               onClick={() => setSelectedService(service)}
-              className="group relative h-96 overflow-hidden cursor-pointer bg-[#1f2937]"
+              className="group bg-gray-800 rounded-2xl overflow-hidden cursor-pointer hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 border border-gray-700 hover:border-primary/50 flex flex-col h-full"
             >
-              {/* Background Image */}
-              <div className="absolute inset-0">
+              {/* Top Image Box */}
+              <div className="relative h-48 sm:h-56 overflow-hidden">
                 <img 
                   src={service.image} 
                   alt={service.title} 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-30 group-hover:opacity-20"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1f2937] via-transparent to-transparent opacity-90"></div>
-              </div>
-
-              {/* Content */}
-              <div className="absolute inset-0 p-8 flex flex-col justify-end transition-all duration-300">
-                <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                  <div className="flex items-center space-x-2 text-primary font-bold mb-3 opacity-80 group-hover:opacity-100">
-                     <span>{service.id}</span>
-                     <div className="h-[1px] w-8 bg-primary"></div>
-                  </div>
-                  
-                  <h3 className="text-white text-2xl font-bold mb-3 leading-tight group-hover:text-primary transition-colors">
-                    {service.title}
-                  </h3>
-                  
-                  <p className="text-gray-400 text-sm mb-6 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100 line-clamp-2">
-                    {service.description}
-                  </p>
-
-                  <div className="flex items-center text-primary font-semibold text-sm uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-all duration-500 delay-200 transform translate-x-[-10px] group-hover:translate-x-0">
-                    Xem chi tiết <ArrowRight size={16} className="ml-2" />
-                  </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-800 via-transparent to-transparent opacity-80"></div>
+                <div className="absolute top-4 left-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                  {service.id}
                 </div>
               </div>
               
-              {/* Hover Top Line */}
-              <div className="absolute top-0 left-0 w-0 h-1 bg-primary transition-all duration-500 group-hover:w-full"></div>
+              {/* Content Box */}
+              <div className="p-6 md:p-8 flex flex-col flex-grow relative z-10 bg-gray-800">
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-primary transition-colors">
+                  {service.title}
+                </h3>
+                <p className="text-gray-400 text-sm leading-relaxed mb-6 flex-grow line-clamp-3">
+                  {service.description}
+                </p>
+                <div className="flex items-center text-primary font-bold text-sm uppercase tracking-wider group-hover:translate-x-2 transition-transform duration-300">
+                  Xem chi tiết <ArrowRight size={16} className="ml-2" />
+                </div>
+              </div>
             </div>
           ))}
         </div>

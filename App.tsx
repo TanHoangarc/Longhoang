@@ -4,6 +4,7 @@ import Hero from './components/Hero';
 import About from './components/About';
 import Services from './components/Services';
 import News from './components/News';
+import Jobs from './components/Jobs';
 import ContactForm from './components/ContactForm';
 import Footer from './components/Footer';
 import ConsoleLogin from './components/ConsoleLogin';
@@ -36,10 +37,19 @@ export interface Milestone {
   desc: string;
 }
 
+export interface Job {
+  id: number;
+  title: string;
+  quantity: number;
+  branch: 'HCM' | 'HPH';
+  type: string;
+}
+
 function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbum[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [activePage, setActivePage] = useState<string | null>(null);
   
   // Custom routing and auth
@@ -64,6 +74,7 @@ function App() {
         if (data.projects) setProjects(data.projects);
         if (data.galleryAlbums) setGalleryAlbums(data.galleryAlbums);
         if (data.milestones) setMilestones(data.milestones);
+        if (data.jobs) setJobs(data.jobs);
       })
       .catch(err => console.error("Failed to fetch data:", err));
       
@@ -106,6 +117,11 @@ function App() {
   const handleUpdateMilestones = (newMilestones: Milestone[]) => {
     setMilestones(newMilestones);
     updateBackend({ ...fullData, milestones: newMilestones });
+  };
+
+  const handleUpdateJobs = (newJobs: Job[]) => {
+    setJobs(newJobs);
+    updateBackend({ ...fullData, jobs: newJobs });
   };
 
   const updateBackend = (dataToSave: any) => {
@@ -157,6 +173,7 @@ function App() {
         />
         <Services />
         <News />
+        <Jobs jobs={jobs} onUpdateJobs={handleUpdateJobs} userRole={userRole} />
         <ContactForm onSubmitRequest={handleNewQuotationRequest} />
       </main>
       <Footer />
