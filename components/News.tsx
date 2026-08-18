@@ -13,7 +13,8 @@ const FALLBACK_NEWS = [
     pubDate: new Date().toISOString(),
     link: "#",
     thumbnail: STOCK_IMAGES[0],
-    description: "Các chuyên gia nhận định ngành logistics sẽ có những bước tiến vượt bậc nhờ vào sự phát triển của thương mại điện tử và đầu tư hạ tầng."
+    description: "Các chuyên gia nhận định ngành logistics sẽ có những bước tiến vượt bậc nhờ vào sự phát triển của thương mại điện tử và đầu tư hạ tầng.",
+    category: "news"
   }
 ];
 
@@ -26,6 +27,7 @@ interface NewsProps {
 const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) => {
   const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'news' | 'knowledge'>('news');
   
   const isAdmin = userRole === 'admin';
   const [isAdding, setIsAdding] = useState(false);
@@ -52,16 +54,17 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
               link: item.link,
               thumbnail: item.thumbnail || STOCK_IMAGES[index % STOCK_IMAGES.length],
               description: cleanDesc,
-              isManual: false
+              isManual: false,
+              category: 'news'
             };
           });
           setNews(processedNews);
         } else {
-          setNews(FALLBACK_NEWS.map((n, i) => ({ ...n, id: `fb-${i}`, isManual: false })));
+          setNews(FALLBACK_NEWS.map((n, i) => ({ ...n, id: `fb-${i}`, isManual: false, category: 'news' })));
         }
       } catch (err) {
         console.error("Failed to fetch news:", err);
-        setNews(FALLBACK_NEWS.map((n, i) => ({ ...n, id: `fb-${i}`, isManual: false })));
+        setNews(FALLBACK_NEWS.map((n, i) => ({ ...n, id: `fb-${i}`, isManual: false, category: 'news' })));
       } finally {
         setLoading(false);
       }
@@ -84,7 +87,8 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
       link: '#',
       thumbnail: STOCK_IMAGES[0],
       description: '',
-      isManual: true
+      isManual: true,
+      category: activeTab
     });
   };
 
@@ -120,17 +124,44 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
   };
 
   // Combine manual news (from admin) and fetched news (from Google)
-  const displayNews = [...manualNews, ...news].slice(0, 6);
+  // Filter by active tab (fallback to 'news' if undefined)
+  const filteredManualNews = manualNews.filter(n => (n.category || 'news') === activeTab);
+  const filteredFetchedNews = activeTab === 'news' ? news : [];
+  const displayNews = [...filteredManualNews, ...filteredFetchedNews].slice(0, 6);
 
   return (
     <section id="news" className="py-20 bg-gray-50 relative">
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-12 relative">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Tin tức thị trường</h2>
+          <h2 className="text-3xl font-bold text-gray-800 mb-2">Tin tức & Kiến thức</h2>
           <div className="w-20 h-1 bg-primary mx-auto mb-4"></div>
-          <p className="text-gray-500 max-w-2xl mx-auto">
-            Cập nhật thông tin mới nhất về ngành Logistics, vận tải và xuất nhập khẩu tại Việt Nam (Tự động cập nhật 24/7).
+          <p className="text-gray-500 max-w-2xl mx-auto mb-8">
+            Cập nhật thông tin mới nhất về ngành Logistics, vận tải và kiến thức chuyên ngành chuyên sâu.
           </p>
+
+          {/* Tabs */}
+          <div className="flex justify-center space-x-4 mb-4">
+            <button
+              onClick={() => setActiveTab('news')}
+              className={`px-6 py-2 rounded-full font-bold transition-all ${
+                activeTab === 'news' 
+                  ? 'bg-primary text-white shadow-md' 
+                  : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              Tin tức chuyên ngành
+            </button>
+            <button
+              onClick={() => setActiveTab('knowledge')}
+              className={`px-6 py-2 rounded-full font-bold transition-all ${
+                activeTab === 'knowledge' 
+                  ? 'bg-primary text-white shadow-md' 
+                  : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              Kiến thức chuyên ngành
+            </button>
+          </div>
 
           {isAdmin && (
             <div className="absolute top-0 right-0">
@@ -152,6 +183,17 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
                 <h3 className="text-2xl font-bold mb-6">{isAdding ? 'Đăng tin mới' : 'Chỉnh sửa tin'}</h3>
                 
                 <div className="space-y-4 text-sm text-gray-800">
+                  <div>
+                    <label className="font-bold block mb-1">Phân loại</label>
+                    <select 
+                      className="w-full border p-3 rounded bg-white"
+                      value={editData.category || 'news'} 
+                      onChange={e => setEditData({...editData, category: e.target.value})}
+                    >
+                      <option value="news">Tin tức chuyên ngành</option>
+                      <option value="knowledge">Kiến thức chuyên ngành</option>
+                    </select>
+                  </div>
                   <div>
                     <label className="font-bold block mb-1">Tiêu đề</label>
                     <input className="w-full border p-3 rounded" value={editData.title} onChange={e => setEditData({...editData, title: e.target.value})} placeholder="Nhập tiêu đề tin..."/>
@@ -181,6 +223,10 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <Loader2 className="animate-spin text-primary w-10 h-10" />
+          </div>
+        ) : displayNews.length === 0 ? (
+          <div className="text-center text-gray-500 h-48 flex items-center justify-center">
+            Chưa có bài viết nào trong chuyên mục này.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
