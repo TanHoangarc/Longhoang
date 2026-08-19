@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Loader2, 
   ExternalLink, 
@@ -12,8 +12,12 @@ import {
   BookOpen, 
   Sparkles,
   ArrowRight,
-  Info
+  Info,
+  Image as ImageIcon,
+  Upload,
+  Link2
 } from 'lucide-react';
+import { API_BASE_URL } from '../constants';
 
 const STOCK_IMAGES = [
   "https://images.unsplash.com/photo-1566576912906-253200c681bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
@@ -63,7 +67,11 @@ const FALLBACK_NEWS: NewsItem[] = [
     isManual: false,
     mediaType: "iframe",
     iframeCode: '<iframe title="Shipping Container 3D" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/2f53ec9741ea4db382a939f4fe6d4b29/embed"></iframe>',
-    content: `Container tiêu chuẩn ISO là công cụ vận tải cốt lõi trong chuỗi cung ứng toàn cầu. Việc nắm rõ chính xác kích thước lọt lòng, kích thước cửa mở và tải trọng tối đa giúp các chủ hàng lên kế hoạch đóng gói, xếp dỡ (stuffing/destuffing) an toàn và tối ưu chi phí cước biển.\n\nDưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng loại container thông dụng trong logistics:`,
+    content: `Container tiêu chuẩn ISO là công cụ vận tải cốt lõi trong chuỗi cung ứng toàn cầu. Việc nắm rõ chính xác kích thước lọt lòng, kích thước cửa mở và tải trọng tối đa giúp các chủ hàng lên kế hoạch đóng gói, xếp dỡ (stuffing/destuffing) an toàn và tối ưu chi phí cước biển.
+
+![Cấu trúc các loại Container tiêu chuẩn đường biển](https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80)
+
+Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng loại container thông dụng trong logistics:`,
     table: {
       headers: ["Chỉ tiêu kỹ thuật", "Cont 20' Thường (20'DC)", "Cont 40' Thường (40'DC)", "Cont 40' Cao (40'HC)"],
       rows: [
@@ -96,6 +104,13 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
   
   // Full article reader modal
   const [readingArticle, setReadingArticle] = useState<NewsItem | null>(null);
+
+  // Content image upload & insertion states
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showLinkPrompt, setShowLinkPrompt] = useState(false);
+  const [imgUrlInput, setImgUrlInput] = useState('');
+  const [imgCaptionInput, setImgCaptionInput] = useState('');
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -189,6 +204,56 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
   const cancelEdit = () => {
     setIsAdding(false);
     setIsEditing(null);
+    setShowLinkPrompt(false);
+  };
+
+  // Image Upload handler for Article Content
+  const handleUploadContentImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    setIsUploadingImage(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API_BASE_URL}/api/upload?category=GALLERY`, {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const uploadedUrl = `${API_BASE_URL}/files/GALLERY/${data.record.fileName}`;
+        const caption = file.name.replace(/\.[^/.]+$/, "");
+        const markdownImg = `\n\n![${caption}](${uploadedUrl})\n\n`;
+        setEditData(prev => ({
+          ...prev,
+          content: (prev.content || '') + markdownImg
+        }));
+      } else {
+        alert('Không thể tải ảnh lên máy chủ. Bạn có thể sử dụng tính năng Chèn link ảnh.');
+      }
+    } catch (error) {
+      console.error('Upload image failed:', error);
+      alert('Đã xảy ra lỗi khi tải ảnh lên máy chủ.');
+    } finally {
+      setIsUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Insert image via URL link
+  const handleInsertLinkImage = () => {
+    if (!imgUrlInput.trim()) return;
+    const caption = imgCaptionInput.trim() || 'Hình ảnh minh họa';
+    const markdownImg = `\n\n![${caption}](${imgUrlInput.trim()})\n\n`;
+    setEditData(prev => ({
+      ...prev,
+      content: (prev.content || '') + markdownImg
+    }));
+    setImgUrlInput('');
+    setImgCaptionInput('');
+    setShowLinkPrompt(false);
   };
 
   // Table manipulation helpers
@@ -260,7 +325,11 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
       ...editData,
       title: editData.title || "Quy cách & Kích thước chi tiết các loại Container (20ft, 40ft, 40HC)",
       description: editData.description || "Bảng tra cứu kích thước lọt lòng, thể tích chứa hàng và tải trọng chuẩn quốc tế của các loại Container phổ biến.",
-      content: editData.content || `Container tiêu chuẩn ISO là xương sống của ngành vận tải đường biển quốc tế. Việc nắm rõ chính xác kích thước lọt lòng, chiều rộng cửa mở và tải trọng tối đa giúp doanh nghiệp tính toán xếp hàng (stuffing) tối ưu và tiết kiệm chi phí vận chuyển.\n\nDưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng loại container thông dụng:`,
+      content: editData.content || `Container tiêu chuẩn ISO là xương sống của ngành vận tải đường biển quốc tế. Việc nắm rõ chính xác kích thước lọt lòng, chiều rộng cửa mở và tải trọng tối đa giúp doanh nghiệp tính toán xếp hàng (stuffing) tối ưu và tiết kiệm chi phí vận chuyển.
+
+![Cấu trúc các loại Container tiêu chuẩn đường biển](https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80)
+
+Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng loại container thông dụng:`,
       table: {
         headers: ["Chỉ tiêu kỹ thuật", "Cont 20' Thường (20'DC)", "Cont 40' Thường (40'DC)", "Cont 40' Cao (40'HC)"],
         rows: [
@@ -286,6 +355,72 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
     } else if (item.link) {
       window.open(item.link, '_blank');
     }
+  };
+
+  // Robust Markdown and Image Content Parser for Reader Modal
+  const renderArticleContent = (content?: string) => {
+    if (!content) return null;
+
+    // Pattern to identify markdown image syntax: ![alt text](image_url)
+    const regex = /!\[(.*?)\]\((.*?)\)/g;
+    const elements: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    let partIndex = 0;
+    while ((match = regex.exec(content)) !== null) {
+      // Text block before this image
+      if (match.index > lastIndex) {
+        const textSegment = content.substring(lastIndex, match.index).trim();
+        if (textSegment) {
+          elements.push(
+            <div key={`text-${partIndex++}`} className="text-gray-700 leading-relaxed text-base whitespace-pre-line my-4">
+              {textSegment}
+            </div>
+          );
+        }
+      }
+
+      // The Image block
+      const altText = match[1] || 'Hình ảnh minh họa';
+      const imageUrl = match[2];
+
+      elements.push(
+        <figure key={`img-${partIndex++}`} className="my-6 text-center">
+          <div className="rounded-2xl overflow-hidden shadow-md border border-gray-100 bg-gray-50 inline-block w-full max-h-[500px]">
+            <img 
+              src={imageUrl} 
+              alt={altText}
+              className="w-full h-auto max-h-[500px] object-contain mx-auto transition-transform hover:scale-[1.01] duration-300"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = STOCK_IMAGES[0];
+              }}
+            />
+          </div>
+          {altText && (
+            <figcaption className="text-xs sm:text-sm text-gray-500 mt-2.5 italic font-medium">
+              📷 {altText}
+            </figcaption>
+          )}
+        </figure>
+      );
+
+      lastIndex = regex.lastIndex;
+    }
+
+    // Remaining text block after last image
+    if (lastIndex < content.length) {
+      const remainingText = content.substring(lastIndex).trim();
+      if (remainingText) {
+        elements.push(
+          <div key={`text-${partIndex++}`} className="text-gray-700 leading-relaxed text-base whitespace-pre-line my-4">
+            {remainingText}
+          </div>
+        );
+      }
+    }
+
+    return <div>{elements}</div>;
   };
 
   // Combine manual news and fallback/fetched news
@@ -406,10 +541,10 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
                     />
                   </div>
 
-                  {/* Media Type Selection */}
+                  {/* Media Type Selection (Cover / 3D Header) */}
                   <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                    <label className="font-bold block mb-2 text-gray-700">Hình ảnh / Mô hình 3D xoay 360 độ</label>
-                    <div className="flex gap-4 mb-3">
+                    <label className="font-bold block mb-2 text-gray-700">Ảnh bìa / Mô hình 3D xoay 360 độ (Đầu bài viết)</label>
+                    <div className="flex flex-wrap gap-4 mb-3">
                       <label className="flex items-center cursor-pointer">
                         <input 
                           type="radio" 
@@ -418,7 +553,7 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
                           onChange={() => setEditData({...editData, mediaType: 'image'})}
                           className="mr-2 text-primary"
                         />
-                        <span>Hình ảnh tĩnh thông thường</span>
+                        <span>Hình ảnh bìa thông thường</span>
                       </label>
                       <label className="flex items-center cursor-pointer">
                         <input 
@@ -458,16 +593,103 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
                     )}
                   </div>
 
-                  {/* Full Article Content */}
-                  <div>
-                    <label className="font-bold block mb-1.5 text-gray-700">Nội dung chi tiết bài viết (Bài viết / Diễn giải kiến thức)</label>
+                  {/* Full Article Content with Image Inserter Toolbar */}
+                  <div className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5 pb-2.5 border-b border-gray-100">
+                      <div>
+                        <label className="font-bold text-gray-800 block">Nội dung chi tiết bài viết</label>
+                        <p className="text-xs text-gray-500">Soạn thảo bài viết, tài liệu kỹ thuật & chèn ảnh minh họa</p>
+                      </div>
+
+                      {/* Image Inserter Buttons */}
+                      <div className="flex items-center gap-2">
+                        {/* Hidden file input */}
+                        <input 
+                          type="file" 
+                          ref={fileInputRef} 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={handleUploadContentImage} 
+                        />
+                        
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploadingImage}
+                          className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center transition"
+                        >
+                          {isUploadingImage ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin mr-1.5" /> Đang tải ảnh...
+                            </>
+                          ) : (
+                            <>
+                              <Upload size={13} className="mr-1.5" /> Tải ảnh từ máy tính
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setShowLinkPrompt(!showLinkPrompt)}
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center transition"
+                        >
+                          <Link2 size={13} className="mr-1.5" /> Chèn link ảnh (URL)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quick Link Image Popover / Form */}
+                    {showLinkPrompt && (
+                      <div className="bg-gray-50 border border-primary/20 rounded-lg p-3 mb-3 space-y-2 animate-in fade-in">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-gray-700 flex items-center">
+                            <ImageIcon size={14} className="mr-1.5 text-primary" /> Chèn ảnh từ đường link URL
+                          </span>
+                          <button 
+                            type="button" 
+                            onClick={() => setShowLinkPrompt(false)} 
+                            className="text-gray-400 hover:text-red-500 text-xs"
+                          >
+                            Đóng
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <input 
+                            className="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:ring-1 focus:ring-primary outline-none"
+                            placeholder="Link ảnh (https://...jpg/.png)"
+                            value={imgUrlInput}
+                            onChange={e => setImgUrlInput(e.target.value)}
+                          />
+                          <input 
+                            className="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:ring-1 focus:ring-primary outline-none"
+                            placeholder="Chú thích ảnh (Ví dụ: Sơ đồ xếp cont)"
+                            value={imgCaptionInput}
+                            onChange={e => setImgCaptionInput(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={handleInsertLinkImage}
+                            className="bg-primary text-white text-xs px-3 py-1.5 rounded font-bold hover:bg-primaryDark transition"
+                          >
+                            Chèn vào bài viết
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <textarea 
-                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-primary/40 outline-none leading-relaxed" 
-                      rows={5} 
+                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-primary/40 outline-none leading-relaxed font-normal" 
+                      rows={6} 
                       value={editData.content || ''} 
                       onChange={e => setEditData({...editData, content: e.target.value})} 
-                      placeholder="Nhập nội dung bài viết chi tiết, hướng dẫn quy trình đóng hàng, lưu ý kỹ thuật..."
+                      placeholder="Nhập nội dung bài viết. Bạn có thể nhấn nút [Tải ảnh từ máy tính] ở trên hoặc gõ ![Chú thích](link_ảnh) để chèn hình ảnh vào đúng vị trí mong muốn..."
                     />
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      💡 Mẹo: Hình ảnh được chèn với cú pháp <code className="bg-gray-100 text-gray-700 px-1 py-0.5 rounded">![Chú thích ảnh](link_ảnh)</code> sẽ tự động hiển thị đẹp mắt, rõ nét trong bài đọc.
+                    </p>
                   </div>
 
                   {/* Dynamic Table Section */}
@@ -651,7 +873,7 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
                 {readingArticle.title}
               </h2>
 
-              {/* 3D Model or Image Viewer */}
+              {/* 3D Model or Image Viewer Header */}
               {readingArticle.mediaType === 'iframe' && readingArticle.iframeCode ? (
                 <div className="h-80 sm:h-96 rounded-2xl overflow-hidden mb-8 bg-gray-950 relative shadow-inner border border-gray-800">
                   <div className="w-full h-full media-iframe-container" dangerouslySetInnerHTML={{ __html: readingArticle.iframeCode }} />
@@ -676,10 +898,10 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
                 </div>
               )}
 
-              {/* Full Content */}
+              {/* Full Content (with rich parsed images inside body) */}
               {readingArticle.content && (
-                <div className="text-gray-700 leading-relaxed text-base whitespace-pre-line mb-8">
-                  {readingArticle.content}
+                <div className="my-6">
+                  {renderArticleContent(readingArticle.content)}
                 </div>
               )}
 
