@@ -23,6 +23,9 @@ import {
   Pin,
   Eye,
   ChevronRight,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
   Flame,
   ArrowLeft,
   AlertTriangle
@@ -51,6 +54,8 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [readingArticle, setReadingArticle] = useState<NewsItem | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // Custom in-app delete confirmation modal state (bypasses iframe window.confirm blocking)
   const [deleteTarget, setDeleteTarget] = useState<NewsItem | null>(null);
@@ -60,6 +65,11 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState<string | number | null>(null);
   const [editData, setEditData] = useState<Partial<NewsItem>>({});
+
+  // Reset pagination when category or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [category, searchTerm]);
 
   // Toolbar & Upload state
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -124,6 +134,23 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
     if (!a.isPinned && b.isPinned) return 1;
     return new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime();
   });
+
+  const totalPages = Math.max(1, Math.ceil(sortedMainItems.length / ITEMS_PER_PAGE));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedItems = sortedMainItems.slice(
+    (safeCurrentPage - 1) * ITEMS_PER_PAGE,
+    safeCurrentPage * ITEMS_PER_PAGE
+  );
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    const element = document.getElementById('articles-list-top');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 350, behavior: 'smooth' });
+    }
+  };
 
   // Top 5 most viewed articles in this category for the sidebar
   const topViewedItems = [...categoryItems]
@@ -745,7 +772,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
         </div>
 
         {/* 2-Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8" id="articles-list-top">
           {/* LEFT: Main Articles List (8 Cols) */}
           <div className="lg:col-span-8 space-y-6">
             {sortedMainItems.length === 0 ? (
@@ -763,123 +790,220 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
                 </button>
               </div>
             ) : (
-              sortedMainItems.map((item, idx) => (
-                <div
-                  key={item.id}
-                  onClick={(e) => handleOpenArticle(item, e)}
-                  className={`bg-white rounded-2xl overflow-hidden border transition-all duration-300 hover:shadow-xl group cursor-pointer relative flex flex-col sm:flex-row ${
-                    item.isPinned ? 'border-amber-300 ring-1 ring-amber-200 bg-amber-50/20 shadow-md' : 'border-gray-200 hover:border-blue-300'
-                  }`}
-                >
-                  {/* Pinned Marker */}
-                  {item.isPinned && (
-                    <div className="absolute top-3 left-3 z-20 bg-amber-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow flex items-center space-x-1">
-                      <Pin size={12} className="fill-white" />
-                      <span>ĐÃ GHIM</span>
-                    </div>
-                  )}
-
-                  {/* Admin controls */}
-                  {isAdmin && (
-                    <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-white/90 backdrop-blur-sm p-1 rounded-xl shadow-md border border-gray-200">
-                      <button
-                        onClick={(e) => handleTogglePin(item, e)}
-                        className={`p-1.5 rounded-lg text-xs font-bold transition flex items-center ${
-                          item.isPinned ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600 hover:bg-amber-50 hover:text-amber-600'
-                        }`}
-                        title={item.isPinned ? "Bỏ ghim bài viết" : "Ghim bài viết lên đầu"}
-                      >
-                        <Pin size={13} className={item.isPinned ? "fill-amber-700" : ""} />
-                      </button>
-                      <button
-                        onClick={(e) => startEdit(item, e)}
-                        className="p-1.5 rounded-lg text-xs bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition"
-                        title="Chỉnh sửa bài viết"
-                      >
-                        <Edit size={13} />
-                      </button>
-                      <button
-                        onClick={(e) => promptDeleteNews(item, e)}
-                        className="p-1.5 rounded-lg text-xs bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition"
-                        title="Xóa bài viết"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Card Thumbnail */}
-                  <div className="sm:w-64 h-48 sm:h-auto flex-shrink-0 relative overflow-hidden bg-gray-900">
-                    {item.mediaType === 'iframe' && item.iframeCode ? (
-                      <div className="w-full h-full relative flex items-center justify-center bg-gray-950">
-                        <img 
-                          src={item.thumbnail || STOCK_IMAGES[1]} 
-                          alt={item.title} 
-                          className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-500" 
-                        />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                          <span className="bg-primary/90 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center shadow-lg backdrop-blur-sm">
-                            <Sparkles size={13} className="mr-1.5 text-amber-300" /> Mô hình 3D xoay 360°
-                          </span>
-                        </div>
+              <>
+                {paginatedItems.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    onClick={(e) => handleOpenArticle(item, e)}
+                    className={`bg-white rounded-2xl overflow-hidden border transition-all duration-300 hover:shadow-xl group cursor-pointer relative flex flex-col sm:flex-row ${
+                      item.isPinned ? 'border-amber-300 ring-1 ring-amber-200 bg-amber-50/20 shadow-md' : 'border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    {/* Pinned Marker */}
+                    {item.isPinned && (
+                      <div className="absolute top-3 left-3 z-20 bg-amber-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow flex items-center space-x-1">
+                        <Pin size={12} className="fill-white" />
+                        <span>ĐÃ GHIM</span>
                       </div>
-                    ) : (
-                      <img
-                        src={item.thumbnail || STOCK_IMAGES[idx % STOCK_IMAGES.length]}
-                        alt={item.title}
-                        className="w-full h-full object-cover transform group-hover:scale-105 transition duration-500"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = STOCK_IMAGES[0];
-                        }}
-                      />
                     )}
-                  </div>
 
-                  {/* Card Info */}
-                  <div className="p-5 sm:p-6 flex flex-col justify-between flex-grow">
-                    <div>
-                      {/* Meta stats */}
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-2.5">
-                        <span className="flex items-center text-gray-500">
-                          <Calendar size={13} className="mr-1 text-primary" />
-                          {formatDate(item.pubDate)}
-                        </span>
-                        <span className="flex items-center font-medium bg-gray-100 px-2 py-0.5 rounded text-gray-600">
-                          <Eye size={12} className="mr-1 text-blue-500" />
-                          {(item.views || 0).toLocaleString()} lượt xem
-                        </span>
-                        {item.table && (
-                          <span className="bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded text-[11px] flex items-center">
-                            <TableIcon size={11} className="mr-1 text-blue-600" /> Có bảng thông số
+                    {/* Admin controls */}
+                    {isAdmin && (
+                      <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 bg-white/90 backdrop-blur-sm p-1 rounded-xl shadow-md border border-gray-200">
+                        <button
+                          onClick={(e) => handleTogglePin(item, e)}
+                          className={`p-1.5 rounded-lg text-xs font-bold transition flex items-center ${
+                            item.isPinned ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600 hover:bg-amber-50 hover:text-amber-600'
+                          }`}
+                          title={item.isPinned ? "Bỏ ghim bài viết" : "Ghim bài viết lên đầu"}
+                        >
+                          <Pin size={13} className={item.isPinned ? "fill-amber-700" : ""} />
+                        </button>
+                        <button
+                          onClick={(e) => startEdit(item, e)}
+                          className="p-1.5 rounded-lg text-xs bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition"
+                          title="Chỉnh sửa bài viết"
+                        >
+                          <Edit size={13} />
+                        </button>
+                        <button
+                          onClick={(e) => promptDeleteNews(item, e)}
+                          className="p-1.5 rounded-lg text-xs bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition"
+                          title="Xóa bài viết"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Card Thumbnail */}
+                    <div className="sm:w-64 h-48 sm:h-auto flex-shrink-0 relative overflow-hidden bg-gray-900">
+                      {item.mediaType === 'iframe' && item.iframeCode ? (
+                        <div className="w-full h-full relative flex items-center justify-center bg-gray-950">
+                          <img 
+                            src={item.thumbnail || STOCK_IMAGES[1]} 
+                            alt={item.title} 
+                            className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-500" 
+                          />
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <span className="bg-primary/90 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center shadow-lg backdrop-blur-sm">
+                              <Sparkles size={13} className="mr-1.5 text-amber-300" /> Mô hình 3D xoay 360°
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={item.thumbnail || STOCK_IMAGES[idx % STOCK_IMAGES.length]}
+                          alt={item.title}
+                          className="w-full h-full object-cover transform group-hover:scale-105 transition duration-500"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = STOCK_IMAGES[0];
+                          }}
+                        />
+                      )}
+                    </div>
+
+                    {/* Card Info */}
+                    <div className="p-5 sm:p-6 flex flex-col justify-between flex-grow">
+                      <div>
+                        {/* Meta stats */}
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-2.5">
+                          <span className="flex items-center text-gray-500">
+                            <Calendar size={13} className="mr-1 text-primary" />
+                            {formatDate(item.pubDate)}
                           </span>
-                        )}
+                          <span className="flex items-center font-medium bg-gray-100 px-2 py-0.5 rounded text-gray-600">
+                            <Eye size={12} className="mr-1 text-blue-500" />
+                            {(item.views || 0).toLocaleString()} lượt xem
+                          </span>
+                          {item.table && (
+                            <span className="bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded text-[11px] flex items-center">
+                              <TableIcon size={11} className="mr-1 text-blue-600" /> Có bảng thông số
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Title */}
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors leading-snug line-clamp-2">
+                          {item.title}
+                        </h3>
+
+                        {/* Description */}
+                        <p className="text-gray-600 text-xs sm:text-sm line-clamp-2 leading-relaxed mb-4">
+                          {item.description}
+                        </p>
                       </div>
 
-                      {/* Title */}
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors leading-snug line-clamp-2">
-                        {item.title}
-                      </h3>
+                      {/* Footer link */}
+                      <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                        <span className="text-xs font-bold text-primary flex items-center group-hover:underline">
+                          <span>Đọc toàn bộ bài viết</span>
+                          <ArrowRight size={14} className="ml-1 transform group-hover:translate-x-1 transition" />
+                        </span>
 
-                      {/* Description */}
-                      <p className="text-gray-600 text-xs sm:text-sm line-clamp-2 leading-relaxed mb-4">
-                        {item.description}
-                      </p>
-                    </div>
-
-                    {/* Footer link */}
-                    <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
-                      <span className="text-xs font-bold text-primary flex items-center group-hover:underline">
-                        <span>Đọc toàn bộ bài viết</span>
-                        <ArrowRight size={14} className="ml-1 transform group-hover:translate-x-1 transition" />
-                      </span>
-
-                      <span className="text-[11px] text-gray-400 font-medium">
-                        {category === 'news' ? 'Tin chuyên ngành' : 'Cẩm nang nghiệp vụ'}
-                      </span>
+                        <span className="text-[11px] text-gray-400 font-medium">
+                          {category === 'news' ? 'Tin chuyên ngành' : 'Cẩm nang nghiệp vụ'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+
+                {/* Pagination Bar */}
+                {totalPages > 1 && (
+                  <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+                    <div className="text-xs sm:text-sm text-gray-500 font-medium">
+                      Đang hiển thị <span className="font-bold text-gray-900">{(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(safeCurrentPage * ITEMS_PER_PAGE, sortedMainItems.length)}</span> trong số <span className="font-bold text-gray-900">{sortedMainItems.length}</span> bài viết
+                    </div>
+
+                    <div className="flex items-center space-x-1.5 flex-wrap justify-center">
+                      {/* First Page */}
+                      <button
+                        onClick={() => handlePageChange(1)}
+                        disabled={safeCurrentPage === 1}
+                        className={`p-2 rounded-xl border text-xs font-bold transition flex items-center justify-center ${
+                          safeCurrentPage === 1 
+                            ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50' 
+                            : 'border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 bg-white shadow-xs'
+                        }`}
+                        title="Trang đầu"
+                      >
+                        <ChevronsLeft size={16} />
+                      </button>
+
+                      {/* Prev Page */}
+                      <button
+                        onClick={() => handlePageChange(safeCurrentPage - 1)}
+                        disabled={safeCurrentPage === 1}
+                        className={`px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center space-x-1 ${
+                          safeCurrentPage === 1 
+                            ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50' 
+                            : 'border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 bg-white shadow-xs'
+                        }`}
+                      >
+                        <ChevronLeft size={16} />
+                        <span className="hidden sm:inline">Trước</span>
+                      </button>
+
+                      {/* Numbered Buttons */}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page => {
+                          return page === 1 || page === totalPages || Math.abs(page - safeCurrentPage) <= 1;
+                        })
+                        .map((page, idx, arr) => {
+                          const prevPage = arr[idx - 1];
+                          const showEllipsis = prevPage && page - prevPage > 1;
+
+                          return (
+                            <React.Fragment key={page}>
+                              {showEllipsis && (
+                                <span className="px-1 text-gray-400 text-xs font-bold select-none">...</span>
+                              )}
+                              <button
+                                onClick={() => handlePageChange(page)}
+                                className={`w-9 h-9 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center ${
+                                  safeCurrentPage === page
+                                    ? 'bg-primary text-white shadow-md shadow-primary/30 border border-primary'
+                                    : 'border border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 bg-white shadow-xs'
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            </React.Fragment>
+                          );
+                        })}
+
+                      {/* Next Page */}
+                      <button
+                        onClick={() => handlePageChange(safeCurrentPage + 1)}
+                        disabled={safeCurrentPage === totalPages}
+                        className={`px-3 py-2 rounded-xl border text-xs font-bold transition flex items-center space-x-1 ${
+                          safeCurrentPage === totalPages 
+                            ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50' 
+                            : 'border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 bg-white shadow-xs'
+                        }`}
+                      >
+                        <span className="hidden sm:inline">Sau</span>
+                        <ChevronRight size={16} />
+                      </button>
+
+                      {/* Last Page */}
+                      <button
+                        onClick={() => handlePageChange(totalPages)}
+                        disabled={safeCurrentPage === totalPages}
+                        className={`p-2 rounded-xl border text-xs font-bold transition flex items-center justify-center ${
+                          safeCurrentPage === totalPages 
+                            ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50' 
+                            : 'border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 bg-white shadow-xs'
+                        }`}
+                        title="Trang cuối"
+                      >
+                        <ChevronsRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

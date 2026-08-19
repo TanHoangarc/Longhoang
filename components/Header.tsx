@@ -123,43 +123,33 @@ const Header: React.FC<HeaderProps> = ({ activePage, onOpenPage }) => {
 
                         {/* Dropdown Menu */}
                         {newsDropdownOpen && (
-                          <div className="absolute left-0 top-full mt-1 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                          <div className="absolute left-0 top-full mt-1 w-60 bg-white rounded-2xl shadow-xl border border-gray-100 p-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                             <button
                               onClick={(e) => handleNavClick(e, 'news-page')}
-                              className={`w-full text-left px-3.5 py-3 rounded-xl transition flex items-start space-x-3 group/item ${
+                              className={`w-full text-left px-3 py-2.5 rounded-xl transition flex items-center space-x-3 group/item ${
                                 activePage === 'news-page' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'
                               }`}
                             >
-                              <div className="w-8 h-8 rounded-lg bg-blue-100/70 text-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover/item:bg-blue-600 group-hover/item:text-white transition">
-                                <Newspaper size={16} />
+                              <div className="w-7 h-7 rounded-lg bg-blue-100/70 text-blue-600 flex items-center justify-center flex-shrink-0 group-hover/item:bg-blue-600 group-hover/item:text-white transition">
+                                <Newspaper size={15} />
                               </div>
-                              <div>
-                                <div className="font-bold text-xs uppercase tracking-wider text-gray-900 group-hover/item:text-blue-600">
-                                  Tin tức chuyên ngành
-                                </div>
-                                <div className="text-[11px] text-gray-400 font-normal mt-0.5 leading-snug">
-                                  Thị trường logistics & cảng biển
-                                </div>
-                              </div>
+                              <span className="font-bold text-xs uppercase tracking-wider text-gray-900 group-hover/item:text-blue-600">
+                                Tin tức chuyên ngành
+                              </span>
                             </button>
 
                             <button
                               onClick={(e) => handleNavClick(e, 'knowledge-page')}
-                              className={`w-full text-left px-3.5 py-3 rounded-xl transition flex items-start space-x-3 group/item mt-1 ${
+                              className={`w-full text-left px-3 py-2.5 rounded-xl transition flex items-center space-x-3 group/item mt-1 ${
                                 activePage === 'knowledge-page' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'
                               }`}
                             >
-                              <div className="w-8 h-8 rounded-lg bg-amber-100/70 text-amber-700 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover/item:bg-amber-600 group-hover/item:text-white transition">
-                                <BookOpen size={16} />
+                              <div className="w-7 h-7 rounded-lg bg-amber-100/70 text-amber-700 flex items-center justify-center flex-shrink-0 group-hover/item:bg-amber-600 group-hover/item:text-white transition">
+                                <BookOpen size={15} />
                               </div>
-                              <div>
-                                <div className="font-bold text-xs uppercase tracking-wider text-gray-900 group-hover/item:text-blue-600">
-                                  Kiến thức chuyên ngành
-                                </div>
-                                <div className="text-[11px] text-gray-400 font-normal mt-0.5 leading-snug">
-                                  Quy cách container, 3D & thông số
-                                </div>
-                              </div>
+                              <span className="font-bold text-xs uppercase tracking-wider text-gray-900 group-hover/item:text-blue-600">
+                                Kiến thức chuyên ngành
+                              </span>
                             </button>
                           </div>
                         )}

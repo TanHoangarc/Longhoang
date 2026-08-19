@@ -57,6 +57,10 @@ const Services = () => {
                 <img 
                   src={service.image} 
                   alt={service.title} 
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+                  }}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-800 via-transparent to-transparent opacity-80"></div>
@@ -104,6 +108,10 @@ const Services = () => {
               <img 
                 src={selectedService.image} 
                 alt={selectedService.title} 
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+                }}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-8 md:hidden">

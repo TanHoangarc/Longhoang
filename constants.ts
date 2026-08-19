@@ -72,7 +72,7 @@ export const SERVICES = [
     id: '07',
     title: 'Chuyển phát nhanh',
     description: 'Gửi chứng từ, hàng mẫu hay bưu phẩm đi quốc tế chưa bao giờ dễ dàng hơn. Dịch vụ Express cam kết thời gian phát hàng và theo dõi lộ trình 24/7.',
-    image: 'https://images.unsplash.com/photo-1566576912906-253200c681bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+    image: 'https://images.unsplash.com/photo-1526367790999-0150786686a2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
   },
   {
     id: '08',
