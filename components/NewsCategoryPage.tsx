@@ -69,6 +69,9 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
   const [showLinkPrompt, setShowLinkPrompt] = useState(false);
   const [imgUrlInput, setImgUrlInput] = useState('');
   const [imgCaptionInput, setImgCaptionInput] = useState('');
+  const [showRefLinkPrompt, setShowRefLinkPrompt] = useState(false);
+  const [refLinkText, setRefLinkText] = useState('');
+  const [refLinkUrl, setRefLinkUrl] = useState('');
 
   // Lock body scroll when modal open
   useEffect(() => {
@@ -176,7 +179,9 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
       isPinned: false,
       views: 0,
       mediaType: 'image',
-      iframeCode: ''
+      iframeCode: '',
+      sourceName: '',
+      sourceUrl: ''
     });
   };
 
@@ -219,6 +224,33 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
     setIsAdding(false);
     setIsEditing(null);
     setShowLinkPrompt(false);
+    setShowRefLinkPrompt(false);
+  };
+
+  const openRefLinkPrompt = () => {
+    const textarea = contentTextareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selected = (editData.content || '').substring(start, end);
+      if (selected.trim()) {
+        setRefLinkText(selected);
+      } else if (!refLinkText) {
+        setRefLinkText('');
+      }
+    }
+    setShowRefLinkPrompt(prev => !prev);
+    setShowLinkPrompt(false);
+  };
+
+  const handleInsertRefLink = () => {
+    if (!refLinkUrl.trim()) return;
+    const displayText = refLinkText.trim() || refLinkUrl.trim();
+    const linkMarkdown = `[${displayText}](${refLinkUrl.trim()})`;
+    insertFormatAtCursor(linkMarkdown, '', '');
+    setRefLinkText('');
+    setRefLinkUrl('');
+    setShowRefLinkPrompt(false);
   };
 
   // Content helper: insert formatting at cursor
@@ -399,13 +431,45 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
     });
   };
 
-  // Render inline formatting (**bold**)
+  // Render inline formatting (**bold**, *italic*, [link](url))
   const renderInlineFormattedText = (line: string) => {
-    const parts = line.split(/(\*\*.*?\*\*)/g);
+    // Match Markdown link [text](url), bold **text**, or italic *text*
+    const tokenRegex = /(\[.*?\]\(.*?\)|\*\*.*?\*\*|\*.*?\*)/g;
+    const parts = line.split(tokenRegex);
+
     return parts.map((part, pIdx) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
+      if (!part) return null;
+
+      // Link: [Text](URL)
+      const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
+      if (linkMatch) {
+        const linkText = linkMatch[1];
+        const linkUrl = linkMatch[2];
+        return (
+          <a
+            key={pIdx}
+            href={linkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:text-primaryDark hover:underline font-semibold inline-flex items-center gap-0.5 mx-0.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span>{linkText}</span>
+            <ExternalLink size={12} className="inline opacity-80" />
+          </a>
+        );
+      }
+
+      // Bold: **Text**
+      if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
         return <strong key={pIdx} className="font-bold text-gray-900">{part.slice(2, -2)}</strong>;
       }
+
+      // Italic: *Text*
+      if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
+        return <em key={pIdx} className="italic text-gray-800">{part.slice(1, -1)}</em>;
+      }
+
       return part;
     });
   };
@@ -1006,6 +1070,30 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
               }
             </div>
 
+            {/* Reference Source Box */}
+            {(readingArticle.sourceName || readingArticle.sourceUrl || (readingArticle.link && readingArticle.link !== '#')) && (
+              <div className="mt-8 p-4 bg-gradient-to-r from-blue-50/90 to-indigo-50/70 rounded-2xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm shadow-sm">
+                <div className="flex items-start sm:items-center space-x-2 text-gray-700">
+                  <ExternalLink size={18} className="text-primary flex-shrink-0 mt-0.5 sm:mt-0" />
+                  <div>
+                    <span className="font-bold text-gray-900 mr-1.5">Nguồn tham khảo:</span>
+                    <span className="text-gray-800 font-medium">{readingArticle.sourceName || readingArticle.sourceUrl || readingArticle.link}</span>
+                  </div>
+                </div>
+                {((readingArticle.sourceUrl && readingArticle.sourceUrl.startsWith('http')) || (readingArticle.link && readingArticle.link.startsWith('http'))) && (
+                  <a
+                    href={readingArticle.sourceUrl || readingArticle.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center space-x-1.5 bg-white hover:bg-primary hover:text-white text-primary border border-primary/30 px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm self-start sm:self-auto"
+                  >
+                    <span>Xem liên kết gốc</span>
+                    <ExternalLink size={13} />
+                  </a>
+                )}
+              </div>
+            )}
+
             {/* Modal Bottom Actions */}
             <div className="mt-12 pt-6 border-t border-gray-100 flex justify-between items-center">
               <div className="text-xs text-gray-400 font-medium">
@@ -1147,12 +1235,42 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
                 )}
               </div>
 
+              {/* Source & Reference Fields */}
+              <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
+                <div className="flex items-center space-x-2 text-primary font-bold text-sm">
+                  <ExternalLink size={16} />
+                  <span>Nguồn tham khảo / Liên kết gốc</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Tên nguồn tham khảo / Đơn vị ban hành</label>
+                    <input 
+                      type="text" 
+                      className="w-full bg-white border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/40 outline-none" 
+                      value={editData.sourceName || ''} 
+                      onChange={e => setEditData({...editData, sourceName: e.target.value})} 
+                      placeholder="VD: Tổng cục Hải quan, Hiệp hội VLA, Tạp chí Hàng hải..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Đường dẫn nguồn gốc (URL / Link bài viết gốc)</label>
+                    <input 
+                      type="text" 
+                      className="w-full bg-white border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/40 outline-none" 
+                      value={editData.sourceUrl || editData.link || ''} 
+                      onChange={e => setEditData({...editData, sourceUrl: e.target.value, link: e.target.value})} 
+                      placeholder="https://vla.com.vn/tin-tuc... hoặc https://..."
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Full Content Toolbar */}
               <div className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-gray-100">
                   <div>
                     <label className="font-bold text-gray-800 block">Nội dung chi tiết bài viết</label>
-                    <p className="text-xs text-gray-500">Soạn thảo, định dạng tiêu đề, in đậm và chèn ảnh minh họa</p>
+                    <p className="text-xs text-gray-500">Soạn thảo, định dạng tiêu đề, in đậm, danh sách và link nguồn tham khảo</p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -1161,6 +1279,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => insertFormatAtCursor('**', '**', 'Chữ in đậm')}
                       className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                      title="Tô đậm văn bản được chọn"
                     >
                       <Bold size={13} className="mr-1" /> Tô đậm
                     </button>
@@ -1168,8 +1287,9 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
                     <button
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => insertFormatAtCursor('\n## ', '\n', 'Tiêu đề mục')}
+                      onClick={() => insertFormatAtCursor('## ', '', 'Tiêu đề mục')}
                       className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                      title="Tạo tiêu đề mục (không chèn dòng trống thừa)"
                     >
                       <Heading2 size={13} className="mr-1 text-primary" /> Tiêu đề mục
                     </button>
@@ -1177,10 +1297,23 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
                     <button
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => insertFormatAtCursor('\n- ', '\n', 'Nội dung danh sách')}
+                      onClick={() => insertFormatAtCursor('- ', '', 'Nội dung danh sách')}
                       className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                      title="Tạo gạch đầu dòng (không chèn dòng trống thừa)"
                     >
                       <List size={13} className="mr-1" /> Gạch đầu dòng
+                    </button>
+
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={openRefLinkPrompt}
+                      className={`px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border shadow-sm ${
+                        showRefLinkPrompt ? 'bg-primary text-white border-primary' : 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-200'
+                      }`}
+                      title="Chèn link nguồn tham khảo vào nội dung"
+                    >
+                      <ExternalLink size={13} className="mr-1" /> Link / Nguồn
                     </button>
 
                     <button
@@ -1216,13 +1349,57 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
                     <button
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => setShowLinkPrompt(!showLinkPrompt)}
+                      onClick={() => {
+                        setShowLinkPrompt(!showLinkPrompt);
+                        setShowRefLinkPrompt(false);
+                      }}
                       className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center transition border border-gray-200 shadow-sm"
                     >
                       <Link2 size={13} className="mr-1" /> Link ảnh
                     </button>
                   </div>
                 </div>
+
+                {/* Reference Link Prompt Box */}
+                {showRefLinkPrompt && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3 space-y-2">
+                    <div className="text-xs font-bold text-blue-900 flex items-center">
+                      <ExternalLink size={13} className="mr-1 text-primary" />
+                      <span>Chèn liên kết / link nguồn tham khảo vào bài viết</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input 
+                        className="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:ring-1 focus:ring-primary outline-none"
+                        placeholder="Tên nguồn / văn bản hiển thị (VD: Hiệp hội VLA)"
+                        value={refLinkText}
+                        onChange={e => setRefLinkText(e.target.value)}
+                      />
+                      <input 
+                        className="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:ring-1 focus:ring-primary outline-none"
+                        placeholder="Đường dẫn liên kết (VD: https://vla.com.vn)"
+                        value={refLinkUrl}
+                        onChange={e => setRefLinkUrl(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowRefLinkPrompt(false)}
+                        className="bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded font-semibold hover:bg-gray-300 transition"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleInsertRefLink}
+                        disabled={!refLinkUrl.trim()}
+                        className="bg-primary text-white text-xs px-3 py-1.5 rounded font-bold hover:bg-primaryDark disabled:opacity-50 transition"
+                      >
+                        Chèn vào nội dung
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {showLinkPrompt && (
                   <div className="bg-gray-50 border border-primary/20 rounded-lg p-3 mb-3 space-y-2">

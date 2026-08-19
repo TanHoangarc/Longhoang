@@ -8,6 +8,8 @@ export interface NewsItem {
   title: string;
   pubDate: string;
   link?: string;
+  sourceName?: string;
+  sourceUrl?: string;
   thumbnail?: string;
   description: string;
   category?: 'news' | 'knowledge';
@@ -34,7 +36,9 @@ export const DEFAULT_NEWS_ITEMS: NewsItem[] = [
     id: 'news-item-1',
     title: "Thị trường Logistics Việt Nam dự báo tăng trưởng mạnh mẽ trong quý 4",
     pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(),
-    link: "#",
+    link: "https://vla.com.vn",
+    sourceName: "Hiệp hội Doanh nghiệp Dịch vụ Logistics Việt Nam (VLA)",
+    sourceUrl: "https://vla.com.vn",
     thumbnail: STOCK_IMAGES[0],
     description: "Các chuyên gia nhận định ngành logistics sẽ có những bước tiến vượt bậc nhờ vào sự phát triển của thương mại điện tử và đầu tư hạ tầng cảng biển trọng điểm.",
     category: "news",
@@ -45,13 +49,17 @@ Ngành Logistics Việt Nam đang bước vào giai đoạn tăng tốc với h�
 
 - **Tăng trưởng kim ngạch:** Xuất khẩu sang thị trường Bắc Mỹ và EU duy trì đà phục hồi tích cực.
 - **Hiện đại hóa cảng biển:** Áp dụng hệ thống Smart Port và làm thủ tục hải quan điện tử 24/7.
-- **Tối ưu cước tàu:** Doanh nghiệp chủ động ký hợp đồng dịch vụ dài hạn nhằm ổn định chi phí.`
+- **Tối ưu cước tàu:** Doanh nghiệp chủ động ký hợp đồng dịch vụ dài hạn nhằm ổn định chi phí.
+
+Tham khảo thêm thông tin quy hoạch tại [Cục Hàng hải Việt Nam](https://vinamarine.gov.vn) để nắm bắt tiến độ nâng cấp hạ tầng các luồng hàng hải quốc gia.`
   },
   {
     id: 'news-item-2',
     title: "Xu hướng số hóa và tự động hóa trong quản lý kho bãi hiện đại (Smart Warehousing)",
     pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-    link: "#",
+    link: "https://logistics.gov.vn",
+    sourceName: "Cổng Thông tin Logistics Việt Nam (Bộ Công Thương)",
+    sourceUrl: "https://logistics.gov.vn",
     thumbnail: STOCK_IMAGES[2],
     description: "Công nghệ WMS và robot AGV đang thay đổi hoàn toàn phương thức vận hành kho hàng, giúp giảm thiểu sai sót và tăng tốc độ xử lý đơn hàng lên 40%.",
     category: "news",
@@ -68,7 +76,9 @@ Kho bãi thông minh là chìa khóa giúp doanh nghiệp nâng cao năng lực 
     id: 'news-item-3',
     title: "Cập nhật biến động giá cước vận tải biển tuyến Châu Á - Bắc Mỹ & Châu Âu",
     pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
-    link: "#",
+    link: "https://www.freightos.com",
+    sourceName: "Chỉ số Cước Vận tải Quốc tế Freightos (FBX)",
+    sourceUrl: "https://www.freightos.com",
     thumbnail: STOCK_IMAGES[4],
     description: "Phân tích cung cầu tải trọng tàu container trên các tuyến hàng hải huyết mạch, khuyến nghị doanh nghiệp xuất nhập khẩu lên kế hoạch booking sớm.",
     category: "news",
@@ -84,7 +94,9 @@ Trong bối cảnh hải trình vòng qua Mũi Hảo Vọng tiếp tục kéo d�
     id: 'news-item-4',
     title: "Quy định mới về chứng từ hải quan điện tử và kiểm dịch hàng hóa xuất nhập khẩu",
     pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 8).toISOString(),
-    link: "#",
+    link: "https://tongcuc.customs.gov.vn",
+    sourceName: "Tổng cục Hải quan Việt Nam",
+    sourceUrl: "https://tongcuc.customs.gov.vn",
     thumbnail: STOCK_IMAGES[3],
     description: "Tổng cục Hải quan hướng dẫn triển khai kiểm tra chuyên ngành tập trung qua Cổng thông tin một cửa quốc gia NSW, giảm thời gian thông quan.",
     category: "news",
@@ -93,7 +105,7 @@ Trong bối cảnh hải trình vòng qua Mũi Hảo Vọng tiếp tục kéo d�
     content: `## Hướng dẫn thủ tục thông quan mới
 Tối ưu hóa thủ tục xuất nhập khẩu qua hệ thống dịch vụ công trực tuyến.
 
-- Doanh nghiệp cập nhật chữ ký số và tài khoản trên Cổng một cửa quốc gia.
+- Doanh nghiệp cập nhật chữ ký số và tài khoản trên Cổng một cửa quốc gia [Cổng Thông tin Một cửa Quốc gia](https://vnsw.gov.vn).
 - Chuẩn bị đầy đủ C/O điện tử để hưởng thuế suất ưu đãi theo các hiệp định FTA.`
   },
 
@@ -102,7 +114,9 @@ Tối ưu hóa thủ tục xuất nhập khẩu qua hệ thống dịch vụ cô
     id: 'knowledge-item-1',
     title: "Quy cách & Kích thước chuẩn các loại Container (20ft, 40ft, 40HC)",
     pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    link: "",
+    link: "https://www.iso.org",
+    sourceName: "Tiêu chuẩn Quốc tế ISO 668:2020 (Freight Containers)",
+    sourceUrl: "https://www.iso.org",
     thumbnail: STOCK_IMAGES[1],
     description: "Bảng tra cứu kích thước lọt lòng, thể tích chứa hàng và tải trọng chuẩn quốc tế của các loại Container phổ biến nhất trong vận tải đường biển.",
     category: "knowledge",
@@ -144,7 +158,9 @@ Dưới đây là bảng thông số chuẩn xác cho từng loại container th
     id: 'knowledge-item-2',
     title: "Bảng so sánh chi tiết các điều kiện Incoterms 2020 (EXW, FOB, CIF, DDP)",
     pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
-    link: "",
+    link: "https://iccwbo.org",
+    sourceName: "Phòng Thương mại Quốc tế (ICC - International Chamber of Commerce)",
+    sourceUrl: "https://iccwbo.org/resources-for-business/incoterms-rules/incoterms-2020/",
     thumbnail: STOCK_IMAGES[3],
     description: "Phân định rõ ràng trách nhiệm chi phí, rủi ro chuyển giao và nghĩa vụ bảo hiểm giữa người bán và người mua theo bộ quy tắc Incoterms 2020 của ICC.",
     category: "knowledge",
@@ -172,7 +188,9 @@ Incoterms (International Commercial Terms) xác định chính xác thời đi�
     id: 'knowledge-item-3',
     title: "Quy trình 6 bước thông quan hàng nhập khẩu nguyên container (FCL)",
     pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
-    link: "",
+    link: "https://customs.gov.vn",
+    sourceName: "Cục Hải quan TP. Hồ Chí Minh & Hải Phòng",
+    sourceUrl: "https://haiquan.hochiminhcity.gov.vn",
     thumbnail: STOCK_IMAGES[0],
     description: "Hướng dẫn thực chiến từ nhận Thông báo hàng đến (Arrival Notice), lấy D/O, truyền tờ khai VNACCS đến thanh lý hải quan và kéo cont về kho.",
     category: "knowledge",
