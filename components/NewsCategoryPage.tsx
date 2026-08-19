@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  Loader2, 
   ExternalLink, 
   Calendar, 
   Plus, 
@@ -26,182 +25,10 @@ import {
   ChevronRight,
   Flame,
   ArrowLeft,
-  Filter,
-  CheckCircle2,
-  Tag
+  AlertTriangle
 } from 'lucide-react';
 import { API_BASE_URL } from '../constants';
-import { TableData, NewsItem } from './News';
-
-const STOCK_IMAGES = [
-  "https://images.unsplash.com/photo-1566576912906-253200c681bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1494412574643-35d324688b08?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1553413077-190dd305871c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1578575437130-527eed3abbec?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-];
-
-const EXTENDED_FALLBACK_NEWS: NewsItem[] = [
-  {
-    id: 'fb-news-1',
-    title: "Thị trường Logistics Việt Nam dự báo tăng trưởng mạnh mẽ trong quý 4",
-    pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(),
-    link: "#",
-    thumbnail: STOCK_IMAGES[0],
-    description: "Các chuyên gia nhận định ngành logistics sẽ có những bước tiến vượt bậc nhờ vào sự phát triển của thương mại điện tử và đầu tư hạ tầng cảng biển trọng điểm.",
-    category: "news",
-    isManual: false,
-    isPinned: true,
-    views: 1840,
-    content: `## Xu hướng phát triển mạnh mẽ của chuỗi cung ứng
-Ngành Logistics Việt Nam đang bước vào giai đoạn tăng tốc với hàng loạt dự án cao tốc, cụm cảng nước sâu Cái Mép - Thị Vải và cảng Lạch Huyện được nâng cấp công suất tiếp nhận tàu mẹ quốc tế.
-
-- **Tăng trưởng kim ngạch:** Xuất khẩu sang thị trường Bắc Mỹ và EU duy trì đà phục hồi tích cực.
-- **Hiện đại hóa cảng biển:** Áp dụng hệ thống Smart Port và làm thủ tục hải quan điện tử 24/7.
-- **Tối ưu cước tàu:** Doanh nghiệp chủ động ký hợp đồng dịch vụ dài hạn nhằm ổn định chi phí.`
-  },
-  {
-    id: 'fb-news-2',
-    title: "Xu hướng số hóa và tự động hóa trong quản lý kho bãi hiện đại (Smart Warehousing)",
-    pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-    link: "#",
-    thumbnail: STOCK_IMAGES[2],
-    description: "Công nghệ WMS và robot AGV đang thay đổi hoàn toàn phương thức vận hành kho hàng, giúp giảm thiểu sai sót và tăng tốc độ xử lý đơn hàng lên 40%.",
-    category: "news",
-    isManual: false,
-    views: 1250,
-    content: `## Ứng dụng công nghệ vào quản trị kho hàng
-Kho bãi thông minh là chìa khóa giúp doanh nghiệp nâng cao năng lực cạnh tranh và giảm chi phí lưu kho.
-
-1. **Hệ thống WMS:** Giám sát vị trí pallet theo thời gian thực và quản lý hạn sử dụng FIFO/LIFO.
-2. **Robot AGV:** Tự động lấy hàng và vận chuyển pallet trong nhà kho.
-3. **Mã vạch QR/RFID:** Quét hàng tốc độ cao, loại bỏ lỗi ghi chép thủ công.`
-  },
-  {
-    id: 'fb-news-3',
-    title: "Cập nhật biến động giá cước vận tải biển tuyến Châu Á - Bắc Mỹ & Châu Âu",
-    pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
-    link: "#",
-    thumbnail: STOCK_IMAGES[4],
-    description: "Phân tích cung cầu tải trọng tàu container trên các tuyến hàng hải huyết mạch, khuyến nghị doanh nghiệp xuất nhập khẩu lên kế hoạch booking sớm.",
-    category: "news",
-    isManual: false,
-    views: 2130,
-    content: `## Tình hình cung cầu tải trọng tàu biển
-Trong bối cảnh hải trình vòng qua Mũi Hảo Vọng tiếp tục kéo dài thời gian xoay vòng vỏ container, giá cước spot có xu hướng dao động nhẹ theo tuần.
-
-- Doanh nghiệp nên gửi **Shipping Instruction (SI)** và chốt chỗ trước 2-3 tuần.
-- Ưu tiên chọn các hãng tàu có lịch trình ổn định và độ tin cậy đúng giờ cao.`
-  },
-  {
-    id: 'fb-news-4',
-    title: "Quy định mới về chứng từ hải quan điện tử và kiểm dịch hàng hóa xuất nhập khẩu",
-    pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 8).toISOString(),
-    link: "#",
-    thumbnail: STOCK_IMAGES[3],
-    description: "Tổng cục Hải quan triển khai cơ chế một cửa quốc gia nâng cao, tinh giản thủ tục kiểm tra chuyên ngành và rút ngắn thời gian thông quan.",
-    category: "news",
-    isManual: false,
-    views: 890,
-    content: `## Hướng dẫn cập nhật hồ sơ hải quan điện tử
-- Khai báo tờ khai VNACCS/VCIS chính xác từng dòng thuế suất và xuất xứ C/O.
-- Tải chứng từ scan có chữ ký số trực tiếp lên hệ thống.`
-  },
-  {
-    id: 'fb-knowledge-1',
-    title: "Quy cách & Kích thước chuẩn các loại Container (20ft, 40ft, 40HC)",
-    pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    link: "",
-    thumbnail: STOCK_IMAGES[1],
-    description: "Bảng tra cứu kích thước lọt lòng, thể tích chứa hàng và tải trọng chuẩn quốc tế của các loại Container phổ biến nhất trong vận tải đường biển.",
-    category: "knowledge",
-    isManual: false,
-    isPinned: true,
-    views: 3450,
-    mediaType: "iframe",
-    iframeCode: '<iframe title="Shipping Container 3D" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/2f53ec9741ea4db382a939f4fe6d4b29/embed"></iframe>',
-    content: `## 1. Khái niệm về Container tiêu chuẩn quốc tế
-Container tiêu chuẩn ISO là công cụ vận chuyển hàng hóa cốt lõi trong chuỗi cung ứng toàn cầu. Việc nắm rõ chính xác **kích thước lọt lòng**, **chiều rộng cửa mở** và **tải trọng tối đa** giúp các chủ hàng lên kế hoạch đóng gói, xếp dỡ (stuffing/destuffing) an toàn và tối ưu chi phí cước biển.
-
-![Cấu trúc các loại Container tiêu chuẩn đường biển](https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80)
-
-## 2. Các điểm cần lưu ý khi chọn Container
-- **Cont 20ft DC:** Thích hợp cho hàng nặng, thể tích nhỏ như gạo, phân bón, xi măng, khoáng sản.
-- **Cont 40ft DC:** Thích hợp cho hàng hóa thể tích lớn nhưng trọng lượng vừa phải như dệt may, nội thất, hạt nhựa.
-- **Cont 40ft HC (High Cube):** Chiều cao vượt trội (2.698m), tối ưu chứa được nhiều kiện hàng cồng kềnh.
-
-## 3. Bảng thông số kỹ thuật chi tiết
-Dưới đây là bảng thông số chuẩn xác cho từng loại container thông dụng trong logistics:
-
-[BANG_THONG_SO]
-
-## 4. Lời khuyên đóng hàng an toàn
-- Kiểm tra seal và tình trạng kín nước của vỏ container trước khi bốc hàng.
-- Phân bổ đều trọng lượng hàng hóa trên mặt sàn cont để đảm bảo an toàn khi cẩu và vận chuyển biển.`,
-    table: {
-      headers: ["Chỉ tiêu kỹ thuật", "Cont 20' Thường (20'DC)", "Cont 40' Thường (40'DC)", "Cont 40' Cao (40'HC)"],
-      rows: [
-        ["Kích thước lọt lòng (D x R x C)", "5.898 x 2.352 x 2.393 m", "12.032 x 2.352 x 2.393 m", "12.032 x 2.352 x 2.698 m"],
-        ["Kích thước cửa (Rộng x Cao)", "2.340 x 2.280 m", "2.340 x 2.280 m", "2.340 x 2.585 m"],
-        ["Thể tích chứa hàng (CBM)", "33.2 m³", "67.7 m³", "76.3 m³"],
-        ["Trọng lượng vỏ cont (Tare)", "2,230 kg", "3,700 kg", "3,970 kg"],
-        ["Tải trọng hàng tối đa (Payload)", "28,250 kg", "26,780 kg", "26,510 kg"],
-        ["Trọng lượng toàn bộ (Max Gross)", "30,480 kg", "30,480 kg", "30,480 kg"]
-      ]
-    }
-  },
-  {
-    id: 'fb-knowledge-2',
-    title: "Hướng dẫn phân biệt Incoterms 2020: FOB, CIF, DDP, EXW chuẩn xác nhất",
-    pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
-    link: "",
-    thumbnail: STOCK_IMAGES[3],
-    description: "Cẩm nang chi tiết về ranh giới chuyển giao rủi ro, phân chia chi phí cước biển, bảo hiểm và trách nhiệm làm thủ tục hải quan giữa người mua và người bán.",
-    category: "knowledge",
-    isManual: false,
-    views: 2980,
-    content: `## 1. Tổng quan về Incoterms 2020
-Incoterms (International Commercial Terms) là bộ quy tắc thương mại quốc tế quy định quyền và nghĩa vụ giữa bên bán và bên mua trong hợp đồng mua bán hàng hóa quốc tế.
-
-## 2. So sánh các điều kiện phổ biến
-- **EXW (Ex Works - Giao tại xưởng):** Người bán chỉ cần chuẩn bị hàng tại kho, người mua chịu toàn bộ chi phí và rủi ro từ xưởng đến điểm đích.
-- **FOB (Free On Board - Giao lên tàu):** Người bán hoàn thành nghĩa vụ khi hàng đã qua lan can tàu tại cảng bốc hàng.
-- **CIF (Cost, Insurance and Freight):** Người bán trả cước tàu và mua bảo hiểm đường biển tối thiểu cho lô hàng.
-- **DDP (Delivered Duty Paid):** Người bán chịu mọi rủi ro và đóng thuế nhập khẩu tận nơi cho người mua.
-
-[BANG_THONG_SO]
-
-## 3. Lưu ý khi đàm phán hợp đồng
-Luôn ghi rõ phiên bản Incoterms áp dụng, ví dụ: **FOB Cat Lai Port, Incoterms 2020**.`,
-    table: {
-      headers: ["Điều kiện", "Chuyển giao rủi ro", "Chi phí cước biển", "Bảo hiểm hàng hải", "Thủ tục thông quan NK"],
-      rows: [
-        ["EXW", "Tại kho người bán", "Người mua chịu", "Người mua chịu", "Người mua chịu"],
-        ["FOB", "Khi hàng lên tàu tại cảng đi", "Người mua chịu", "Người mua tùy chọn", "Người mua chịu"],
-        ["CIF", "Khi hàng lên tàu tại cảng đi", "Người bán trả", "Người bán mua (Loại C)", "Người mua chịu"],
-        ["DDP", "Tại kho người mua", "Người bán trả", "Người bán mua", "Người bán làm & đóng thuế"]
-      ]
-    }
-  },
-  {
-    id: 'fb-knowledge-3',
-    title: "Quy trình 6 bước thông quan hàng nhập khẩu nguyên container (FCL)",
-    pubDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
-    link: "",
-    thumbnail: STOCK_IMAGES[0],
-    description: "Hướng dẫn thực chiến từ nhận Thông báo hàng đến (Arrival Notice), lấy D/O, truyền tờ khai VNACCS đến thanh lý hải quan và kéo cont về kho.",
-    category: "knowledge",
-    isManual: false,
-    views: 1620,
-    content: `## Quy trình thông quan FCL từng bước
-1. **Bước 1: Nhận Arrival Notice:** Kiểm tra ngày tàu cập và hãng tàu chỉ định.
-2. **Bước 2: Lấy lệnh giao hàng (D/O):** Nộp cước local charges và tiền cược vỏ container.
-3. **Bước 3: Lên tờ khai hải quan:** Nhập dữ liệu phần mềm ECUS5-VNACCS.
-4. **Bước 4: Phân luồng tờ khai (Xanh / Vàng / Đỏ):** Nộp thuế và kiểm tra chứng từ/kiểm hóa.
-5. **Bước 5: In mã vạch & thanh lý giám sát:** Trình hải quan cổng cảng.
-6. **Bước 6: Kéo vỏ cont về kho dỡ hàng và trả vỏ:** Kiểm tra tình trạng vỏ cont tránh phát sinh phí sửa chữa.`
-  }
-];
+import { TableData, NewsItem, STOCK_IMAGES, DEFAULT_NEWS_ITEMS } from '../src/data/defaultArticles';
 
 interface NewsCategoryPageProps {
   category: 'news' | 'knowledge';
@@ -223,9 +50,10 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
   onOpenPage
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [items, setItems] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(false);
   const [readingArticle, setReadingArticle] = useState<NewsItem | null>(null);
+
+  // Custom in-app delete confirmation modal state (bypasses iframe window.confirm blocking)
+  const [deleteTarget, setDeleteTarget] = useState<NewsItem | null>(null);
 
   // Admin state
   const isAdmin = userRole === 'admin';
@@ -242,39 +70,28 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
   const [imgUrlInput, setImgUrlInput] = useState('');
   const [imgCaptionInput, setImgCaptionInput] = useState('');
 
-  // Merge items from manualNews and fallbacks
-  useEffect(() => {
-    // Collect all articles for this category
-    const categoryFallbacks = EXTENDED_FALLBACK_NEWS.filter(item => item.category === category);
-    const categoryManual = manualNews.filter(item => (item.category || 'news') === category);
-
-    // Merge by id (manual overrides fallbacks if matching)
-    const mergedMap = new Map<string | number, NewsItem>();
-    
-    // Add fallbacks first
-    categoryFallbacks.forEach(item => {
-      mergedMap.set(item.id, item);
-    });
-
-    // Add / override with manual items
-    categoryManual.forEach(item => {
-      mergedMap.set(item.id, item);
-    });
-
-    setItems(Array.from(mergedMap.values()));
-  }, [category, manualNews]);
-
   // Lock body scroll when modal open
   useEffect(() => {
-    const isAnyModalOpen = Boolean(readingArticle || isAdding || isEditing !== null);
+    const isAnyModalOpen = Boolean(readingArticle || isAdding || isEditing !== null || deleteTarget !== null);
     if (isAnyModalOpen) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          if (readingArticle) setReadingArticle(null);
+          if (isAdding || isEditing !== null) cancelEdit();
+          if (deleteTarget) setDeleteTarget(null);
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
       return () => {
         document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [readingArticle, isAdding, isEditing]);
+  }, [readingArticle, isAdding, isEditing, deleteTarget]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -282,27 +99,47 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
     return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
+  // Master list of all articles in the system
+  const currentSourceList: NewsItem[] = manualNews && manualNews.length > 0 ? manualNews : DEFAULT_NEWS_ITEMS;
+
+  // Filter for this specific category
+  const categoryItems = currentSourceList.filter(n => (n.category || 'news') === category);
+
+  // Search filter
+  const filteredItems = categoryItems.filter(item => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      item.title.toLowerCase().includes(searchLower) ||
+      item.description.toLowerCase().includes(searchLower) ||
+      (item.content && item.content.toLowerCase().includes(searchLower))
+    );
+  });
+
+  // Sort: pinned first, then latest pubDate
+  const sortedMainItems = [...filteredItems].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    return new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime();
+  });
+
+  // Top 5 most viewed articles in this category for the sidebar
+  const topViewedItems = [...categoryItems]
+    .sort((a, b) => (b.views || 0) - (a.views || 0))
+    .slice(0, 5);
+
   // Increment view counter and open article
   const handleOpenArticle = (item: NewsItem, e?: React.MouseEvent) => {
     if (e) e.preventDefault();
 
-    // Increment views locally
     const currentViews = item.views || 0;
     const updatedItem = { ...item, views: currentViews + 1 };
 
-    // Update in list
-    setItems(prev => prev.map(n => n.id === item.id ? updatedItem : n));
-
-    // If it's a manual item, update manualNews so it persists
     if (onUpdateNews) {
-      const existsInManual = manualNews.some(n => n.id === item.id);
-      if (existsInManual) {
-        const updated = manualNews.map(n => n.id === item.id ? updatedItem : n);
-        onUpdateNews(updated);
-      } else {
-        // save view count state
-        onUpdateNews([...manualNews, { ...updatedItem, isManual: true }]);
-      }
+      const targetIdStr = String(item.id);
+      const updated = currentSourceList.map(n => 
+        String(n.id) === targetIdStr ? updatedItem : n
+      );
+      onUpdateNews(updated);
     }
 
     if (item.content || item.table || item.category === 'knowledge' || !item.link || item.link === '#' || item.link.trim() === '') {
@@ -315,23 +152,13 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
   // Toggle Pin for Admin
   const handleTogglePin = (item: NewsItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAdmin) return;
+    if (!isAdmin || !onUpdateNews) return;
 
-    const newPinStatus = !item.isPinned;
-    const updatedItem = { ...item, isPinned: newPinStatus, isManual: true };
-
-    setItems(prev => prev.map(n => n.id === item.id ? updatedItem : n));
-
-    if (onUpdateNews) {
-      const existsInManual = manualNews.some(n => n.id === item.id);
-      let updated: NewsItem[];
-      if (existsInManual) {
-        updated = manualNews.map(n => n.id === item.id ? updatedItem : n);
-      } else {
-        updated = [...manualNews, updatedItem];
-      }
-      onUpdateNews(updated);
-    }
+    const targetIdStr = String(item.id);
+    const updated = currentSourceList.map(n => 
+      String(n.id) === targetIdStr ? { ...n, isPinned: !n.isPinned } : n
+    );
+    onUpdateNews(updated);
   };
 
   // Admin Actions
@@ -345,7 +172,6 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
       thumbnail: STOCK_IMAGES[0],
       description: '',
       content: '',
-      isManual: true,
       category: category,
       isPinned: false,
       views: 0,
@@ -360,30 +186,31 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
     setEditData({ ...item });
   };
 
-  const deleteNews = (id: string | number, e: React.MouseEvent) => {
+  const promptDeleteNews = (item: NewsItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm("Bạn có chắc muốn xóa bài viết này?")) return;
+    setDeleteTarget(item);
+  };
 
-    setItems(prev => prev.filter(n => n.id !== id));
-    if (onUpdateNews) {
-      onUpdateNews(manualNews.filter(n => n.id !== id));
-    }
+  const confirmDeleteNews = () => {
+    if (!deleteTarget || !onUpdateNews) return;
+    const targetIdStr = String(deleteTarget.id);
+    const updated = currentSourceList.filter(n => String(n.id) !== targetIdStr);
+    onUpdateNews(updated);
+    setDeleteTarget(null);
   };
 
   const saveNews = () => {
     if (!onUpdateNews) return;
-    let updatedManual = [...manualNews];
+    let updatedFull = [...currentSourceList];
     const itemToSave = { ...editData } as NewsItem;
 
     if (isAdding) {
-      updatedManual = [itemToSave, ...updatedManual];
-      setItems(prev => [itemToSave, ...prev]);
+      updatedFull = [itemToSave, ...updatedFull];
     } else {
-      updatedManual = updatedManual.map(n => n.id === isEditing ? itemToSave : n);
-      setItems(prev => prev.map(n => n.id === isEditing ? itemToSave : n));
+      updatedFull = updatedFull.map(n => String(n.id) === String(isEditing) ? itemToSave : n);
     }
 
-    onUpdateNews(updatedManual);
+    onUpdateNews(updatedFull);
     setIsAdding(false);
     setIsEditing(null);
   };
@@ -394,7 +221,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
     setShowLinkPrompt(false);
   };
 
-  // Format Helper for Editor
+  // Content helper: insert formatting at cursor
   const insertFormatAtCursor = (prefix: string, suffix: string = '', defaultPlaceholder: string = '') => {
     const textarea = contentTextareaRef.current;
     const currentVal = editData.content || '';
@@ -408,32 +235,33 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
     }
 
     const savedTextareaScrollTop = textarea.scrollTop;
-    const savedModalScrollTop = modalRef.current?.scrollTop;
-
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const selectedText = currentVal.substring(start, end) || defaultPlaceholder;
-    const replacement = prefix + selectedText + suffix;
+    const selectedText = currentVal.substring(start, end);
+    const textToInsert = selectedText ? selectedText : defaultPlaceholder;
 
-    const newVal = currentVal.substring(0, start) + replacement + currentVal.substring(end);
-    setEditData(prev => ({ ...prev, content: newVal }));
+    const newContent = 
+      currentVal.substring(0, start) + 
+      prefix + 
+      textToInsert + 
+      suffix + 
+      currentVal.substring(end);
 
-    const newSelStart = start + prefix.length;
-    const newSelEnd = newSelStart + selectedText.length;
+    setEditData(prev => ({
+      ...prev,
+      content: newContent
+    }));
 
-    requestAnimationFrame(() => {
-      if (contentTextareaRef.current) {
-        contentTextareaRef.current.focus({ preventScroll: true });
-        contentTextareaRef.current.setSelectionRange(newSelStart, newSelEnd);
-        contentTextareaRef.current.scrollTop = savedTextareaScrollTop;
-      }
-      if (modalRef.current && savedModalScrollTop !== undefined) {
-        modalRef.current.scrollTop = savedModalScrollTop;
-      }
-    });
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorStart = start + prefix.length;
+      const newCursorEnd = newCursorStart + textToInsert.length;
+      textarea.setSelectionRange(newCursorStart, newCursorEnd);
+      textarea.scrollTop = savedTextareaScrollTop;
+    }, 0);
   };
 
-  // Upload image
+  // Upload image handler
   const handleUploadContentImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -450,32 +278,40 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
       if (res.ok) {
         const data = await res.json();
         const uploadedUrl = `${API_BASE_URL}/files/GALLERY/${data.record.fileName}`;
-        const caption = file.name.replace(/\.[^/.]+$/, "");
-        const markdownImg = `\n\n![${caption}](${uploadedUrl})\n\n`;
-        setEditData(prev => ({
-          ...prev,
-          content: (prev.content || '') + markdownImg
-        }));
+        const defaultCaption = file.name.replace(/\.[^/.]+$/, "");
+        const imageMarkdown = `\n\n![${defaultCaption}](${uploadedUrl})\n\n`;
+        insertFormatAtCursor(imageMarkdown, '', '');
       } else {
-        alert('Không thể tải ảnh lên máy chủ. Bạn có thể dùng tính năng Link ảnh.');
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Url = reader.result as string;
+          const defaultCaption = file.name.replace(/\.[^/.]+$/, "");
+          const imageMarkdown = `\n\n![${defaultCaption}](${base64Url})\n\n`;
+          insertFormatAtCursor(imageMarkdown, '', '');
+        };
+        reader.readAsDataURL(file);
       }
-    } catch (error) {
-      console.error('Upload failed:', error);
-      alert('Lỗi tải ảnh.');
+    } catch (err) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Url = reader.result as string;
+        const defaultCaption = file.name.replace(/\.[^/.]+$/, "");
+        const imageMarkdown = `\n\n![${defaultCaption}](${base64Url})\n\n`;
+        insertFormatAtCursor(imageMarkdown, '', '');
+      };
+      reader.readAsDataURL(file);
     } finally {
       setIsUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
+  // Insert image via URL
   const handleInsertLinkImage = () => {
     if (!imgUrlInput.trim()) return;
     const caption = imgCaptionInput.trim() || 'Hình ảnh minh họa';
-    const markdownImg = `\n\n![${caption}](${imgUrlInput.trim()})\n\n`;
-    setEditData(prev => ({
-      ...prev,
-      content: (prev.content || '') + markdownImg
-    }));
+    const imageMarkdown = `\n\n![${caption}](${imgUrlInput.trim()})\n\n`;
+    insertFormatAtCursor(imageMarkdown, '', '');
     setImgUrlInput('');
     setImgCaptionInput('');
     setShowLinkPrompt(false);
@@ -489,10 +325,10 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
       setEditData({
         ...editData,
         table: {
-          headers: ['Thông số / Chỉ tiêu', 'Giá trị / Chi tiết'],
+          headers: ["Chỉ tiêu", "Loại 1", "Loại 2"],
           rows: [
-            ['Kích thước', ''],
-            ['Tải trọng', '']
+            ["Thông số A", "100", "200"],
+            ["Thông số B", "300", "400"]
           ]
         }
       });
@@ -500,78 +336,82 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
   };
 
   const addColumn = () => {
-    const curTable = editData.table || { headers: ['Cột 1'], rows: [['']] };
-    const newHeaders = [...curTable.headers, `Cột ${curTable.headers.length + 1}`];
-    const newRows = curTable.rows.map(row => [...row, '']);
-    setEditData({ ...editData, table: { headers: newHeaders, rows: newRows } });
+    if (!editData.table) return;
+    const newHeaders = [...editData.table.headers, `Cột ${editData.table.headers.length + 1}`];
+    const newRows = editData.table.rows.map(row => [...row, '-']);
+    setEditData({
+      ...editData,
+      table: { headers: newHeaders, rows: newRows }
+    });
   };
 
-  const removeColumn = (colIndex: number) => {
-    const curTable = editData.table;
-    if (!curTable || curTable.headers.length <= 1) return;
-    const newHeaders = curTable.headers.filter((_, idx) => idx !== colIndex);
-    const newRows = curTable.rows.map(row => row.filter((_, idx) => idx !== colIndex));
-    setEditData({ ...editData, table: { headers: newHeaders, rows: newRows } });
+  const removeColumn = (colIdx: number) => {
+    if (!editData.table || editData.table.headers.length <= 1) return;
+    const newHeaders = editData.table.headers.filter((_, i) => i !== colIdx);
+    const newRows = editData.table.rows.map(row => row.filter((_, i) => i !== colIdx));
+    setEditData({
+      ...editData,
+      table: { headers: newHeaders, rows: newRows }
+    });
   };
 
   const addRow = () => {
-    const curTable = editData.table || { headers: ['Cột 1'], rows: [['']] };
-    const newRow = Array(curTable.headers.length).fill('');
-    setEditData({ ...editData, table: { ...curTable, rows: [...curTable.rows, newRow] } });
-  };
-
-  const removeRow = (rowIndex: number) => {
-    const curTable = editData.table;
-    if (!curTable || curTable.rows.length <= 1) return;
-    const newRows = curTable.rows.filter((_, idx) => idx !== rowIndex);
-    setEditData({ ...editData, table: { ...curTable, rows: newRows } });
-  };
-
-  const updateHeader = (colIndex: number, val: string) => {
-    const curTable = editData.table || { headers: [], rows: [] };
-    const newHeaders = [...curTable.headers];
-    newHeaders[colIndex] = val;
-    setEditData({ ...editData, table: { ...curTable, headers: newHeaders } });
-  };
-
-  const updateCell = (rowIndex: number, colIndex: number, val: string) => {
-    const curTable = editData.table || { headers: [], rows: [] };
-    const newRows = curTable.rows.map((row, rIdx) => {
-      if (rIdx !== rowIndex) return row;
-      const updatedRow = [...row];
-      updatedRow[colIndex] = val;
-      return updatedRow;
+    if (!editData.table) return;
+    const newRow = new Array(editData.table.headers.length).fill('-');
+    setEditData({
+      ...editData,
+      table: { ...editData.table, rows: [...editData.table.rows, newRow] }
     });
-    setEditData({ ...editData, table: { ...curTable, rows: newRows } });
   };
 
-  // Inline formatting helper
-  const renderInlineFormattedText = (text: string) => {
-    const parts: React.ReactNode[] = [];
-    const boldRegex = /\*\*(.*?)\*\*/g;
-    let lastIdx = 0;
-    let match: RegExpExecArray | null;
-    let k = 0;
-    while ((match = boldRegex.exec(text)) !== null) {
-      if (match.index > lastIdx) {
-        parts.push(text.substring(lastIdx, match.index));
+  const removeRow = (rowIdx: number) => {
+    if (!editData.table || editData.table.rows.length <= 1) return;
+    const newRows = editData.table.rows.filter((_, i) => i !== rowIdx);
+    setEditData({
+      ...editData,
+      table: { ...editData.table, rows: newRows }
+    });
+  };
+
+  const updateHeader = (colIdx: number, val: string) => {
+    if (!editData.table) return;
+    const newHeaders = [...editData.table.headers];
+    newHeaders[colIdx] = val;
+    setEditData({
+      ...editData,
+      table: { ...editData.table, headers: newHeaders }
+    });
+  };
+
+  const updateCell = (rowIdx: number, colIdx: number, val: string) => {
+    if (!editData.table) return;
+    const newRows = editData.table.rows.map((row, ri) => {
+      if (ri === rowIdx) {
+        const newRow = [...row];
+        newRow[colIdx] = val;
+        return newRow;
       }
-      parts.push(
-        <strong key={`b-${k++}`} className="font-bold text-gray-900">
-          {match[1]}
-        </strong>
-      );
-      lastIdx = boldRegex.lastIndex;
-    }
-    if (lastIdx < text.length) {
-      parts.push(text.substring(lastIdx));
-    }
-    return parts;
+      return row;
+    });
+    setEditData({
+      ...editData,
+      table: { ...editData.table, rows: newRows }
+    });
   };
 
-  // Specs table renderer
-  const renderSpecsTable = (tableData?: TableData, keyPrefix = 'specs-table') => {
-    if (!tableData || !tableData.headers || tableData.headers.length === 0) return null;
+  // Render inline formatting (**bold**)
+  const renderInlineFormattedText = (line: string) => {
+    const parts = line.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, pIdx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={pIdx} className="font-bold text-gray-900">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
+  // Render Technical Specifications Table
+  const renderSpecsTable = (tableData: TableData, keyPrefix: string = 'specs-table') => {
     return (
       <div key={keyPrefix} className="my-8">
         <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
@@ -606,6 +446,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
     );
   };
 
+  // Helper to parse rich markdown blocks
   const renderTextBlock = (text: string, blockKey: string | number, tableData?: TableData) => {
     const lines = text.split('\n');
     return (
@@ -616,6 +457,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
             return <div key={lIdx} className="h-1.5" />;
           }
 
+          // Inline Specifications Table Command
           const TABLE_SHORTCODE_REGEX = /^\s*(\[(BANG_THONG_SO|BANG|TABLE|SPECS_TABLE|BANG_THONG_SO_CHI_TIET)\]|\{\{(BANG_THONG_SO|BANG|TABLE|SPECS_TABLE)\}\})\s*$/i;
           if (TABLE_SHORTCODE_REGEX.test(trimmed)) {
             if (tableData && tableData.headers && tableData.headers.length > 0) {
@@ -624,6 +466,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
             return null;
           }
 
+          // Heading 1
           if (trimmed.startsWith('# ')) {
             return (
               <h3 key={lIdx} className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-6 mb-3 pt-3 border-b border-gray-200 pb-2.5">
@@ -632,6 +475,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
             );
           }
 
+          // Heading 2
           if (trimmed.startsWith('## ')) {
             return (
               <h4 key={lIdx} className="text-xl sm:text-2xl font-bold text-gray-900 mt-6 mb-3 flex items-center">
@@ -641,6 +485,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
             );
           }
 
+          // Heading 3
           if (trimmed.startsWith('### ')) {
             return (
               <h5 key={lIdx} className="text-lg sm:text-xl font-bold text-primary mt-5 mb-2 flex items-center">
@@ -649,6 +494,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
             );
           }
 
+          // Bullet List
           if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
             return (
               <div key={lIdx} className="flex items-start ml-2 sm:ml-4 text-gray-700">
@@ -658,6 +504,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
             );
           }
 
+          // Numbered List
           const numMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
           if (numMatch) {
             return (
@@ -668,6 +515,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
             );
           }
 
+          // Standard Paragraph
           return (
             <p key={lIdx} className="text-gray-700 leading-relaxed text-base">
               {renderInlineFormattedText(trimmed)}
@@ -678,14 +526,16 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
     );
   };
 
+  // Robust Markdown and Image Content Parser for Reader Modal
   const renderArticleContent = (content?: string, tableData?: TableData) => {
     if (!content) return null;
+
     const regex = /!\[(.*?)\]\((.*?)\)/g;
     const elements: React.ReactNode[] = [];
     let lastIndex = 0;
     let match: RegExpExecArray | null;
-    let partIndex = 0;
 
+    let partIndex = 0;
     while ((match = regex.exec(content)) !== null) {
       if (match.index > lastIndex) {
         const textSegment = content.substring(lastIndex, match.index);
@@ -730,75 +580,66 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
     return <div>{elements}</div>;
   };
 
-  // Filter items by search keyword
-  const filteredItems = items.filter(item => {
-    if (!searchTerm.trim()) return true;
-    const q = searchTerm.toLowerCase();
-    const matchTitle = (item.title || '').toLowerCase().includes(q);
-    const matchDesc = (item.description || '').toLowerCase().includes(q);
-    const matchContent = (item.content || '').toLowerCase().includes(q);
-    return matchTitle || matchDesc || matchContent;
-  });
-
-  // Sort main list: Pinned items first, then by date / order
-  const sortedMainItems = [...filteredItems].sort((a, b) => {
-    if (a.isPinned && !b.isPinned) return -1;
-    if (!a.isPinned && b.isPinned) return 1;
-    return new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime();
-  });
-
-  // Most viewed list (Right Sidebar): Sorted by views descending (highest to lowest)
-  const topViewedItems = [...items].sort((a, b) => (b.views || 0) - (a.views || 0));
-
   const pageTitle = category === 'news' ? 'Tin tức chuyên ngành' : 'Kiến thức chuyên ngành';
-  const pageSubtitle = category === 'news'
-    ? 'Cập nhật tin tức thị trường Logistics, xuất nhập khẩu, giá cước và biến động cảng biển trong nước & quốc tế.'
-    : 'Cẩm nang tra cứu quy cách container, bảng thông số kỹ thuật, thủ tục hải quan và kiến thức vận tải biển thực chiến.';
+  const pageSubtitle = category === 'news' 
+    ? 'Cập nhật tình hình thị trường Logistics, xuất nhập khẩu, giá cước và biến động chuỗi cung ứng.' 
+    : 'Cẩm nang nghiệp vụ xuất nhập khẩu, quy cách container, tra cứu Incoterms và quy trình hải quan chuẩn.';
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-20 pt-6">
-      {/* Main Content Area */}
-      <div className="container mx-auto px-4">
-        {/* Compact Breadcrumb & Navigation Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div className="flex items-center space-x-2 text-sm text-gray-500 font-medium">
+    <div className="min-h-screen bg-[#f8fafc] pt-24 pb-20">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-r from-blue-900 via-primaryDark to-blue-950 text-white py-12 px-4 shadow-inner">
+        <div className="container mx-auto max-w-7xl">
+          {/* Breadcrumb */}
+          <div className="flex items-center space-x-2 text-xs sm:text-sm text-blue-200 mb-4">
             <button 
               onClick={onBack}
-              className="hover:text-primary transition flex items-center gap-1.5 font-semibold text-gray-700 hover:underline"
+              className="hover:text-white transition flex items-center"
             >
-              <ArrowLeft size={16} />
-              <span>Trang chủ</span>
+              <ArrowLeft size={14} className="mr-1" /> Trang chủ
             </button>
-            <span className="text-gray-300">/</span>
-            <span className="text-primary font-bold">{pageTitle}</span>
+            <ChevronRight size={14} />
+            <span className="text-white font-semibold">{pageTitle}</span>
           </div>
 
-          {/* Clean Category Switcher Tabs */}
-          <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-gray-200 shadow-sm">
-            <button
-              onClick={() => onChangeCategory('news')}
-              className={`px-4 py-1.5 rounded-lg font-bold text-xs sm:text-sm transition flex items-center gap-1.5 ${
-                category === 'news'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <span>Tin tức chuyên ngành</span>
-            </button>
-            <button
-              onClick={() => onChangeCategory('knowledge')}
-              className={`px-4 py-1.5 rounded-lg font-bold text-xs sm:text-sm transition flex items-center gap-1.5 ${
-                category === 'knowledge'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <BookOpen size={14} />
-              <span>Kiến thức chuyên ngành</span>
-            </button>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-2">
+                {pageTitle}
+              </h1>
+              <p className="text-blue-100 text-sm sm:text-base max-w-3xl leading-relaxed">
+                {pageSubtitle}
+              </p>
+            </div>
+
+            {/* Switch Category Pill Buttons */}
+            <div className="bg-white/10 backdrop-blur-md p-1.5 rounded-2xl flex border border-white/20 self-start md:self-auto">
+              <button
+                onClick={() => onChangeCategory('news')}
+                className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  category === 'news'
+                    ? 'bg-white text-primaryDark shadow-lg'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                Tin tức chuyên ngành
+              </button>
+              <button
+                onClick={() => onChangeCategory('knowledge')}
+                className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+                  category === 'knowledge'
+                    ? 'bg-white text-primaryDark shadow-lg'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                Kiến thức chuyên ngành
+              </button>
+            </div>
           </div>
         </div>
+      </div>
 
+      <div className="container mx-auto max-w-7xl px-4 mt-8">
         {/* Search Bar & Action Header */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Search Input */}
@@ -894,7 +735,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
                         <Edit size={13} />
                       </button>
                       <button
-                        onClick={(e) => deleteNews(item.id, e)}
+                        onClick={(e) => promptDeleteNews(item, e)}
                         className="p-1.5 rounded-lg text-xs bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition"
                         title="Xóa bài viết"
                       >
@@ -1068,7 +909,46 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
         </div>
       </div>
 
-      {/* Reader Modal (Streamlined, no top cover or repeated description) */}
+      {/* Custom In-App Delete Confirmation Modal */}
+      {deleteTarget && createPortal(
+        <div 
+          className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setDeleteTarget(null)}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 text-center"
+          >
+            <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle size={28} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Xác nhận xóa bài viết?</h3>
+            <p className="text-gray-600 text-sm mb-6 line-clamp-3">
+              Bạn có chắc chắn muốn xóa bài viết: <span className="font-semibold text-gray-900">"{deleteTarget.title}"</span>? Thao tác này không thể hoàn tác.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100 transition text-sm"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteNews}
+                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition shadow-md shadow-red-600/30 text-sm flex items-center"
+              >
+                <Trash2 size={16} className="mr-1.5" />
+                Xác nhận xóa
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Reader Modal */}
       {readingArticle && createPortal(
         <div 
           className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 md:p-8 overflow-y-auto animate-in fade-in duration-200"
@@ -1100,81 +980,40 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
                 <Calendar size={14} className="mr-1" />
                 {formatDate(readingArticle.pubDate)}
               </span>
-              <span className="text-gray-500 text-xs flex items-center bg-gray-100 px-2.5 py-1 rounded-full font-medium">
-                <Eye size={13} className="mr-1 text-blue-500" />
-                {(readingArticle.views || 0).toLocaleString()} lượt đọc
+              <span className="text-gray-400 text-xs flex items-center">
+                <Eye size={14} className="mr-1" />
+                {(readingArticle.views || 0).toLocaleString()} lượt xem
               </span>
+              {readingArticle.isPinned && (
+                <span className="bg-amber-500 text-white text-xs font-extrabold px-2.5 py-0.5 rounded-full flex items-center">
+                  <Pin size={12} className="mr-1 fill-white" /> Đã ghim
+                </span>
+              )}
             </div>
 
             {/* Title */}
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 leading-tight">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-8">
               {readingArticle.title}
             </h2>
 
-            {/* 3D Interactive Model Header (Only when configured as 3D iframe embed) */}
-            {readingArticle.mediaType === 'iframe' && readingArticle.iframeCode && (
-              <div className="h-80 sm:h-96 md:h-[440px] rounded-2xl overflow-hidden mb-8 bg-gray-950 relative shadow-inner border border-gray-800">
-                <div className="w-full h-full media-iframe-container" dangerouslySetInnerHTML={{ __html: readingArticle.iframeCode }} />
-                <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-[11px] text-white flex items-center pointer-events-none">
-                  <Sparkles size={13} className="mr-1.5 text-amber-400" /> Mô hình 3D tương tác (Dùng chuột để xoay 360° & phóng to)
-                </div>
+            {/* Content & Inline Images */}
+            <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed font-normal">
+              {renderArticleContent(readingArticle.content, readingArticle.table)}
+
+              {(!readingArticle.content || !readingArticle.content.includes('[BANG_THONG_SO]')) && 
+                readingArticle.table && 
+                renderSpecsTable(readingArticle.table, 'reader-table-fallback')
+              }
+            </div>
+
+            {/* Modal Bottom Actions */}
+            <div className="mt-12 pt-6 border-t border-gray-100 flex justify-between items-center">
+              <div className="text-xs text-gray-400 font-medium">
+                Long Hoang Logistics Knowledge Base
               </div>
-            )}
-
-            {/* Full Content with rich parsed headers, bold, lists, images, and inline tables */}
-            {readingArticle.content ? (
-              <div className="my-6">
-                {renderArticleContent(readingArticle.content, readingArticle.table)}
-              </div>
-            ) : (
-              readingArticle.description && (
-                <div className="bg-gray-50 border-l-4 border-primary p-4 sm:p-5 rounded-r-xl text-gray-700 font-medium text-base my-6 leading-relaxed">
-                  {readingArticle.description}
-                </div>
-              )
-            )}
-
-            {/* Specifications Dynamic Table (Fallback at bottom only if not already inserted inline in content) */}
-            {(!readingArticle.content || !/\[(BANG_THONG_SO|BANG|TABLE|SPECS_TABLE|BANG_THONG_SO_CHI_TIET)\]|\{\{(BANG_THONG_SO|BANG|TABLE|SPECS_TABLE)\}\}/i.test(readingArticle.content)) && (
-              renderSpecsTable(readingArticle.table, 'bottom-specs-table')
-            )}
-
-            {/* External link button if available */}
-            {readingArticle.link && readingArticle.link !== '#' && readingArticle.link.trim() !== '' && (
-              <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between">
-                <span className="text-sm text-gray-500">Nguồn bài viết gốc:</span>
-                <a 
-                  href={readingArticle.link} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="inline-flex items-center text-primary font-bold hover:underline text-sm"
-                >
-                  Xem bài viết trên trang gốc <ExternalLink size={15} className="ml-1.5" />
-                </a>
-              </div>
-            )}
-
-            {/* Action Footer */}
-            <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-3 justify-end">
               <button
-                onClick={() => {
-                  setReadingArticle(null);
-                  onBack();
-                  setTimeout(() => {
-                    const contactSection = document.querySelector('#contact');
-                    if (contactSection) {
-                      contactSection.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }, 100);
-                }}
-                className="bg-primary hover:bg-primaryDark text-white px-6 py-3 rounded-xl font-bold text-sm transition flex items-center justify-center space-x-2 shadow-md shadow-primary/20"
-              >
-                <span>Liên hệ tư vấn dịch vụ</span>
-                <ArrowRight size={16} />
-              </button>
-              <button 
-                onClick={() => setReadingArticle(null)} 
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-bold text-sm transition"
+                onClick={() => setReadingArticle(null)}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-6 py-2.5 rounded-xl font-bold text-sm transition"
               >
                 Đóng
               </button>
@@ -1184,19 +1023,22 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
         document.body
       )}
 
-      {/* Admin Modal Form for Add/Edit Article */}
+      {/* Admin Add/Edit Modal */}
       {(isAdding || isEditing !== null) && createPortal(
         <div 
-          className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+          className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200"
           onClick={cancelEdit}
         >
           <div 
             ref={modalRef}
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto border border-gray-200 my-auto cursor-default"
+            className="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 shadow-2xl border border-gray-100 relative my-auto cursor-default"
           >
-            <button onClick={cancelEdit} className="absolute top-5 right-5 text-gray-400 hover:text-red-500 p-1.5 rounded-full hover:bg-gray-100 transition">
-              <X size={22}/>
+            <button 
+              onClick={cancelEdit} 
+              className="absolute top-5 right-5 text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition"
+            >
+              <X size={20} />
             </button>
             
             <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
@@ -1368,7 +1210,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
                       disabled={isUploadingImage}
                       className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition shadow-sm"
                     >
-                      {isUploadingImage ? <Loader2 size={13} className="animate-spin mr-1" /> : <Upload size={13} className="mr-1" />} Tải ảnh
+                      <Upload size={13} className="mr-1" /> Tải ảnh
                     </button>
 
                     <button
@@ -1412,38 +1254,19 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
 
                 <textarea 
                   ref={contentTextareaRef}
-                  className="w-full border border-gray-300 p-3.5 rounded-lg focus:ring-2 focus:ring-primary/40 outline-none leading-relaxed font-normal" 
-                  rows={8} 
+                  className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-primary/40 outline-none leading-relaxed" 
+                  rows={10} 
                   value={editData.content || ''} 
                   onChange={e => setEditData({...editData, content: e.target.value})} 
-                  placeholder="Nhập nội dung bài viết..."
+                  placeholder="Nội dung bài viết..."
                 />
               </div>
 
-              {/* Dynamic Table Section */}
-              <div className="border border-gray-200 rounded-xl p-4 sm:p-5 bg-white shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                  <div>
-                    <h4 className="font-bold text-gray-900 flex items-center text-base">
-                      <TableIcon size={18} className="mr-2 text-primary" />
-                      Bảng thông số / Dữ liệu kỹ thuật
-                    </h4>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Chèn mã <code className="bg-amber-50 text-amber-800 font-bold px-1 rounded border border-amber-200">[BANG_THONG_SO]</code> vào nội dung để chọn vị trí bảng hiển thị.
-                    </p>
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center gap-2">
-                    {editData.table && (
-                      <button
-                        type="button"
-                        onClick={() => insertFormatAtCursor('\n\n[BANG_THONG_SO]\n\n', '', '')}
-                        className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center transition shadow-sm"
-                      >
-                        <TableIcon size={13} className="mr-1 text-amber-700" /> Đặt bảng vào nội dung
-                      </button>
-                    )}
-
+              {/* Technical Table Editor Section */}
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-bold text-gray-700">Bảng dữ liệu / Thông số kỹ thuật đính kèm</span>
+                  <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={handleToggleTable}

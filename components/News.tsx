@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  Loader2, 
   ExternalLink, 
   Calendar, 
   Plus, 
@@ -21,95 +20,13 @@ import {
   Heading2,
   List,
   Pin,
-  Eye
+  Eye,
+  AlertTriangle
 } from 'lucide-react';
 import { API_BASE_URL } from '../constants';
+import { TableData, NewsItem, STOCK_IMAGES, DEFAULT_NEWS_ITEMS } from '../src/data/defaultArticles';
 
-const STOCK_IMAGES = [
-  "https://images.unsplash.com/photo-1566576912906-253200c681bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1494412574643-35d324688b08?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1553413077-190dd305871c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-];
-
-export interface TableData {
-  headers: string[];
-  rows: string[][];
-}
-
-export interface NewsItem {
-  id: string | number;
-  title: string;
-  pubDate: string;
-  link?: string;
-  thumbnail?: string;
-  description: string;
-  category?: 'news' | 'knowledge';
-  isManual?: boolean;
-  isPinned?: boolean;
-  views?: number;
-  mediaType?: 'image' | 'iframe';
-  iframeCode?: string;
-  content?: string;
-  table?: TableData;
-}
-
-const FALLBACK_NEWS: NewsItem[] = [
-  {
-    id: 'fb-news-0',
-    title: "Thị trường Logistics Việt Nam dự báo tăng trưởng mạnh mẽ",
-    pubDate: new Date().toISOString(),
-    link: "#",
-    thumbnail: STOCK_IMAGES[0],
-    description: "Các chuyên gia nhận định ngành logistics sẽ có những bước tiến vượt bậc nhờ vào sự phát triển của thương mại điện tử và đầu tư hạ tầng cảng biển.",
-    category: "news",
-    isManual: false,
-    isPinned: true,
-    views: 1840
-  },
-  {
-    id: 'fb-knowledge-0',
-    title: "Quy cách & Kích thước chuẩn các loại Container (20ft, 40ft, 40HC)",
-    pubDate: new Date().toISOString(),
-    link: "",
-    thumbnail: STOCK_IMAGES[1],
-    description: "Bảng tra cứu kích thước lọt lòng, thể tích chứa hàng và tải trọng chuẩn quốc tế của các loại Container phổ biến nhất trong vận tải đường biển.",
-    category: "knowledge",
-    isManual: false,
-    isPinned: true,
-    views: 3450,
-    mediaType: "iframe",
-    iframeCode: '<iframe title="Shipping Container 3D" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/2f53ec9741ea4db382a939f4fe6d4b29/embed"></iframe>',
-    content: `## 1. Khái niệm về Container tiêu chuẩn quốc tế
-Container tiêu chuẩn ISO là công cụ vận chuyển hàng hóa cốt lõi trong chuỗi cung ứng toàn cầu. Việc nắm rõ chính xác **kích thước lọt lòng**, **chiều rộng cửa mở** và **tải trọng tối đa** giúp các chủ hàng lên kế hoạch đóng gói, xếp dỡ (stuffing/destuffing) an toàn và tối ưu chi phí cước biển.
-
-![Cấu trúc các loại Container tiêu chuẩn đường biển](https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80)
-
-## 2. Các điểm cần lưu ý khi chọn Container
-- **Cont 20ft DC:** Thích hợp cho hàng nặng, thể tích nhỏ như gạo, phân bón, xi măng, khoáng sản.
-- **Cont 40ft DC:** Thích hợp cho hàng hóa thể tích lớn nhưng trọng lượng vừa phải như dệt may, nội thất, hạt nhựa.
-- **Cont 40ft HC (High Cube):** Chiều cao vượt trội (2.698m), tối ưu chứa được nhiều kiện hàng cồng kềnh.
-
-## 3. Bảng thông số kỹ thuật chi tiết
-Dưới đây là bảng thông số chuẩn xác cho từng loại container thông dụng trong logistics:
-
-[BANG_THONG_SO]
-
-## 4. Lời khuyên đóng hàng an toàn
-- Kiểm tra seal và tình trạng kín nước của vỏ container trước khi bốc hàng.
-- Phân bổ đều trọng lượng hàng hóa trên mặt sàn cont để đảm bảo an toàn khi cẩu và vận chuyển biển.`,
-    table: {
-      headers: ["Chỉ tiêu kỹ thuật", "Cont 20' Thường (20'DC)", "Cont 40' Thường (40'DC)", "Cont 40' Cao (40'HC)"],
-      rows: [
-        ["Kích thước lọt lòng (D x R x C)", "5.898 x 2.352 x 2.393 m", "12.032 x 2.352 x 2.393 m", "12.032 x 2.352 x 2.698 m"],
-        ["Kích thước cửa (Rộng x Cao)", "2.340 x 2.280 m", "2.340 x 2.280 m", "2.340 x 2.585 m"],
-        ["Thể tích chứa hàng (CBM)", "33.2 m³", "67.7 m³", "76.3 m³"],
-        ["Trọng lượng vỏ cont (Tare)", "2,230 kg", "3,700 kg", "3,970 kg"],
-        ["Tải trọng hàng tối đa (Payload)", "28,250 kg", "26,780 kg", "26,510 kg"],
-        ["Trọng lượng toàn bộ (Max Gross)", "30,480 kg", "30,480 kg", "30,480 kg"]
-      ]
-    }
-  }
-];
+export type { TableData, NewsItem };
 
 interface NewsProps {
   userRole?: string | null;
@@ -119,8 +36,6 @@ interface NewsProps {
 }
 
 const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, onOpenCategoryPage }) => {
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'news' | 'knowledge'>('news');
   
   const isAdmin = userRole === 'admin';
@@ -130,6 +45,9 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, on
   
   // Full article reader modal
   const [readingArticle, setReadingArticle] = useState<NewsItem | null>(null);
+
+  // Custom Delete Confirmation Modal state (prevents iframe window.confirm blocking)
+  const [deleteTarget, setDeleteTarget] = useState<NewsItem | null>(null);
 
   // Content image upload & insertion states
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -142,7 +60,7 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, on
 
   // Lock background scroll and handle Escape key when any modal is open
   useEffect(() => {
-    const isAnyModalOpen = Boolean(readingArticle || isAdding || isEditing !== null);
+    const isAnyModalOpen = Boolean(readingArticle || isAdding || isEditing !== null || deleteTarget !== null);
     if (isAnyModalOpen) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -151,6 +69,7 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, on
         if (e.key === 'Escape') {
           if (readingArticle) setReadingArticle(null);
           if (isAdding || isEditing !== null) cancelEdit();
+          if (deleteTarget) setDeleteTarget(null);
         }
       };
 
@@ -160,51 +79,16 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, on
         window.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [readingArticle, isAdding, isEditing]);
-
-  useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        const RSS_URL = `https://news.google.com/rss/search?q=logistics+vận+tải+xuất+nhập+khẩu+việt+nam&hl=vi&gl=VN&ceid=VN:vi`;
-        const API_ENDPOINT = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}`;
-        const response = await fetch(API_ENDPOINT);
-        const data = await response.json();
-
-        if (data.status === 'ok' && data.items.length > 0) {
-          const processedNews: NewsItem[] = data.items.slice(0, 3).map((item: any, index: number) => {
-            const cleanDesc = item.description 
-              ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 100) + '...' 
-              : 'Tin tức cập nhật mới nhất từ thị trường Logistics Việt Nam.';
-            return {
-              id: `fetched-${index}`,
-              title: item.title,
-              pubDate: item.pubDate,
-              link: item.link,
-              thumbnail: item.thumbnail || STOCK_IMAGES[index % STOCK_IMAGES.length],
-              description: cleanDesc,
-              isManual: false,
-              category: 'news'
-            };
-          });
-          setNews(processedNews);
-        } else {
-          setNews(FALLBACK_NEWS.filter(n => n.category === 'news'));
-        }
-      } catch (err) {
-        console.error("Failed to fetch news:", err);
-        setNews(FALLBACK_NEWS.filter(n => n.category === 'news'));
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchNews();
-  }, []);
+  }, [readingArticle, isAdding, isEditing, deleteTarget]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
     return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
+
+  // Master list of all articles in the system
+  const currentSourceList: NewsItem[] = manualNews && manualNews.length > 0 ? manualNews : DEFAULT_NEWS_ITEMS;
 
   const handleAddNew = () => {
     setIsAdding(true);
@@ -216,8 +100,9 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, on
       thumbnail: STOCK_IMAGES[0],
       description: '',
       content: '',
-      isManual: true,
       category: activeTab,
+      isPinned: false,
+      views: 0,
       mediaType: 'image',
       iframeCode: ''
     });
@@ -231,24 +116,30 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, on
   const saveNews = () => {
     if (!onUpdateNews) return;
     
-    let updatedManual = [...manualNews];
+    let updatedFull = [...currentSourceList];
     const itemToSave = { ...editData } as NewsItem;
 
     if (isAdding) {
-      updatedManual = [itemToSave, ...updatedManual];
+      updatedFull = [itemToSave, ...updatedFull];
     } else {
-      updatedManual = updatedManual.map(n => n.id === isEditing ? itemToSave : n);
+      updatedFull = updatedFull.map(n => String(n.id) === String(isEditing) ? itemToSave : n);
     }
     
-    onUpdateNews(updatedManual);
+    onUpdateNews(updatedFull);
     setIsAdding(false);
     setIsEditing(null);
   };
 
-  const deleteNews = (id: string | number) => {
-    if (onUpdateNews && window.confirm("Bạn có chắc muốn xóa bài viết này?")) {
-      onUpdateNews(manualNews.filter(n => n.id !== id));
-    }
+  const promptDeleteNews = (item: NewsItem) => {
+    setDeleteTarget(item);
+  };
+
+  const confirmDeleteNews = () => {
+    if (!deleteTarget || !onUpdateNews) return;
+    const targetIdStr = String(deleteTarget.id);
+    const updated = currentSourceList.filter(n => String(n.id) !== targetIdStr);
+    onUpdateNews(updated);
+    setDeleteTarget(null);
   };
 
   const cancelEdit = () => {
@@ -259,14 +150,10 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, on
 
   const togglePin = (item: NewsItem) => {
     if (!onUpdateNews) return;
-    const isExistingManual = manualNews.some(n => n.id === item.id);
-    let updated: NewsItem[];
-    if (isExistingManual) {
-      updated = manualNews.map(n => n.id === item.id ? { ...n, isPinned: !n.isPinned } : n);
-    } else {
-      const newItem: NewsItem = { ...item, isManual: true, isPinned: !item.isPinned };
-      updated = [newItem, ...manualNews];
-    }
+    const targetIdStr = String(item.id);
+    const updated = currentSourceList.map(n => 
+      String(n.id) === targetIdStr ? { ...n, isPinned: !n.isPinned } : n
+    );
     onUpdateNews(updated);
   };
 
@@ -283,35 +170,34 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, on
       return;
     }
 
-    // Save exact scroll positions of both textarea and modal
     const savedTextareaScrollTop = textarea.scrollTop;
-    const savedModalScrollTop = modalRef.current?.scrollTop;
-
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const selectedText = currentVal.substring(start, end) || defaultPlaceholder;
-    const replacement = prefix + selectedText + suffix;
+    const selectedText = currentVal.substring(start, end);
+    const textToInsert = selectedText ? selectedText : defaultPlaceholder;
 
-    const newVal = currentVal.substring(0, start) + replacement + currentVal.substring(end);
-    setEditData(prev => ({ ...prev, content: newVal }));
+    const newContent = 
+      currentVal.substring(0, start) + 
+      prefix + 
+      textToInsert + 
+      suffix + 
+      currentVal.substring(end);
 
-    const newSelStart = start + prefix.length;
-    const newSelEnd = newSelStart + selectedText.length;
+    setEditData(prev => ({
+      ...prev,
+      content: newContent
+    }));
 
-    // Use requestAnimationFrame to restore focus and exact scroll position
-    requestAnimationFrame(() => {
-      if (contentTextareaRef.current) {
-        contentTextareaRef.current.focus({ preventScroll: true });
-        contentTextareaRef.current.setSelectionRange(newSelStart, newSelEnd);
-        contentTextareaRef.current.scrollTop = savedTextareaScrollTop;
-      }
-      if (modalRef.current && savedModalScrollTop !== undefined) {
-        modalRef.current.scrollTop = savedModalScrollTop;
-      }
-    });
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorStart = start + prefix.length;
+      const newCursorEnd = newCursorStart + textToInsert.length;
+      textarea.setSelectionRange(newCursorStart, newCursorEnd);
+      textarea.scrollTop = savedTextareaScrollTop;
+    }, 0);
   };
 
-  // Image Upload handler for Article Content
+  // Upload image handler
   const handleUploadContentImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -328,39 +214,46 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, on
       if (res.ok) {
         const data = await res.json();
         const uploadedUrl = `${API_BASE_URL}/files/GALLERY/${data.record.fileName}`;
-        const caption = file.name.replace(/\.[^/.]+$/, "");
-        const markdownImg = `\n\n![${caption}](${uploadedUrl})\n\n`;
-        setEditData(prev => ({
-          ...prev,
-          content: (prev.content || '') + markdownImg
-        }));
+        const defaultCaption = file.name.replace(/\.[^/.]+$/, "");
+        const imageMarkdown = `\n\n![${defaultCaption}](${uploadedUrl})\n\n`;
+        insertFormatAtCursor(imageMarkdown, '', '');
       } else {
-        alert('Không thể tải ảnh lên máy chủ. Bạn có thể sử dụng tính năng Chèn link ảnh.');
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64Url = reader.result as string;
+          const defaultCaption = file.name.replace(/\.[^/.]+$/, "");
+          const imageMarkdown = `\n\n![${defaultCaption}](${base64Url})\n\n`;
+          insertFormatAtCursor(imageMarkdown, '', '');
+        };
+        reader.readAsDataURL(file);
       }
-    } catch (error) {
-      console.error('Upload image failed:', error);
-      alert('Đã xảy ra lỗi khi tải ảnh lên máy chủ.');
+    } catch (err) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Url = reader.result as string;
+        const defaultCaption = file.name.replace(/\.[^/.]+$/, "");
+        const imageMarkdown = `\n\n![${defaultCaption}](${base64Url})\n\n`;
+        insertFormatAtCursor(imageMarkdown, '', '');
+      };
+      reader.readAsDataURL(file);
     } finally {
       setIsUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  // Insert image via URL link
+  // Insert image via URL
   const handleInsertLinkImage = () => {
     if (!imgUrlInput.trim()) return;
     const caption = imgCaptionInput.trim() || 'Hình ảnh minh họa';
-    const markdownImg = `\n\n![${caption}](${imgUrlInput.trim()})\n\n`;
-    setEditData(prev => ({
-      ...prev,
-      content: (prev.content || '') + markdownImg
-    }));
+    const imageMarkdown = `\n\n![${caption}](${imgUrlInput.trim()})\n\n`;
+    insertFormatAtCursor(imageMarkdown, '', '');
     setImgUrlInput('');
     setImgCaptionInput('');
     setShowLinkPrompt(false);
   };
 
-  // Table manipulation helpers
+  // Table Data Handlers
   const handleToggleTable = () => {
     if (editData.table) {
       setEditData({ ...editData, table: undefined });
@@ -368,135 +261,93 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, on
       setEditData({
         ...editData,
         table: {
-          headers: ['Thông số / Chỉ tiêu', 'Giá trị / Chi tiết'],
+          headers: ["Chỉ tiêu", "Loại 1", "Loại 2"],
           rows: [
-            ['Kích thước', ''],
-            ['Tải trọng', '']
+            ["Thông số A", "100", "200"],
+            ["Thông số B", "300", "400"]
           ]
         }
       });
     }
   };
 
-  const addColumn = () => {
-    const curTable = editData.table || { headers: ['Cột 1'], rows: [['']] };
-    const newHeaders = [...curTable.headers, `Cột ${curTable.headers.length + 1}`];
-    const newRows = curTable.rows.map(row => [...row, '']);
-    setEditData({ ...editData, table: { headers: newHeaders, rows: newRows } });
-  };
-
-  const removeColumn = (colIndex: number) => {
-    const curTable = editData.table;
-    if (!curTable || curTable.headers.length <= 1) return;
-    const newHeaders = curTable.headers.filter((_, idx) => idx !== colIndex);
-    const newRows = curTable.rows.map(row => row.filter((_, idx) => idx !== colIndex));
-    setEditData({ ...editData, table: { headers: newHeaders, rows: newRows } });
-  };
-
-  const addRow = () => {
-    const curTable = editData.table || { headers: ['Cột 1'], rows: [['']] };
-    const newRow = Array(curTable.headers.length).fill('');
-    setEditData({ ...editData, table: { ...curTable, rows: [...curTable.rows, newRow] } });
-  };
-
-  const removeRow = (rowIndex: number) => {
-    const curTable = editData.table;
-    if (!curTable || curTable.rows.length <= 1) return;
-    const newRows = curTable.rows.filter((_, idx) => idx !== rowIndex);
-    setEditData({ ...editData, table: { ...curTable, rows: newRows } });
-  };
-
-  const updateHeader = (colIndex: number, val: string) => {
-    const curTable = editData.table || { headers: [], rows: [] };
-    const newHeaders = [...curTable.headers];
-    newHeaders[colIndex] = val;
-    setEditData({ ...editData, table: { ...curTable, headers: newHeaders } });
-  };
-
-  const updateCell = (rowIndex: number, colIndex: number, val: string) => {
-    const curTable = editData.table || { headers: [], rows: [] };
-    const newRows = curTable.rows.map((row, rIdx) => {
-      if (rIdx !== rowIndex) return row;
-      const updatedRow = [...row];
-      updatedRow[colIndex] = val;
-      return updatedRow;
-    });
-    setEditData({ ...editData, table: { ...curTable, rows: newRows } });
-  };
-
-  const loadContainerPreset = () => {
+  const handleHeaderChange = (index: number, val: string) => {
+    if (!editData.table) return;
+    const newHeaders = [...editData.table.headers];
+    newHeaders[index] = val;
     setEditData({
       ...editData,
-      title: editData.title || "Quy cách & Kích thước chi tiết các loại Container (20ft, 40ft, 40HC)",
-      description: editData.description || "Bảng tra cứu kích thước lọt lòng, thể tích chứa hàng và tải trọng chuẩn quốc tế của các loại Container phổ biến.",
-      content: editData.content || `## 1. Khái niệm về Container tiêu chuẩn quốc tế
-Container tiêu chuẩn ISO là công cụ vận tải cốt lõi trong chuỗi cung ứng toàn cầu. Việc nắm rõ chính xác **kích thước lọt lòng**, **chiều rộng cửa mở** và **tải trọng tối đa** giúp các chủ hàng lên kế hoạch đóng gói, xếp dỡ (stuffing/destuffing) an toàn và tối ưu chi phí cước biển.
-
-![Cấu trúc các loại Container tiêu chuẩn đường biển](https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80)
-
-## 2. Các điểm cần lưu ý khi chọn Container
-- **Cont 20ft DC:** Thích hợp cho hàng nặng, thể tích nhỏ như gạo, phân bón, xi măng, khoáng sản.
-- **Cont 40ft DC:** Thích hợp cho hàng hóa thể tích lớn nhưng trọng lượng vừa phải như dệt may, nội thất, hạt nhựa.
-- **Cont 40ft HC (High Cube):** Chiều cao vượt trội (2.698m), tối ưu chứa được nhiều kiện hàng cồng kềnh.
-
-## 3. Bảng thông số kỹ thuật chi tiết
-Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng loại container thông dụng trong logistics:`,
-      table: {
-        headers: ["Chỉ tiêu kỹ thuật", "Cont 20' Thường (20'DC)", "Cont 40' Thường (40'DC)", "Cont 40' Cao (40'HC)"],
-        rows: [
-          ["Kích thước lọt lòng (D x R x C)", "5.898 x 2.352 x 2.393 m", "12.032 x 2.352 x 2.393 m", "12.032 x 2.352 x 2.698 m"],
-          ["Kích thước cửa (Rộng x Cao)", "2.340 x 2.280 m", "2.340 x 2.280 m", "2.340 x 2.585 m"],
-          ["Thể tích chứa hàng (CBM)", "33.2 m³", "67.7 m³", "76.3 m³"],
-          ["Trọng lượng vỏ cont (Tare)", "2,230 kg", "3,700 kg", "3,970 kg"],
-          ["Tải trọng hàng tối đa (Payload)", "28,250 kg", "26,780 kg", "26,510 kg"],
-          ["Trọng lượng toàn bộ (Max Gross)", "30,480 kg", "30,480 kg", "30,480 kg"]
-        ]
-      }
+      table: { ...editData.table, headers: newHeaders }
     });
   };
 
-  // Click on article item handler
-  const handleArticleClick = (item: NewsItem, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-    }
-    if (item.content || item.table || item.category === 'knowledge' || !item.link || item.link === '#' || item.link.trim() === '') {
-      setReadingArticle(item);
-    } else if (item.link) {
-      window.open(item.link, '_blank');
-    }
-  };
-
-  // Helper to parse inline formatting (e.g. **bold**)
-  const renderInlineFormattedText = (text: string) => {
-    const parts: React.ReactNode[] = [];
-    const boldRegex = /\*\*(.*?)\*\*/g;
-    let lastIdx = 0;
-    let match: RegExpExecArray | null;
-
-    let k = 0;
-    while ((match = boldRegex.exec(text)) !== null) {
-      if (match.index > lastIdx) {
-        parts.push(text.substring(lastIdx, match.index));
+  const handleCellChange = (rIdx: number, cIdx: number, val: string) => {
+    if (!editData.table) return;
+    const newRows = editData.table.rows.map((row, ri) => {
+      if (ri === rIdx) {
+        const newRow = [...row];
+        newRow[cIdx] = val;
+        return newRow;
       }
-      parts.push(
-        <strong key={`b-${k++}`} className="font-bold text-gray-900">
-          {match[1]}
-        </strong>
-      );
-      lastIdx = boldRegex.lastIndex;
-    }
-
-    if (lastIdx < text.length) {
-      parts.push(text.substring(lastIdx));
-    }
-
-    return parts;
+      return row;
+    });
+    setEditData({
+      ...editData,
+      table: { ...editData.table, rows: newRows }
+    });
   };
 
-  // Reusable Helper to render Specifications Dynamic Table
-  const renderSpecsTable = (tableData?: TableData, keyPrefix = 'specs-table') => {
-    if (!tableData || !tableData.headers || tableData.headers.length === 0) return null;
+  const handleAddColumn = () => {
+    if (!editData.table) return;
+    const newHeaders = [...editData.table.headers, `Cột ${editData.table.headers.length + 1}`];
+    const newRows = editData.table.rows.map(row => [...row, '-']);
+    setEditData({
+      ...editData,
+      table: { headers: newHeaders, rows: newRows }
+    });
+  };
+
+  const handleRemoveColumn = (colIndex: number) => {
+    if (!editData.table || editData.table.headers.length <= 1) return;
+    const newHeaders = editData.table.headers.filter((_, i) => i !== colIndex);
+    const newRows = editData.table.rows.map(row => row.filter((_, i) => i !== colIndex));
+    setEditData({
+      ...editData,
+      table: { headers: newHeaders, rows: newRows }
+    });
+  };
+
+  const handleAddRow = () => {
+    if (!editData.table) return;
+    const newRow = new Array(editData.table.headers.length).fill('-');
+    setEditData({
+      ...editData,
+      table: { ...editData.table, rows: [...editData.table.rows, newRow] }
+    });
+  };
+
+  const handleRemoveRow = (rIdx: number) => {
+    if (!editData.table || editData.table.rows.length <= 1) return;
+    const newRows = editData.table.rows.filter((_, i) => i !== rIdx);
+    setEditData({
+      ...editData,
+      table: { ...editData.table, rows: newRows }
+    });
+  };
+
+  // Render inline formatting (**bold**)
+  const renderInlineFormattedText = (line: string) => {
+    const parts = line.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, pIdx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={pIdx} className="font-bold text-gray-900">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
+  // Render Technical Specifications Table
+  const renderSpecsTable = (tableData: TableData, keyPrefix: string = 'specs-table') => {
     return (
       <div key={keyPrefix} className="my-8">
         <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
@@ -531,7 +382,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
     );
   };
 
-  // Helper to parse rich markdown blocks (Headings, Bullet points, Numbered items, Tables, Paragraphs)
+  // Helper to parse rich markdown blocks
   const renderTextBlock = (text: string, blockKey: string | number, tableData?: TableData) => {
     const lines = text.split('\n');
     return (
@@ -542,7 +393,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
             return <div key={lIdx} className="h-1.5" />;
           }
 
-          // Inline Specifications Table Command: [BANG_THONG_SO], [BANG], [TABLE], [SPECS_TABLE]
+          // Inline Specifications Table Command
           const TABLE_SHORTCODE_REGEX = /^\s*(\[(BANG_THONG_SO|BANG|TABLE|SPECS_TABLE|BANG_THONG_SO_CHI_TIET)\]|\{\{(BANG_THONG_SO|BANG|TABLE|SPECS_TABLE)\}\})\s*$/i;
           if (TABLE_SHORTCODE_REGEX.test(trimmed)) {
             if (tableData && tableData.headers && tableData.headers.length > 0) {
@@ -551,7 +402,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
             return null;
           }
 
-          // Heading 1: # Tiêu đề chính
+          // Heading 1
           if (trimmed.startsWith('# ')) {
             return (
               <h3 key={lIdx} className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-6 mb-3 pt-3 border-b border-gray-200 pb-2.5">
@@ -560,7 +411,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
             );
           }
 
-          // Heading 2: ## Tiêu đề lớn
+          // Heading 2
           if (trimmed.startsWith('## ')) {
             return (
               <h4 key={lIdx} className="text-xl sm:text-2xl font-bold text-gray-900 mt-6 mb-3 flex items-center">
@@ -570,7 +421,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
             );
           }
 
-          // Heading 3: ### Tiêu đề vừa
+          // Heading 3
           if (trimmed.startsWith('### ')) {
             return (
               <h5 key={lIdx} className="text-lg sm:text-xl font-bold text-primary mt-5 mb-2 flex items-center">
@@ -579,7 +430,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
             );
           }
 
-          // Bullet List: - item hoặc * item
+          // Bullet List
           if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
             return (
               <div key={lIdx} className="flex items-start ml-2 sm:ml-4 text-gray-700">
@@ -589,7 +440,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
             );
           }
 
-          // Numbered List: 1. item
+          // Numbered List
           const numMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
           if (numMatch) {
             return (
@@ -600,7 +451,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
             );
           }
 
-          // Standard Paragraph with inline formatting
+          // Standard Paragraph
           return (
             <p key={lIdx} className="text-gray-700 leading-relaxed text-base">
               {renderInlineFormattedText(trimmed)}
@@ -615,7 +466,6 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
   const renderArticleContent = (content?: string, tableData?: TableData) => {
     if (!content) return null;
 
-    // Pattern to identify markdown image syntax: ![alt text](image_url)
     const regex = /!\[(.*?)\]\((.*?)\)/g;
     const elements: React.ReactNode[] = [];
     let lastIndex = 0;
@@ -623,7 +473,6 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
 
     let partIndex = 0;
     while ((match = regex.exec(content)) !== null) {
-      // Text block before this image
       if (match.index > lastIndex) {
         const textSegment = content.substring(lastIndex, match.index);
         if (textSegment.trim()) {
@@ -631,7 +480,6 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
         }
       }
 
-      // The Image block
       const altText = match[1] || 'Hình ảnh minh họa';
       const imageUrl = match[2];
 
@@ -658,7 +506,6 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
       lastIndex = regex.lastIndex;
     }
 
-    // Remaining text block after last image
     if (lastIndex < content.length) {
       const remainingText = content.substring(lastIndex);
       if (remainingText.trim()) {
@@ -669,16 +516,11 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
     return <div>{elements}</div>;
   };
 
-  // Combine manual news and fallback/fetched news
-  const fallbackForTab = FALLBACK_NEWS.filter(n => n.category === activeTab);
-  const filteredManualNews = manualNews.filter(n => (n.category || 'news') === activeTab);
-  const filteredFetchedNews = activeTab === 'news' ? news : [];
-  
-  const allTabItems = [...filteredManualNews, ...filteredFetchedNews];
-  const sourceList = allTabItems.length > 0 ? allTabItems : fallbackForTab;
+  // Filter items by category from currentSourceList
+  const filteredCategoryItems = currentSourceList.filter(n => (n.category || 'news') === activeTab);
 
   // Sort so pinned articles come first, then latest pubDate
-  const sortedTabItems = [...sourceList].sort((a, b) => {
+  const sortedTabItems = [...filteredCategoryItems].sort((a, b) => {
     if (a.isPinned && !b.isPinned) return -1;
     if (!a.isPinned && b.isPinned) return 1;
     return new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime();
@@ -686,6 +528,14 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
 
   // Exactly 3 priority items on the home section
   const displayNews = sortedTabItems.slice(0, 3);
+
+  const handleArticleClick = (item: NewsItem) => {
+    if (item.content || item.table || item.category === 'knowledge' || !item.link || item.link === '#' || item.link.trim() === '') {
+      setReadingArticle(item);
+    } else if (item.link) {
+      window.open(item.link, '_blank');
+    }
+  };
 
   return (
     <section id="news" className="py-20 bg-gray-50 relative">
@@ -698,452 +548,421 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
           </p>
 
           {/* Tabs */}
-          <div className="flex justify-center space-x-4 mb-4">
-            <button
-              onClick={() => setActiveTab('news')}
-              className={`px-6 py-2.5 rounded-full font-bold transition-all text-sm flex items-center ${
-                activeTab === 'news' 
-                  ? 'bg-primary text-white shadow-md shadow-primary/20' 
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              Tin tức chuyên ngành
-            </button>
-            <button
-              onClick={() => setActiveTab('knowledge')}
-              className={`px-6 py-2.5 rounded-full font-bold transition-all text-sm flex items-center ${
-                activeTab === 'knowledge' 
-                  ? 'bg-primary text-white shadow-md shadow-primary/20' 
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              <BookOpen size={16} className="mr-1.5" /> Kiến thức chuyên ngành
-            </button>
+          <div className="flex justify-center mb-6">
+            <div className="bg-gray-200/80 p-1.5 rounded-2xl flex space-x-2 border border-gray-300/50 shadow-inner">
+              <button
+                onClick={() => setActiveTab('news')}
+                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 ${
+                  activeTab === 'news'
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                }`}
+              >
+                Tin tức chuyên ngành
+              </button>
+              <button
+                onClick={() => setActiveTab('knowledge')}
+                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 ${
+                  activeTab === 'knowledge'
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                }`}
+              >
+                Kiến thức chuyên ngành
+              </button>
+            </div>
           </div>
 
           {isAdmin && (
-            <div className="absolute top-0 right-0">
-               <button 
-                 onClick={handleAddNew}
-                 className="bg-primary hover:bg-primaryDark text-white px-4 py-2 rounded-lg shadow-md flex items-center font-bold text-sm transition"
-               >
-                 <Plus size={16} className="mr-1.5" /> Đăng bài mới
-               </button>
+            <div className="flex justify-center mt-2">
+              <button 
+                onClick={handleAddNew}
+                className="bg-primary hover:bg-primaryDark text-white px-4 py-2 rounded-lg font-semibold flex items-center space-x-2 shadow-sm transition"
+              >
+                <Plus size={18} />
+                <span>Thêm {activeTab === 'news' ? 'Tin tức' : 'Kiến thức'} mới</span>
+              </button>
             </div>
           )}
         </div>
 
-        {/* Modal form for Adding/Editing Article - Rendered via Portal */}
+        {/* Custom In-App Delete Confirmation Modal */}
+        {deleteTarget && createPortal(
+          <div 
+            className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={() => setDeleteTarget(null)}
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 text-center"
+            >
+              <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={28} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Xác nhận xóa bài viết?</h3>
+              <p className="text-gray-600 text-sm mb-6 line-clamp-3">
+                Bạn có chắc chắn muốn xóa bài viết: <span className="font-semibold text-gray-900">"{deleteTarget.title}"</span>? Thao tác này không thể hoàn tác.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100 transition text-sm"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteNews}
+                  className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition shadow-md shadow-red-600/30 text-sm flex items-center"
+                >
+                  <Trash2 size={16} className="mr-1.5" />
+                  Xác nhận xóa
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* Modal Thêm/Sửa tin */}
         {(isAdding || isEditing !== null) && createPortal(
           <div 
-            className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+            className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200"
             onClick={cancelEdit}
           >
-             <div 
-               ref={modalRef}
-               onClick={(e) => e.stopPropagation()}
-               className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto border border-gray-200 my-auto cursor-default"
-             >
-                <button onClick={cancelEdit} className="absolute top-5 right-5 text-gray-400 hover:text-red-500 p-1.5 rounded-full hover:bg-gray-100 transition">
-                  <X size={22}/>
-                </button>
-                
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                  {isAdding ? <PlusCircle className="mr-2 text-primary" size={26} /> : <Edit className="mr-2 text-primary" size={26} />}
-                  {isAdding ? 'Đăng bài viết mới' : 'Chỉnh sửa bài viết'}
+            <div 
+              ref={modalRef}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto p-6 sm:p-8 shadow-2xl border border-gray-100 relative my-auto cursor-default"
+            >
+              <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                  <span className="w-2 h-6 bg-primary rounded-full mr-3 inline-block"></span>
+                  {isAdding ? `Đăng bài ${activeTab === 'news' ? 'Tin tức' : 'Kiến thức'} mới` : `Chỉnh sửa bài viết`}
                 </h3>
-                
-                <div className="space-y-5 text-sm text-gray-800">
-                  {/* Category & Preset */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="font-bold block mb-1.5 text-gray-700">Phân loại chuyên mục</label>
-                      <select 
-                        className="w-full border border-gray-300 p-3 rounded-lg bg-white focus:ring-2 focus:ring-primary/40 outline-none" 
-                        value={editData.category || 'news'} 
-                        onChange={e => setEditData({...editData, category: e.target.value as 'news' | 'knowledge'})}
-                      >
-                        <option value="news">Tin tức chuyên ngành (News)</option>
-                        <option value="knowledge">Kiến thức chuyên ngành (Knowledge & Specs)</option>
-                      </select>
-                    </div>
+                <button 
+                  onClick={cancelEdit} 
+                  className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
 
-                    {editData.category === 'knowledge' && (
-                      <div className="flex items-end">
-                        <button
-                          type="button"
-                          onClick={loadContainerPreset}
-                          className="w-full bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-900 px-4 py-3 rounded-lg font-semibold flex items-center justify-center transition"
-                        >
-                          <Sparkles size={16} className="mr-2 text-amber-600" /> Dán dữ liệu mẫu Container chuẩn (1-Click)
-                        </button>
-                      </div>
-                    )}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tiêu đề bài viết (*)</label>
+                  <input 
+                    type="text" 
+                    className="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-primary/40 focus:border-primary outline-none transition font-medium" 
+                    value={editData.title || ''} 
+                    onChange={e => setEditData({...editData, title: e.target.value})} 
+                    placeholder="Nhập tiêu đề bài viết..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Chuyên mục</label>
+                    <select 
+                      className="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-primary/40 focus:border-primary outline-none transition font-medium bg-white"
+                      value={editData.category || activeTab}
+                      onChange={e => setEditData({...editData, category: e.target.value as any})}
+                    >
+                      <option value="news">Tin tức chuyên ngành</option>
+                      <option value="knowledge">Kiến thức chuyên ngành</option>
+                    </select>
                   </div>
-
-                  {/* Pin option */}
-                  <div className="bg-blue-50/70 border border-blue-100 p-3 rounded-xl flex items-center justify-between">
-                    <label className="flex items-center gap-2 cursor-pointer font-medium text-gray-800 text-sm">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Trạng thái Ghim bài</label>
+                    <div className="flex items-center space-x-3 p-2.5 border border-gray-300 rounded-xl">
                       <input 
-                        type="checkbox"
-                        checked={!!editData.isPinned}
-                        onChange={(e) => setEditData({ ...editData, isPinned: e.target.checked })}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        type="checkbox" 
+                        id="isPinnedCheck"
+                        className="w-5 h-5 text-primary rounded focus:ring-primary accent-primary cursor-pointer"
+                        checked={Boolean(editData.isPinned)}
+                        onChange={e => setEditData({...editData, isPinned: e.target.checked})}
                       />
-                      <span className="flex items-center gap-1.5">
-                        <Pin size={15} className="text-blue-600" />
-                        Ghim bài viết này lên đầu trang (Ưu tiên hiển thị)
+                      <label htmlFor="isPinnedCheck" className="text-sm font-bold text-gray-700 cursor-pointer flex items-center">
+                        <Pin size={15} className="mr-1.5 text-primary" /> Ghim bài viết lên đầu trang
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Mô tả ngắn gọn (*)</label>
+                  <textarea 
+                    className="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-primary/40 focus:border-primary outline-none transition font-normal" 
+                    rows={2} 
+                    value={editData.description || ''} 
+                    onChange={e => setEditData({...editData, description: e.target.value})} 
+                    placeholder="Mô tả tóm tắt nội dung để hiển thị trên thẻ bài viết..."
+                  />
+                </div>
+
+                {/* Media Type Switcher */}
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <label className="block text-sm font-bold text-gray-800 mb-2">Loại hình ảnh đại diện / Trực quan</label>
+                  <div className="flex space-x-4 mb-3">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="mediaType" 
+                        value="image" 
+                        checked={editData.mediaType !== 'iframe'} 
+                        onChange={() => setEditData({...editData, mediaType: 'image'})}
+                        className="text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm font-medium text-gray-700 flex items-center">
+                        <ImageIcon size={16} className="mr-1 text-gray-500" /> Hình ảnh tĩnh
+                      </span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="mediaType" 
+                        value="iframe" 
+                        checked={editData.mediaType === 'iframe'} 
+                        onChange={() => setEditData({...editData, mediaType: 'iframe'})}
+                        className="text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm font-medium text-gray-700 flex items-center">
+                        <Sparkles size={16} className="mr-1 text-primary" /> Mô hình 3D xoay 360° (Mã nhúng iFrame)
                       </span>
                     </label>
                   </div>
 
-                  {/* Title */}
-                  <div>
-                    <label className="font-bold block mb-1.5 text-gray-700">Tiêu đề bài viết <span className="text-red-500">*</span></label>
-                    <input 
-                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-primary/40 outline-none font-medium" 
-                      value={editData.title || ''} 
-                      onChange={e => setEditData({...editData, title: e.target.value})} 
-                      placeholder="Nhập tiêu đề bài viết hoặc tên loại Container..."
-                    />
-                  </div>
+                  {editData.mediaType === 'iframe' ? (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Mã nhúng iFrame (Ví dụ Sketchfab 3D)</label>
+                      <textarea 
+                        className="w-full border border-gray-300 p-2.5 rounded-lg text-xs font-mono focus:ring-2 focus:ring-primary/40 outline-none" 
+                        rows={3} 
+                        value={editData.iframeCode || ''} 
+                        onChange={e => setEditData({...editData, iframeCode: e.target.value})} 
+                        placeholder='<iframe title="..." src="https://sketchfab.com/models/..." ...></iframe>'
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">URL Hình ảnh thu nhỏ</label>
+                      <input 
+                        type="text" 
+                        className="w-full border border-gray-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-primary/40 outline-none" 
+                        value={editData.thumbnail || ''} 
+                        onChange={e => setEditData({...editData, thumbnail: e.target.value})} 
+                        placeholder="https://images.unsplash.com/... hoặc link ảnh"
+                      />
+                    </div>
+                  )}
+                </div>
 
-                  {/* Short Description */}
-                  <div>
-                    <label className="font-bold block mb-1.5 text-gray-700">Mô tả ngắn (Lead / Tóm tắt) <span className="text-red-500">*</span></label>
-                    <textarea 
-                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-primary/40 outline-none" 
-                      rows={2} 
-                      value={editData.description || ''} 
-                      onChange={e => setEditData({...editData, description: e.target.value})} 
-                      placeholder="Đoạn tóm tắt hiển thị ngoài thẻ danh sách..."
-                    />
-                  </div>
-
-                  {/* Media Type Selection (Cover / 3D Header) */}
-                  <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                    <label className="font-bold block mb-2 text-gray-700">Ảnh bìa / Mô hình 3D xoay 360 độ (Đầu bài viết)</label>
-                    <div className="flex flex-wrap gap-4 mb-3">
-                      <label className="flex items-center cursor-pointer">
-                        <input 
-                          type="radio" 
-                          name="mediaType" 
-                          checked={editData.mediaType !== 'iframe'} 
-                          onChange={() => setEditData({...editData, mediaType: 'image'})}
-                          className="mr-2 text-primary"
-                        />
-                        <span>Hình ảnh bìa thông thường</span>
-                      </label>
-                      <label className="flex items-center cursor-pointer">
-                        <input 
-                          type="radio" 
-                          name="mediaType" 
-                          checked={editData.mediaType === 'iframe'} 
-                          onChange={() => setEditData({...editData, mediaType: 'iframe'})}
-                          className="mr-2 text-primary"
-                        />
-                        <span className="font-semibold text-primary">Mô hình 3D tương tác xoay 360° (Sketchfab Embed)</span>
-                      </label>
+                {/* Content Toolbar */}
+                <div className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-gray-100">
+                    <div>
+                      <label className="font-bold text-gray-800 block">Nội dung chi tiết bài viết</label>
+                      <p className="text-xs text-gray-500">Soạn thảo, định dạng tiêu đề, in đậm và chèn ảnh minh họa</p>
                     </div>
 
-                    {editData.mediaType === 'iframe' ? (
-                      <div>
-                        <textarea 
-                          className="w-full border border-gray-300 p-3 rounded-lg font-mono text-xs bg-white focus:ring-2 focus:ring-primary/40 outline-none" 
-                          rows={3} 
-                          value={editData.iframeCode || ''} 
-                          onChange={e => setEditData({...editData, iframeCode: e.target.value})} 
-                          placeholder='<iframe src="https://sketchfab.com/models/2f53ec9741ea4db382a939f4fe6d4b29/embed"></iframe>'
-                        />
-                        <p className="text-xs text-gray-500 mt-1 flex items-center">
-                          <Info size={14} className="mr-1 text-primary flex-shrink-0" />
-                          Dán mã nhúng iframe từ Sketchfab hoặc trang mô hình 3D để người xem xoay 360 độ.
-                        </p>
-                      </div>
-                    ) : (
-                      <div>
-                        <input 
-                          className="w-full border border-gray-300 p-3 rounded-lg bg-white focus:ring-2 focus:ring-primary/40 outline-none" 
-                          value={editData.thumbnail || ''} 
-                          onChange={e => setEditData({...editData, thumbnail: e.target.value})} 
-                          placeholder="https://images.unsplash.com/... hoặc link ảnh kết thúc bằng .jpg/.png"
-                        />
-                      </div>
-                    )}
-                  </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => insertFormatAtCursor('**', '**', 'Chữ in đậm')}
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                      >
+                        <Bold size={13} className="mr-1" /> Tô đậm
+                      </button>
 
-                  {/* Full Article Content with Rich Format Toolbar & Image Inserter */}
-                  <div className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-gray-100">
-                      <div>
-                        <label className="font-bold text-gray-800 block">Nội dung chi tiết bài viết</label>
-                        <p className="text-xs text-gray-500">Soạn thảo, định dạng tiêu đề, in đậm và chèn ảnh minh họa</p>
-                      </div>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => insertFormatAtCursor('\n## ', '\n', 'Tiêu đề mục')}
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                      >
+                        <Heading2 size={13} className="mr-1 text-primary" /> Tiêu đề mục
+                      </button>
 
-                      {/* Formatting & Media Toolbar */}
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {/* Bold Button */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => insertFormatAtCursor('**', '**', 'Chữ in đậm')}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border border-gray-200 shadow-sm active:scale-95"
-                          title="Tô đậm chữ (**văn bản**)"
-                        >
-                          <Bold size={13} className="mr-1" /> Tô đậm
-                        </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => insertFormatAtCursor('\n- ', '\n', 'Nội dung danh sách')}
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                      >
+                        <List size={13} className="mr-1" /> Gạch đầu dòng
+                      </button>
 
-                        {/* Heading Button */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => insertFormatAtCursor('\n## ', '\n', 'Tiêu đề mục')}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border border-gray-200 shadow-sm active:scale-95"
-                          title="Tạo tiêu đề mục lớn (## Tiêu đề)"
-                        >
-                          <Heading2 size={13} className="mr-1 text-primary" /> Tiêu đề mục
-                        </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          if (!editData.table) handleToggleTable();
+                          insertFormatAtCursor('\n\n[BANG_THONG_SO]\n\n', '', '');
+                        }}
+                        className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition shadow-sm"
+                      >
+                        <TableIcon size={13} className="mr-1 text-amber-700" /> Chèn Bảng vào bài
+                      </button>
 
-                        {/* List Button */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => insertFormatAtCursor('\n- ', '\n', 'Nội dung danh sách')}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center transition border border-gray-200 shadow-sm active:scale-95"
-                          title="Tạo gạch đầu dòng (- Mục)"
-                        >
-                          <List size={13} className="mr-1" /> Gạch đầu dòng
-                        </button>
-
-                        {/* Table Shortcode Button */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            if (!editData.table) {
-                              handleToggleTable();
-                            }
-                            insertFormatAtCursor('\n\n[BANG_THONG_SO]\n\n', '', '');
-                          }}
-                          className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition shadow-sm active:scale-95"
-                          title="Chèn lệnh gọi bảng thông số kỹ thuật [BANG_THONG_SO] vào vị trí con trỏ trong nội dung"
-                        >
-                          <TableIcon size={13} className="mr-1 text-amber-700" /> Chèn Bảng vào bài
-                        </button>
-
-                        {/* Hidden file input */}
-                        <input 
-                          type="file" 
-                          ref={fileInputRef} 
-                          accept="image/*" 
-                          className="hidden" 
-                          onChange={handleUploadContentImage} 
-                        />
-                        
-                        {/* Upload Image Button */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isUploadingImage}
-                          className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition shadow-sm active:scale-95"
-                          title="Tải ảnh từ máy tính"
-                        >
-                          {isUploadingImage ? (
-                            <>
-                              <Loader2 size={13} className="animate-spin mr-1" /> Tải ảnh...
-                            </>
-                          ) : (
-                            <>
-                              <Upload size={13} className="mr-1" /> Tải ảnh
-                            </>
-                          )}
-                        </button>
-
-                        {/* Link Image Button */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => setShowLinkPrompt(!showLinkPrompt)}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center transition border border-gray-200 shadow-sm active:scale-95"
-                          title="Chèn ảnh từ link URL"
-                        >
-                          <Link2 size={13} className="mr-1" /> Link ảnh
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Quick Link Image Popover / Form */}
-                    {showLinkPrompt && (
-                      <div className="bg-gray-50 border border-primary/20 rounded-lg p-3 mb-3 space-y-2 animate-in fade-in">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-gray-700 flex items-center">
-                            <ImageIcon size={14} className="mr-1.5 text-primary" /> Chèn ảnh từ đường link URL
-                          </span>
-                          <button 
-                            type="button" 
-                            onClick={() => setShowLinkPrompt(false)} 
-                            className="text-gray-400 hover:text-red-500 text-xs"
-                          >
-                            Đóng
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <input 
-                            className="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:ring-1 focus:ring-primary outline-none"
-                            placeholder="Link ảnh (https://...jpg/.png)"
-                            value={imgUrlInput}
-                            onChange={e => setImgUrlInput(e.target.value)}
-                          />
-                          <input 
-                            className="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:ring-1 focus:ring-primary outline-none"
-                            placeholder="Chú thích ảnh (Ví dụ: Sơ đồ xếp cont)"
-                            value={imgCaptionInput}
-                            onChange={e => setImgCaptionInput(e.target.value)}
-                          />
-                        </div>
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            onClick={handleInsertLinkImage}
-                            className="bg-primary text-white text-xs px-3 py-1.5 rounded font-bold hover:bg-primaryDark transition"
-                          >
-                            Chèn vào bài viết
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <textarea 
-                      ref={contentTextareaRef}
-                      className="w-full border border-gray-300 p-3.5 rounded-lg focus:ring-2 focus:ring-primary/40 outline-none leading-relaxed font-normal" 
-                      rows={7} 
-                      value={editData.content || ''} 
-                      onChange={e => setEditData({...editData, content: e.target.value})} 
-                      placeholder="Nhập nội dung bài viết. Bạn có thể bôi đen chữ và bấm nút [Tô đậm], [Tiêu đề mục] ở thanh công cụ phía trên..."
-                    />
-                    <div className="text-[11px] text-gray-500 mt-2 bg-gray-50 p-2.5 rounded-lg border border-gray-100 flex flex-wrap items-center justify-between gap-1.5">
-                      <span className="font-semibold text-gray-700">📌 <b>Mẹo định dạng nhanh:</b></span>
-                      <span>• Tô đậm: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">**Chữ in đậm**</code></span>
-                      <span>• Tiêu đề mục: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">## Tiêu đề</code></span>
-                      <span>• Danh sách: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">- Ý chính</code></span>
-                      <span>• Vị trí bảng: <code className="bg-amber-50 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded font-bold">[BANG_THONG_SO]</code></span>
-                    </div>
-                  </div>
-
-                  {/* Dynamic Table Section */}
-                  <div className="border border-gray-200 rounded-xl p-4 sm:p-5 bg-white shadow-sm">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                      <div>
-                        <h4 className="font-bold text-gray-900 flex items-center text-base">
-                          <TableIcon size={18} className="mr-2 text-primary" />
-                          Bảng thông số / Dữ liệu kỹ thuật
-                        </h4>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Tùy biến số dòng & cột. Chèn mã lệnh <code className="bg-amber-50 text-amber-800 font-bold px-1 rounded border border-amber-200">[BANG_THONG_SO]</code> vào nội dung để chọn vị trí bảng hiển thị.
-                        </p>
-                      </div>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleUploadContentImage} 
+                      />
                       
-                      <div className="flex flex-wrap items-center gap-2">
-                        {editData.table && (
-                          <button
-                            type="button"
-                            onClick={() => insertFormatAtCursor('\n\n[BANG_THONG_SO]\n\n', '', '')}
-                            className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center transition shadow-sm"
-                            title="Chèn mã [BANG_THONG_SO] vào vị trí con trỏ trong nội dung bài viết ở trên"
-                          >
-                            <TableIcon size={13} className="mr-1 text-amber-700" /> Đặt bảng vào nội dung
-                          </button>
-                        )}
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingImage}
+                        className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition shadow-sm"
+                      >
+                        <Upload size={13} className="mr-1" /> Tải ảnh
+                      </button>
 
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => setShowLinkPrompt(!showLinkPrompt)}
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                      >
+                        <Link2 size={13} className="mr-1" /> Link ảnh
+                      </button>
+                    </div>
+                  </div>
+
+                  {showLinkPrompt && (
+                    <div className="bg-gray-50 border border-primary/20 rounded-lg p-3 mb-3 space-y-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input 
+                          className="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:ring-1 focus:ring-primary outline-none"
+                          placeholder="Link ảnh (https://...jpg/.png)"
+                          value={imgUrlInput}
+                          onChange={e => setImgUrlInput(e.target.value)}
+                        />
+                        <input 
+                          className="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:ring-1 focus:ring-primary outline-none"
+                          placeholder="Chú thích ảnh"
+                          value={imgCaptionInput}
+                          onChange={e => setImgCaptionInput(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex justify-end">
                         <button
                           type="button"
-                          onClick={handleToggleTable}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                            editData.table 
-                              ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100' 
-                              : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20'
-                          }`}
+                          onClick={handleInsertLinkImage}
+                          className="bg-primary text-white text-xs px-3 py-1.5 rounded font-bold hover:bg-primaryDark transition"
                         >
-                          {editData.table ? 'Xóa bảng' : '+ Thêm bảng dữ liệu'}
+                          Chèn vào bài viết
                         </button>
-
-                        {editData.table && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={addColumn}
-                              className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center transition"
-                            >
-                              <Plus size={14} className="mr-1" /> Thêm cột
-                            </button>
-                            <button
-                              type="button"
-                              onClick={addRow}
-                              className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center transition"
-                            >
-                              <Plus size={14} className="mr-1" /> Thêm hàng
-                            </button>
-                          </>
-                        )}
                       </div>
                     </div>
+                  )}
 
-                    {editData.table && (
-                      <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                        <table className="w-full text-left border-collapse text-xs">
-                          {/* Table Headers */}
+                  <textarea 
+                    ref={contentTextareaRef}
+                    className="w-full border border-gray-300 p-3.5 rounded-lg focus:ring-2 focus:ring-primary/40 outline-none leading-relaxed font-normal" 
+                    rows={8} 
+                    value={editData.content || ''} 
+                    onChange={e => setEditData({...editData, content: e.target.value})} 
+                    placeholder="Nhập nội dung bài viết..."
+                  />
+                </div>
+
+                {/* Table Editor Section */}
+                <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/70">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-bold text-gray-800 text-sm">Bảng dữ liệu / Thông số kỹ thuật</h4>
+                      <p className="text-xs text-gray-500">Tạo bảng so sánh, thông số kỹ thuật trực quan</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleToggleTable}
+                      className={`text-xs px-3 py-1.5 rounded-lg font-bold border transition ${
+                        editData.table 
+                          ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' 
+                          : 'bg-primary text-white border-transparent hover:bg-primaryDark'
+                      }`}
+                    >
+                      {editData.table ? 'Xóa Bảng' : '+ Tạo Bảng Mới'}
+                    </button>
+                  </div>
+
+                  {editData.table && (
+                    <div className="mt-4 space-y-3">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleAddColumn}
+                          className="bg-white border border-gray-300 text-gray-700 text-xs px-2.5 py-1 rounded shadow-sm hover:bg-gray-100 flex items-center font-semibold"
+                        >
+                          <Plus size={12} className="mr-1" /> Thêm Cột
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleAddRow}
+                          className="bg-white border border-gray-300 text-gray-700 text-xs px-2.5 py-1 rounded shadow-sm hover:bg-gray-100 flex items-center font-semibold"
+                        >
+                          <Plus size={12} className="mr-1" /> Thêm Hàng
+                        </button>
+                      </div>
+
+                      <div className="overflow-x-auto border border-gray-300 rounded-lg bg-white">
+                        <table className="w-full text-xs">
                           <thead>
-                            <tr className="bg-gray-100">
-                              {editData.table.headers.map((header, colIdx) => (
-                                <th key={colIdx} className="p-2 border border-gray-200 min-w-[150px]">
+                            <tr className="bg-primary/10 border-b border-gray-300">
+                              {editData.table.headers.map((h, i) => (
+                                <th key={i} className="p-2 border-r border-gray-300 last:border-r-0 min-w-[120px]">
                                   <div className="flex items-center gap-1">
-                                    <input 
-                                      className="w-full bg-white border border-gray-300 px-2 py-1.5 rounded font-bold text-gray-800 focus:outline-none focus:border-primary"
-                                      value={header}
-                                      onChange={e => updateHeader(colIdx, e.target.value)}
-                                      placeholder={`Tiêu đề cột ${colIdx + 1}`}
+                                    <input
+                                      type="text"
+                                      value={h}
+                                      onChange={(e) => handleHeaderChange(i, e.target.value)}
+                                      className="w-full bg-white border border-gray-300 rounded p-1 font-bold text-gray-800"
                                     />
-                                    {editData.table!.headers.length > 1 && (
+                                    {editData.table && editData.table.headers.length > 1 && (
                                       <button 
                                         type="button"
-                                        onClick={() => removeColumn(colIdx)} 
-                                        className="text-gray-400 hover:text-red-500 p-1"
-                                        title="Xóa cột này"
+                                        onClick={() => handleRemoveColumn(i)}
+                                        className="text-red-500 hover:text-red-700 p-0.5"
+                                        title="Xóa cột"
                                       >
-                                        <X size={14} />
+                                        <X size={12} />
                                       </button>
                                     )}
                                   </div>
                                 </th>
                               ))}
-                              <th className="p-2 border border-gray-200 w-10 text-center"></th>
+                              <th className="p-1 w-8"></th>
                             </tr>
                           </thead>
-
-                          {/* Table Rows */}
                           <tbody>
-                            {editData.table.rows.map((row, rowIdx) => (
-                              <tr key={rowIdx} className="hover:bg-gray-50">
-                                {row.map((cell, colIdx) => (
-                                  <td key={colIdx} className="p-2 border border-gray-200">
-                                    <input 
-                                      className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-primary focus:bg-white px-2 py-1 rounded transition text-gray-700 outline-none"
+                            {editData.table.rows.map((row, rIdx) => (
+                              <tr key={rIdx} className="border-b border-gray-200 last:border-0">
+                                {row.map((cell, cIdx) => (
+                                  <td key={cIdx} className="p-2 border-r border-gray-200 last:border-r-0">
+                                    <input
+                                      type="text"
                                       value={cell}
-                                      onChange={e => updateCell(rowIdx, colIdx, e.target.value)}
-                                      placeholder="Nhập giá trị..."
+                                      onChange={(e) => handleCellChange(rIdx, cIdx, e.target.value)}
+                                      className="w-full bg-transparent border-0 border-b border-dashed border-gray-300 focus:border-primary outline-none p-1"
                                     />
                                   </td>
                                 ))}
-                                <td className="p-2 border border-gray-200 text-center">
-                                  {editData.table!.rows.length > 1 && (
-                                    <button 
+                                <td className="p-1 text-center">
+                                  {editData.table && editData.table.rows.length > 1 && (
+                                    <button
                                       type="button"
-                                      onClick={() => removeRow(rowIdx)} 
-                                      className="text-gray-400 hover:text-red-500 p-1 transition"
-                                      title="Xóa hàng này"
+                                      onClick={() => handleRemoveRow(rIdx)}
+                                      className="text-red-500 hover:text-red-700 p-1"
+                                      title="Xóa dòng"
                                     >
-                                      <Trash2 size={14} />
+                                      <Trash2 size={12} />
                                     </button>
                                   )}
                                 </td>
@@ -1152,49 +971,34 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                           </tbody>
                         </table>
                       </div>
-                    )}
-                  </div>
-
-                  {/* External Link (Optional) */}
-                  <div>
-                    <label className="font-bold block mb-1 text-gray-700">
-                      Link bài viết nguồn (URL) 
-                      {editData.category === 'knowledge' ? (
-                        <span className="text-gray-400 font-normal ml-2">(Tùy chọn - để trống nếu đọc trực tiếp trên trang)</span>
-                      ) : (
-                        <span className="text-gray-400 font-normal ml-2">(Tùy chọn)</span>
-                      )}
-                    </label>
-                    <input 
-                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-primary/40 outline-none text-gray-600" 
-                      value={editData.link || ''} 
-                      onChange={e => setEditData({...editData, link: e.target.value})} 
-                      placeholder="https://... (nếu có bài báo nguồn ngoài)"
-                    />
-                  </div>
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                {/* Footer Buttons */}
-                <div className="flex gap-4 mt-8 pt-4 border-t border-gray-200">
-                  <button 
-                    onClick={saveNews} 
-                    className="bg-primary hover:bg-primaryDark text-white px-6 py-3.5 rounded-xl font-bold flex-1 shadow-lg shadow-primary/20 transition flex items-center justify-center"
-                  >
-                    Lưu bài viết
-                  </button>
-                  <button 
-                    onClick={cancelEdit} 
-                    className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-6 py-3.5 rounded-xl font-bold transition"
-                  >
-                    Hủy bỏ
-                  </button>
-                </div>
-             </div>
+              <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end space-x-3">
+                <button 
+                  type="button"
+                  onClick={cancelEdit} 
+                  className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition"
+                >
+                  Hủy bỏ
+                </button>
+                <button 
+                  type="button"
+                  onClick={saveNews} 
+                  className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primaryDark text-white font-bold shadow-md shadow-primary/20 transition flex items-center space-x-2"
+                >
+                  <PlusCircle size={18} />
+                  <span>{isAdding ? 'Đăng bài viết' : 'Lưu cập nhật'}</span>
+                </button>
+              </div>
+            </div>
           </div>,
           document.body
         )}
 
-        {/* Full Article / Knowledge Reader Modal - Rendered via Portal to avoid stacking context issues */}
+        {/* Reader Modal */}
         {readingArticle && createPortal(
           <div 
             className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 md:p-8 overflow-y-auto animate-in fade-in duration-200"
@@ -1204,97 +1008,55 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
               onClick={(e) => e.stopPropagation()}
               className="bg-white rounded-2xl max-w-5xl xl:max-w-6xl w-full max-h-[92vh] overflow-y-auto shadow-2xl p-6 sm:p-10 md:p-12 relative my-auto cursor-default border border-gray-100"
             >
-              {/* Close Button */}
               <button 
-                onClick={() => setReadingArticle(null)} 
-                className="absolute top-5 right-5 z-20 bg-gray-100 hover:bg-red-50 hover:text-red-500 text-gray-700 p-2 rounded-full transition shadow-sm"
-                title="Đóng (hoặc nhấn phím Esc / bấm ra ngoài)"
+                onClick={() => setReadingArticle(null)}
+                className="absolute top-4 right-4 sm:top-6 sm:right-6 bg-gray-100 text-gray-500 hover:text-gray-900 hover:bg-gray-200 w-10 h-10 rounded-full flex items-center justify-center transition z-20 shadow-sm"
+                aria-label="Đóng"
               >
-                <X size={22} />
+                <X size={20} />
               </button>
 
-              {/* Meta & Badge */}
-              <div className="flex flex-wrap items-center gap-3 mb-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                  readingArticle.category === 'knowledge' 
-                    ? 'bg-amber-100 text-amber-800' 
-                    : 'bg-primary/10 text-primary'
-                }`}>
-                  {readingArticle.category === 'knowledge' ? 'Kiến thức chuyên ngành' : 'Tin tức chuyên ngành'}
-                </span>
-                <span className="text-gray-400 text-xs flex items-center">
-                  <Calendar size={14} className="mr-1" />
+              <div className="flex flex-wrap items-center gap-3 mb-6">
+                <span className="bg-primary/10 text-primary font-bold text-xs px-3.5 py-1.5 rounded-full uppercase tracking-wider flex items-center">
+                  <Calendar size={13} className="mr-1.5" />
                   {formatDate(readingArticle.pubDate)}
                 </span>
+                {readingArticle.category === 'knowledge' ? (
+                  <span className="bg-indigo-50 text-indigo-700 font-bold text-xs px-3.5 py-1.5 rounded-full flex items-center">
+                    <BookOpen size={13} className="mr-1.5" /> Kiến thức Logistics
+                  </span>
+                ) : (
+                  <span className="bg-blue-50 text-blue-700 font-bold text-xs px-3.5 py-1.5 rounded-full flex items-center">
+                    <Info size={13} className="mr-1.5" /> Tin tức thị trường
+                  </span>
+                )}
+                {readingArticle.isPinned && (
+                  <span className="bg-amber-50 text-amber-700 border border-amber-200 font-bold text-xs px-3 py-1.5 rounded-full flex items-center">
+                    <Pin size={12} className="mr-1 fill-amber-700" /> Bài viết nổi bật
+                  </span>
+                )}
               </div>
 
-              {/* Title */}
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 leading-tight">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-8">
                 {readingArticle.title}
               </h2>
 
-              {/* 3D Interactive Model Header (Only when configured as 3D iframe embed) */}
-              {readingArticle.mediaType === 'iframe' && readingArticle.iframeCode && (
-                <div className="h-80 sm:h-96 md:h-[440px] rounded-2xl overflow-hidden mb-8 bg-gray-950 relative shadow-inner border border-gray-800">
-                  <div className="w-full h-full media-iframe-container" dangerouslySetInnerHTML={{ __html: readingArticle.iframeCode }} />
-                  <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-[11px] text-white flex items-center pointer-events-none">
-                    <Sparkles size={13} className="mr-1.5 text-amber-400" /> Mô hình 3D tương tác (Dùng chuột để xoay 360° & phóng to)
-                  </div>
+              <div className="prose prose-lg max-w-none text-gray-800 leading-relaxed font-normal">
+                {renderArticleContent(readingArticle.content, readingArticle.table)}
+
+                {(!readingArticle.content || !readingArticle.content.includes('[BANG_THONG_SO]')) && 
+                  readingArticle.table && 
+                  renderSpecsTable(readingArticle.table, 'reader-table-fallback')
+                }
+              </div>
+
+              <div className="mt-12 pt-6 border-t border-gray-100 flex justify-between items-center">
+                <div className="text-xs text-gray-400 font-medium">
+                  Long Hoang Logistics Knowledge Base
                 </div>
-              )}
-
-              {/* Full Content (with rich parsed headers, bold, lists, images, and inline tables) */}
-              {readingArticle.content ? (
-                <div className="my-6">
-                  {renderArticleContent(readingArticle.content, readingArticle.table)}
-                </div>
-              ) : (
-                /* Fallback description for simple news items without long content */
-                readingArticle.description && (
-                  <div className="bg-gray-50 border-l-4 border-primary p-4 sm:p-5 rounded-r-xl text-gray-700 font-medium text-base my-6 leading-relaxed">
-                    {readingArticle.description}
-                  </div>
-                )
-              )}
-
-              {/* Specifications Dynamic Table (Fallback at bottom only if not already inserted inline in content) */}
-              {(!readingArticle.content || !/\[(BANG_THONG_SO|BANG|TABLE|SPECS_TABLE|BANG_THONG_SO_CHI_TIET)\]|\{\{(BANG_THONG_SO|BANG|TABLE|SPECS_TABLE)\}\}/i.test(readingArticle.content)) && (
-                renderSpecsTable(readingArticle.table, 'bottom-specs-table')
-              )}
-
-              {/* External link button if available */}
-              {readingArticle.link && readingArticle.link !== '#' && readingArticle.link.trim() !== '' && (
-                <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Nguồn bài viết gốc:</span>
-                  <a 
-                    href={readingArticle.link} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="inline-flex items-center text-primary font-bold hover:underline text-sm"
-                  >
-                    Xem bài viết trên trang gốc <ExternalLink size={15} className="ml-1.5" />
-                  </a>
-                </div>
-              )}
-
-              {/* Action Footer */}
-              <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-3 justify-end">
                 <button
-                  onClick={() => {
-                    setReadingArticle(null);
-                    const contactSection = document.querySelector('#contact');
-                    if (contactSection) {
-                      contactSection.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }}
-                  className="bg-primary hover:bg-primaryDark text-white px-6 py-3 rounded-xl font-bold text-sm transition flex items-center justify-center space-x-2 shadow-md shadow-primary/20"
-                >
-                  <span>Liên hệ tư vấn dịch vụ</span>
-                  <ArrowRight size={16} />
-                </button>
-                <button 
                   onClick={() => setReadingArticle(null)}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-bold text-sm transition"
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-6 py-2.5 rounded-xl font-bold text-sm transition"
                 >
                   Đóng
                 </button>
@@ -1304,11 +1066,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
           document.body
         )}
 
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <Loader2 className="animate-spin text-primary w-10 h-10" />
-          </div>
-        ) : displayNews.length === 0 ? (
+        {displayNews.length === 0 ? (
           <div className="text-center text-gray-500 h-48 flex items-center justify-center">
             Chưa có bài viết nào trong chuyên mục này.
           </div>
@@ -1341,24 +1099,20 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                     >
                       <Pin size={14} className={item.isPinned ? "fill-current" : ""} />
                     </button>
-                    {item.isManual && (
-                      <>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); startEdit(item); }} 
-                          className="bg-white/95 text-blue-600 p-2 rounded-lg shadow hover:bg-blue-600 hover:text-white transition"
-                          title="Chỉnh sửa bài"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); deleteNews(item.id); }} 
-                          className="bg-white/95 text-red-500 p-2 rounded-lg shadow hover:bg-red-500 hover:text-white transition"
-                          title="Xóa bài"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </>
-                    )}
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); startEdit(item); }} 
+                      className="bg-white/95 text-blue-600 p-2 rounded-lg shadow hover:bg-blue-600 hover:text-white transition"
+                      title="Chỉnh sửa bài"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); promptDeleteNews(item); }} 
+                      className="bg-white/95 text-red-500 p-2 rounded-lg shadow hover:bg-red-500 hover:text-white transition"
+                      title="Xóa bài"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 )}
                 
@@ -1377,11 +1131,6 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                         </div>
                       )}
                     </div>
-                    {item.isManual && (
-                      <div className="absolute bottom-2 right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded shadow pointer-events-none">
-                        Tin thủ công
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <div 
@@ -1407,11 +1156,6 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                           </div>
                         )}
                      </div>
-                     {item.isManual && (
-                       <div className="absolute bottom-2 right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded shadow">
-                         Tin thủ công
-                       </div>
-                     )}
                   </div>
                 )}
 

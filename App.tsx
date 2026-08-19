@@ -10,6 +10,7 @@ import ContactForm from './components/ContactForm';
 import Footer from './components/Footer';
 import ConsoleLogin from './components/ConsoleLogin';
 import { API_BASE_URL } from './constants';
+import { DEFAULT_NEWS_ITEMS } from './src/data/defaultArticles';
 
 export type UserRole = 'admin' | 'manager' | 'staff' | 'customer' | null;
 
@@ -51,7 +52,18 @@ function App() {
   const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbum[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [manualNews, setManualNews] = useState<any[]>([]);
+  const [manualNews, setManualNews] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('lh_manual_news');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.warn("Could not parse local news:", e);
+    }
+    return DEFAULT_NEWS_ITEMS;
+  });
   const [branches, setBranches] = useState<any[]>([]);
   const [footerInfo, setFooterInfo] = useState<any>(null);
   const [activePage, setActivePage] = useState<string | null>(null);
@@ -79,7 +91,12 @@ function App() {
         if (data.galleryAlbums) setGalleryAlbums(data.galleryAlbums);
         if (data.milestones) setMilestones(data.milestones);
         if (data.jobs) setJobs(data.jobs);
-        if (data.manualNews) setManualNews(data.manualNews);
+        if (data.manualNews && Array.isArray(data.manualNews)) {
+          setManualNews(data.manualNews);
+          try {
+            localStorage.setItem('lh_manual_news', JSON.stringify(data.manualNews));
+          } catch (e) {}
+        }
         if (data.branches) setBranches(data.branches);
         if (data.footerInfo) setFooterInfo(data.footerInfo);
       })
@@ -132,7 +149,12 @@ function App() {
   };
 
   const handleUpdateSettings = (key: string, value: any) => {
-    if (key === 'manualNews') setManualNews(value);
+    if (key === 'manualNews') {
+      setManualNews(value);
+      try {
+        localStorage.setItem('lh_manual_news', JSON.stringify(value));
+      } catch (e) {}
+    }
     if (key === 'branches') setBranches(value);
     if (key === 'footerInfo') setFooterInfo(value);
     updateBackend({ ...fullData, [key]: value });
