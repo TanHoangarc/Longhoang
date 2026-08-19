@@ -15,7 +15,10 @@ import {
   Info,
   Image as ImageIcon,
   Upload,
-  Link2
+  Link2,
+  Bold,
+  Heading2,
+  List
 } from 'lucide-react';
 import { API_BASE_URL } from '../constants';
 
@@ -67,11 +70,18 @@ const FALLBACK_NEWS: NewsItem[] = [
     isManual: false,
     mediaType: "iframe",
     iframeCode: '<iframe title="Shipping Container 3D" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/2f53ec9741ea4db382a939f4fe6d4b29/embed"></iframe>',
-    content: `Container tiêu chuẩn ISO là công cụ vận tải cốt lõi trong chuỗi cung ứng toàn cầu. Việc nắm rõ chính xác kích thước lọt lòng, kích thước cửa mở và tải trọng tối đa giúp các chủ hàng lên kế hoạch đóng gói, xếp dỡ (stuffing/destuffing) an toàn và tối ưu chi phí cước biển.
+    content: `## 1. Khái niệm về Container tiêu chuẩn quốc tế
+Container tiêu chuẩn ISO là công cụ vận chuyển hàng hóa cốt lõi trong chuỗi cung ứng toàn cầu. Việc nắm rõ chính xác **kích thước lọt lòng**, **chiều rộng cửa mở** và **tải trọng tối đa** giúp các chủ hàng lên kế hoạch đóng gói, xếp dỡ (stuffing/destuffing) an toàn và tối ưu chi phí cước biển.
 
 ![Cấu trúc các loại Container tiêu chuẩn đường biển](https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80)
 
-Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng loại container thông dụng trong logistics:`,
+## 2. Các điểm cần lưu ý khi chọn Container
+- **Cont 20ft DC:** Thích hợp cho hàng nặng, thể tích nhỏ như gạo, phân bón, xi măng, khoáng sản.
+- **Cont 40ft DC:** Thích hợp cho hàng hóa thể tích lớn nhưng trọng lượng vừa phải như dệt may, nội thất, hạt nhựa.
+- **Cont 40ft HC (High Cube):** Chiều cao vượt trội (2.698m), tối ưu chứa được nhiều kiện hàng cồng kềnh.
+
+## 3. Bảng thông số kỹ thuật chi tiết
+Dưới đây là bảng thông số chuẩn xác cho từng loại container thông dụng trong logistics:`,
     table: {
       headers: ["Chỉ tiêu kỹ thuật", "Cont 20' Thường (20'DC)", "Cont 40' Thường (40'DC)", "Cont 40' Cao (40'HC)"],
       rows: [
@@ -108,6 +118,7 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
   // Content image upload & insertion states
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [showLinkPrompt, setShowLinkPrompt] = useState(false);
   const [imgUrlInput, setImgUrlInput] = useState('');
   const [imgCaptionInput, setImgCaptionInput] = useState('');
@@ -205,6 +216,33 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
     setIsAdding(false);
     setIsEditing(null);
     setShowLinkPrompt(false);
+  };
+
+  // Helper to insert formatting tags at cursor position
+  const insertFormatAtCursor = (prefix: string, suffix: string = '', defaultPlaceholder: string = '') => {
+    const textarea = contentTextareaRef.current;
+    const currentVal = editData.content || '';
+
+    if (!textarea) {
+      setEditData(prev => ({
+        ...prev,
+        content: currentVal + prefix + defaultPlaceholder + suffix
+      }));
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = currentVal.substring(start, end) || defaultPlaceholder;
+    const replacement = prefix + selectedText + suffix;
+
+    const newVal = currentVal.substring(0, start) + replacement + currentVal.substring(end);
+    setEditData(prev => ({ ...prev, content: newVal }));
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
+    }, 50);
   };
 
   // Image Upload handler for Article Content
@@ -325,11 +363,18 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
       ...editData,
       title: editData.title || "Quy cách & Kích thước chi tiết các loại Container (20ft, 40ft, 40HC)",
       description: editData.description || "Bảng tra cứu kích thước lọt lòng, thể tích chứa hàng và tải trọng chuẩn quốc tế của các loại Container phổ biến.",
-      content: editData.content || `Container tiêu chuẩn ISO là xương sống của ngành vận tải đường biển quốc tế. Việc nắm rõ chính xác kích thước lọt lòng, chiều rộng cửa mở và tải trọng tối đa giúp doanh nghiệp tính toán xếp hàng (stuffing) tối ưu và tiết kiệm chi phí vận chuyển.
+      content: editData.content || `## 1. Khái niệm về Container tiêu chuẩn quốc tế
+Container tiêu chuẩn ISO là công cụ vận tải cốt lõi trong chuỗi cung ứng toàn cầu. Việc nắm rõ chính xác **kích thước lọt lòng**, **chiều rộng cửa mở** và **tải trọng tối đa** giúp các chủ hàng lên kế hoạch đóng gói, xếp dỡ (stuffing/destuffing) an toàn và tối ưu chi phí cước biển.
 
 ![Cấu trúc các loại Container tiêu chuẩn đường biển](https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80)
 
-Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng loại container thông dụng:`,
+## 2. Các điểm cần lưu ý khi chọn Container
+- **Cont 20ft DC:** Thích hợp cho hàng nặng, thể tích nhỏ như gạo, phân bón, xi măng, khoáng sản.
+- **Cont 40ft DC:** Thích hợp cho hàng hóa thể tích lớn nhưng trọng lượng vừa phải như dệt may, nội thất, hạt nhựa.
+- **Cont 40ft HC (High Cube):** Chiều cao vượt trội (2.698m), tối ưu chứa được nhiều kiện hàng cồng kềnh.
+
+## 3. Bảng thông số kỹ thuật chi tiết
+Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng loại container thông dụng trong logistics:`,
       table: {
         headers: ["Chỉ tiêu kỹ thuật", "Cont 20' Thường (20'DC)", "Cont 40' Thường (40'DC)", "Cont 40' Cao (40'HC)"],
         rows: [
@@ -349,12 +394,109 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
     if (e) {
       e.preventDefault();
     }
-    // If it has custom full content, dynamic table, is knowledge, or has no valid external link
     if (item.content || item.table || item.category === 'knowledge' || !item.link || item.link === '#' || item.link.trim() === '') {
       setReadingArticle(item);
     } else if (item.link) {
       window.open(item.link, '_blank');
     }
+  };
+
+  // Helper to parse inline formatting (e.g. **bold**)
+  const renderInlineFormattedText = (text: string) => {
+    const parts: React.ReactNode[] = [];
+    const boldRegex = /\*\*(.*?)\*\*/g;
+    let lastIdx = 0;
+    let match: RegExpExecArray | null;
+
+    let k = 0;
+    while ((match = boldRegex.exec(text)) !== null) {
+      if (match.index > lastIdx) {
+        parts.push(text.substring(lastIdx, match.index));
+      }
+      parts.push(
+        <strong key={`b-${k++}`} className="font-bold text-gray-900">
+          {match[1]}
+        </strong>
+      );
+      lastIdx = boldRegex.lastIndex;
+    }
+
+    if (lastIdx < text.length) {
+      parts.push(text.substring(lastIdx));
+    }
+
+    return parts;
+  };
+
+  // Helper to parse rich markdown blocks (Headings, Bullet points, Numbered items, Paragraphs)
+  const renderTextBlock = (text: string, blockKey: string | number) => {
+    const lines = text.split('\n');
+    return (
+      <div key={blockKey} className="space-y-3.5 my-4">
+        {lines.map((line, lIdx) => {
+          const trimmed = line.trim();
+          if (!trimmed) {
+            return <div key={lIdx} className="h-1.5" />;
+          }
+
+          // Heading 1: # Tiêu đề chính
+          if (trimmed.startsWith('# ')) {
+            return (
+              <h3 key={lIdx} className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-6 mb-3 pt-3 border-b border-gray-200 pb-2.5">
+                {renderInlineFormattedText(trimmed.replace(/^#\s+/, ''))}
+              </h3>
+            );
+          }
+
+          // Heading 2: ## Tiêu đề lớn
+          if (trimmed.startsWith('## ')) {
+            return (
+              <h4 key={lIdx} className="text-xl sm:text-2xl font-bold text-gray-900 mt-6 mb-3 flex items-center">
+                <span className="w-1.5 h-6 bg-primary rounded-full mr-2.5 inline-block flex-shrink-0"></span>
+                <span>{renderInlineFormattedText(trimmed.replace(/^##\s+/, ''))}</span>
+              </h4>
+            );
+          }
+
+          // Heading 3: ### Tiêu đề vừa
+          if (trimmed.startsWith('### ')) {
+            return (
+              <h5 key={lIdx} className="text-lg sm:text-xl font-bold text-primary mt-5 mb-2 flex items-center">
+                {renderInlineFormattedText(trimmed.replace(/^###\s+/, ''))}
+              </h5>
+            );
+          }
+
+          // Bullet List: - item hoặc * item
+          if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            return (
+              <div key={lIdx} className="flex items-start ml-2 sm:ml-4 text-gray-700">
+                <span className="w-2 h-2 bg-primary rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                <span className="leading-relaxed text-base">{renderInlineFormattedText(trimmed.replace(/^[-*]\s+/, ''))}</span>
+              </div>
+            );
+          }
+
+          // Numbered List: 1. item
+          const numMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
+          if (numMatch) {
+            return (
+              <div key={lIdx} className="flex items-start ml-2 sm:ml-4 text-gray-700">
+                <span className="font-bold text-primary mr-2 flex-shrink-0">{numMatch[1]}.</span>
+                <span className="leading-relaxed text-base">{renderInlineFormattedText(numMatch[2])}</span>
+              </div>
+            );
+          }
+
+          // Standard Paragraph with inline formatting
+          return (
+            <p key={lIdx} className="text-gray-700 leading-relaxed text-base">
+              {renderInlineFormattedText(trimmed)}
+            </p>
+          );
+        })}
+      </div>
+    );
   };
 
   // Robust Markdown and Image Content Parser for Reader Modal
@@ -371,13 +513,9 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
     while ((match = regex.exec(content)) !== null) {
       // Text block before this image
       if (match.index > lastIndex) {
-        const textSegment = content.substring(lastIndex, match.index).trim();
-        if (textSegment) {
-          elements.push(
-            <div key={`text-${partIndex++}`} className="text-gray-700 leading-relaxed text-base whitespace-pre-line my-4">
-              {textSegment}
-            </div>
-          );
+        const textSegment = content.substring(lastIndex, match.index);
+        if (textSegment.trim()) {
+          elements.push(renderTextBlock(textSegment, `block-${partIndex++}`));
         }
       }
 
@@ -410,13 +548,9 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
 
     // Remaining text block after last image
     if (lastIndex < content.length) {
-      const remainingText = content.substring(lastIndex).trim();
-      if (remainingText) {
-        elements.push(
-          <div key={`text-${partIndex++}`} className="text-gray-700 leading-relaxed text-base whitespace-pre-line my-4">
-            {remainingText}
-          </div>
-        );
+      const remainingText = content.substring(lastIndex);
+      if (remainingText.trim()) {
+        elements.push(renderTextBlock(remainingText, `block-${partIndex++}`));
       }
     }
 
@@ -593,16 +727,46 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                     )}
                   </div>
 
-                  {/* Full Article Content with Image Inserter Toolbar */}
+                  {/* Full Article Content with Rich Format Toolbar & Image Inserter */}
                   <div className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5 pb-2.5 border-b border-gray-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-gray-100">
                       <div>
                         <label className="font-bold text-gray-800 block">Nội dung chi tiết bài viết</label>
-                        <p className="text-xs text-gray-500">Soạn thảo bài viết, tài liệu kỹ thuật & chèn ảnh minh họa</p>
+                        <p className="text-xs text-gray-500">Soạn thảo, định dạng tiêu đề, in đậm và chèn ảnh minh họa</p>
                       </div>
 
-                      {/* Image Inserter Buttons */}
-                      <div className="flex items-center gap-2">
+                      {/* Formatting & Media Toolbar */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {/* Bold Button */}
+                        <button
+                          type="button"
+                          onClick={() => insertFormatAtCursor('**', '**', 'Chữ in đậm')}
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                          title="Tô đậm chữ (**văn bản**)"
+                        >
+                          <Bold size={13} className="mr-1" /> Tô đậm
+                        </button>
+
+                        {/* Heading Button */}
+                        <button
+                          type="button"
+                          onClick={() => insertFormatAtCursor('\n## ', '\n', 'Tiêu đề mục')}
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                          title="Tạo tiêu đề mục lớn (## Tiêu đề)"
+                        >
+                          <Heading2 size={13} className="mr-1 text-primary" /> Tiêu đề mục
+                        </button>
+
+                        {/* List Button */}
+                        <button
+                          type="button"
+                          onClick={() => insertFormatAtCursor('\n- ', '\n', 'Nội dung danh sách')}
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                          title="Tạo gạch đầu dòng (- Mục)"
+                        >
+                          <List size={13} className="mr-1" /> Gạch đầu dòng
+                        </button>
+
                         {/* Hidden file input */}
                         <input 
                           type="file" 
@@ -612,29 +776,33 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                           onChange={handleUploadContentImage} 
                         />
                         
+                        {/* Upload Image Button */}
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={isUploadingImage}
-                          className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-3 py-1.5 rounded-lg font-bold text-xs flex items-center transition"
+                          className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition shadow-sm"
+                          title="Tải ảnh từ máy tính"
                         >
                           {isUploadingImage ? (
                             <>
-                              <Loader2 size={13} className="animate-spin mr-1.5" /> Đang tải ảnh...
+                              <Loader2 size={13} className="animate-spin mr-1" /> Tải ảnh...
                             </>
                           ) : (
                             <>
-                              <Upload size={13} className="mr-1.5" /> Tải ảnh từ máy tính
+                              <Upload size={13} className="mr-1" /> Tải ảnh
                             </>
                           )}
                         </button>
 
+                        {/* Link Image Button */}
                         <button
                           type="button"
                           onClick={() => setShowLinkPrompt(!showLinkPrompt)}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center transition"
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                          title="Chèn ảnh từ link URL"
                         >
-                          <Link2 size={13} className="mr-1.5" /> Chèn link ảnh (URL)
+                          <Link2 size={13} className="mr-1" /> Link ảnh
                         </button>
                       </div>
                     </div>
@@ -681,15 +849,19 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                     )}
 
                     <textarea 
-                      className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-primary/40 outline-none leading-relaxed font-normal" 
-                      rows={6} 
+                      ref={contentTextareaRef}
+                      className="w-full border border-gray-300 p-3.5 rounded-lg focus:ring-2 focus:ring-primary/40 outline-none leading-relaxed font-normal" 
+                      rows={7} 
                       value={editData.content || ''} 
                       onChange={e => setEditData({...editData, content: e.target.value})} 
-                      placeholder="Nhập nội dung bài viết. Bạn có thể nhấn nút [Tải ảnh từ máy tính] ở trên hoặc gõ ![Chú thích](link_ảnh) để chèn hình ảnh vào đúng vị trí mong muốn..."
+                      placeholder="Nhập nội dung bài viết. Bạn có thể bôi đen chữ và bấm nút [Tô đậm], [Tiêu đề mục] ở thanh công cụ phía trên..."
                     />
-                    <p className="text-[11px] text-gray-400 mt-1">
-                      💡 Mẹo: Hình ảnh được chèn với cú pháp <code className="bg-gray-100 text-gray-700 px-1 py-0.5 rounded">![Chú thích ảnh](link_ảnh)</code> sẽ tự động hiển thị đẹp mắt, rõ nét trong bài đọc.
-                    </p>
+                    <div className="text-[11px] text-gray-500 mt-2 bg-gray-50 p-2.5 rounded-lg border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <span>📌 <b>Cách định dạng nhanh:</b></span>
+                      <span>• Tô đậm: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">**Chữ in đậm**</code></span>
+                      <span>• Tiêu đề mục: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">## Tên tiêu đề</code></span>
+                      <span>• Gạch đầu dòng: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">- Ý chính</code></span>
+                    </div>
                   </div>
 
                   {/* Dynamic Table Section */}
@@ -898,7 +1070,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                 </div>
               )}
 
-              {/* Full Content (with rich parsed images inside body) */}
+              {/* Full Content (with rich parsed headers, bold, lists, images) */}
               {readingArticle.content && (
                 <div className="my-6">
                   {renderArticleContent(readingArticle.content)}
