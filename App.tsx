@@ -4,6 +4,7 @@ import Hero from './components/Hero';
 import About from './components/About';
 import Services from './components/Services';
 import News from './components/News';
+import NewsCategoryPage from './components/NewsCategoryPage';
 import Jobs from './components/Jobs';
 import ContactForm from './components/ContactForm';
 import Footer from './components/Footer';
@@ -176,18 +177,50 @@ function App() {
         activePage={activePage}
       />
       <main>
-        <Hero projects={projects} onUpdateProjects={handleUpdateProjects} userRole={userRole} />
-        <About 
-          galleryAlbums={galleryAlbums}
-          onUpdateGallery={handleUpdateGalleryAlbums}
-          milestones={milestones}
-          onUpdateMilestones={handleUpdateMilestones}
-          userRole={userRole}
-        />
-        <Services />
-        <News userRole={userRole} manualNews={manualNews} onUpdateNews={(v: any) => handleUpdateSettings('manualNews', v)} />
-        <Jobs jobs={jobs} onUpdateJobs={handleUpdateJobs} userRole={userRole} />
-        <ContactForm onSubmitRequest={handleNewQuotationRequest} userRole={userRole} branches={branches} onUpdateBranches={(v: any) => handleUpdateSettings('branches', v)} />
+        {activePage === 'news-page' ? (
+          <NewsCategoryPage 
+            category="news"
+            onBack={() => { setActivePage(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            onChangeCategory={(cat) => setActivePage(cat === 'news' ? 'news-page' : 'knowledge-page')}
+            userRole={userRole}
+            manualNews={manualNews}
+            onUpdateNews={(v: any) => handleUpdateSettings('manualNews', v)}
+            onOpenPage={setActivePage}
+          />
+        ) : activePage === 'knowledge-page' ? (
+          <NewsCategoryPage 
+            category="knowledge"
+            onBack={() => { setActivePage(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            onChangeCategory={(cat) => setActivePage(cat === 'news' ? 'news-page' : 'knowledge-page')}
+            userRole={userRole}
+            manualNews={manualNews}
+            onUpdateNews={(v: any) => handleUpdateSettings('manualNews', v)}
+            onOpenPage={setActivePage}
+          />
+        ) : (
+          <>
+            <Hero projects={projects} onUpdateProjects={handleUpdateProjects} userRole={userRole} />
+            <About 
+              galleryAlbums={galleryAlbums}
+              onUpdateGallery={handleUpdateGalleryAlbums}
+              milestones={milestones}
+              onUpdateMilestones={handleUpdateMilestones}
+              userRole={userRole}
+            />
+            <Services />
+            <News 
+              userRole={userRole} 
+              manualNews={manualNews} 
+              onUpdateNews={(v: any) => handleUpdateSettings('manualNews', v)} 
+              onOpenCategoryPage={(cat) => {
+                setActivePage(cat === 'news' ? 'news-page' : 'knowledge-page');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+            <Jobs jobs={jobs} onUpdateJobs={handleUpdateJobs} userRole={userRole} />
+            <ContactForm onSubmitRequest={handleNewQuotationRequest} userRole={userRole} branches={branches} onUpdateBranches={(v: any) => handleUpdateSettings('branches', v)} />
+          </>
+        )}
       </main>
       <Footer userRole={userRole} footerInfo={footerInfo} onUpdateFooter={(v: any) => handleUpdateSettings('footerInfo', v)} />
     </div>

@@ -19,7 +19,9 @@ import {
   Link2,
   Bold,
   Heading2,
-  List
+  List,
+  Pin,
+  Eye
 } from 'lucide-react';
 import { API_BASE_URL } from '../constants';
 
@@ -43,6 +45,8 @@ export interface NewsItem {
   description: string;
   category?: 'news' | 'knowledge';
   isManual?: boolean;
+  isPinned?: boolean;
+  views?: number;
   mediaType?: 'image' | 'iframe';
   iframeCode?: string;
   content?: string;
@@ -58,7 +62,9 @@ const FALLBACK_NEWS: NewsItem[] = [
     thumbnail: STOCK_IMAGES[0],
     description: "Các chuyên gia nhận định ngành logistics sẽ có những bước tiến vượt bậc nhờ vào sự phát triển của thương mại điện tử và đầu tư hạ tầng cảng biển.",
     category: "news",
-    isManual: false
+    isManual: false,
+    isPinned: true,
+    views: 1840
   },
   {
     id: 'fb-knowledge-0',
@@ -69,6 +75,8 @@ const FALLBACK_NEWS: NewsItem[] = [
     description: "Bảng tra cứu kích thước lọt lòng, thể tích chứa hàng và tải trọng chuẩn quốc tế của các loại Container phổ biến nhất trong vận tải đường biển.",
     category: "knowledge",
     isManual: false,
+    isPinned: true,
+    views: 3450,
     mediaType: "iframe",
     iframeCode: '<iframe title="Shipping Container 3D" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/2f53ec9741ea4db382a939f4fe6d4b29/embed"></iframe>',
     content: `## 1. Khái niệm về Container tiêu chuẩn quốc tế
@@ -107,9 +115,10 @@ interface NewsProps {
   userRole?: string | null;
   manualNews?: NewsItem[];
   onUpdateNews?: (news: NewsItem[]) => void;
+  onOpenCategoryPage?: (category: 'news' | 'knowledge') => void;
 }
 
-const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) => {
+const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, onOpenCategoryPage }) => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'news' | 'knowledge'>('news');
@@ -246,6 +255,19 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
     setIsAdding(false);
     setIsEditing(null);
     setShowLinkPrompt(false);
+  };
+
+  const togglePin = (item: NewsItem) => {
+    if (!onUpdateNews) return;
+    const isExistingManual = manualNews.some(n => n.id === item.id);
+    let updated: NewsItem[];
+    if (isExistingManual) {
+      updated = manualNews.map(n => n.id === item.id ? { ...n, isPinned: !n.isPinned } : n);
+    } else {
+      const newItem: NewsItem = { ...item, isManual: true, isPinned: !item.isPinned };
+      updated = [newItem, ...manualNews];
+    }
+    onUpdateNews(updated);
   };
 
   // Helper to insert formatting tags at cursor position WITHOUT jumping / scrolling
@@ -653,7 +675,17 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
   const filteredFetchedNews = activeTab === 'news' ? news : [];
   
   const allTabItems = [...filteredManualNews, ...filteredFetchedNews];
-  const displayNews = allTabItems.length > 0 ? allTabItems.slice(0, 6) : fallbackForTab;
+  const sourceList = allTabItems.length > 0 ? allTabItems : fallbackForTab;
+
+  // Sort so pinned articles come first, then latest pubDate
+  const sortedTabItems = [...sourceList].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    return new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime();
+  });
+
+  // Exactly 3 priority items on the home section
+  const displayNews = sortedTabItems.slice(0, 3);
 
   return (
     <section id="news" className="py-20 bg-gray-50 relative">
@@ -727,7 +759,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                     <div>
                       <label className="font-bold block mb-1.5 text-gray-700">Phân loại chuyên mục</label>
                       <select 
-                        className="w-full border border-gray-300 p-3 rounded-lg bg-white focus:ring-2 focus:ring-primary/40 outline-none"
+                        className="w-full border border-gray-300 p-3 rounded-lg bg-white focus:ring-2 focus:ring-primary/40 outline-none" 
                         value={editData.category || 'news'} 
                         onChange={e => setEditData({...editData, category: e.target.value as 'news' | 'knowledge'})}
                       >
@@ -747,6 +779,22 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                         </button>
                       </div>
                     )}
+                  </div>
+
+                  {/* Pin option */}
+                  <div className="bg-blue-50/70 border border-blue-100 p-3 rounded-xl flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer font-medium text-gray-800 text-sm">
+                      <input 
+                        type="checkbox"
+                        checked={!!editData.isPinned}
+                        onChange={(e) => setEditData({ ...editData, isPinned: e.target.checked })}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <span className="flex items-center gap-1.5">
+                        <Pin size={15} className="text-blue-600" />
+                        Ghim bài viết này lên đầu trang (Ưu tiên hiển thị)
+                      </span>
+                    </label>
                   </div>
 
                   {/* Title */}
@@ -1185,36 +1233,28 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                 {readingArticle.title}
               </h2>
 
-              {/* 3D Model or Image Viewer Header */}
-              {readingArticle.mediaType === 'iframe' && readingArticle.iframeCode ? (
+              {/* 3D Interactive Model Header (Only when configured as 3D iframe embed) */}
+              {readingArticle.mediaType === 'iframe' && readingArticle.iframeCode && (
                 <div className="h-80 sm:h-96 md:h-[440px] rounded-2xl overflow-hidden mb-8 bg-gray-950 relative shadow-inner border border-gray-800">
                   <div className="w-full h-full media-iframe-container" dangerouslySetInnerHTML={{ __html: readingArticle.iframeCode }} />
                   <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-[11px] text-white flex items-center pointer-events-none">
                     <Sparkles size={13} className="mr-1.5 text-amber-400" /> Mô hình 3D tương tác (Dùng chuột để xoay 360° & phóng to)
                   </div>
                 </div>
-              ) : (
-                <div className="h-64 sm:h-80 md:h-[400px] rounded-2xl overflow-hidden mb-8 relative">
-                  <img 
-                    src={readingArticle.thumbnail || STOCK_IMAGES[0]} 
-                    alt={readingArticle.title} 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-
-              {/* Description Lead */}
-              {readingArticle.description && (
-                <div className="bg-gray-50 border-l-4 border-primary p-4 sm:p-5 rounded-r-xl text-gray-700 font-medium text-base mb-6 leading-relaxed">
-                  {readingArticle.description}
-                </div>
               )}
 
               {/* Full Content (with rich parsed headers, bold, lists, images, and inline tables) */}
-              {readingArticle.content && (
+              {readingArticle.content ? (
                 <div className="my-6">
                   {renderArticleContent(readingArticle.content, readingArticle.table)}
                 </div>
+              ) : (
+                /* Fallback description for simple news items without long content */
+                readingArticle.description && (
+                  <div className="bg-gray-50 border-l-4 border-primary p-4 sm:p-5 rounded-r-xl text-gray-700 font-medium text-base my-6 leading-relaxed">
+                    {readingArticle.description}
+                  </div>
+                )
               )}
 
               {/* Specifications Dynamic Table (Fallback at bottom only if not already inserted inline in content) */}
@@ -1288,22 +1328,37 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                 className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 group flex flex-col h-full border border-gray-100 relative"
               >
                 {/* Admin controls per item */}
-                {isAdmin && item.isManual && (
-                  <div className="absolute top-2 right-2 z-30 flex gap-2">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); startEdit(item); }} 
-                      className="bg-white/95 text-blue-600 p-2 rounded-lg shadow hover:bg-blue-600 hover:text-white transition"
-                      title="Chỉnh sửa bài"
+                {isAdmin && (
+                  <div className="absolute top-2 right-2 z-30 flex gap-1.5">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); togglePin(item); }}
+                      className={`p-2 rounded-lg shadow transition ${
+                        item.isPinned 
+                          ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                          : 'bg-white/95 text-gray-600 hover:bg-blue-600 hover:text-white'
+                      }`}
+                      title={item.isPinned ? "Bỏ ghim bài viết" : "Ghim bài viết lên đầu"}
                     >
-                      <Edit size={14} />
+                      <Pin size={14} className={item.isPinned ? "fill-current" : ""} />
                     </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); deleteNews(item.id); }} 
-                      className="bg-white/95 text-red-500 p-2 rounded-lg shadow hover:bg-red-500 hover:text-white transition"
-                      title="Xóa bài"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    {item.isManual && (
+                      <>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); startEdit(item); }} 
+                          className="bg-white/95 text-blue-600 p-2 rounded-lg shadow hover:bg-blue-600 hover:text-white transition"
+                          title="Chỉnh sửa bài"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); deleteNews(item.id); }} 
+                          className="bg-white/95 text-red-500 p-2 rounded-lg shadow hover:bg-red-500 hover:text-white transition"
+                          title="Xóa bài"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
                 
@@ -1311,9 +1366,16 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                 {item.mediaType === 'iframe' && item.iframeCode ? (
                   <div className="block overflow-hidden h-64 relative bg-gray-950 media-iframe-container">
                     <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: item.iframeCode }} />
-                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center shadow-sm pointer-events-none">
-                       <Calendar size={12} className="mr-1" />
-                       {formatDate(item.pubDate)}
+                    <div className="absolute top-4 left-4 flex flex-wrap gap-2 pointer-events-none">
+                      <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center shadow-sm">
+                         <Calendar size={12} className="mr-1" />
+                         {formatDate(item.pubDate)}
+                      </div>
+                      {item.isPinned && (
+                        <div className="bg-blue-600 text-white px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center shadow-sm">
+                          <Pin size={11} className="mr-1 fill-current" /> Đã ghim
+                        </div>
+                      )}
                     </div>
                     {item.isManual && (
                       <div className="absolute bottom-2 right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded shadow pointer-events-none">
@@ -1334,9 +1396,16 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                         (e.target as HTMLImageElement).src = STOCK_IMAGES[index % STOCK_IMAGES.length];
                       }}
                      />
-                     <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center shadow-sm">
-                        <Calendar size={12} className="mr-1" />
-                        {formatDate(item.pubDate)}
+                     <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+                        <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center shadow-sm">
+                           <Calendar size={12} className="mr-1" />
+                           {formatDate(item.pubDate)}
+                        </div>
+                        {item.isPinned && (
+                          <div className="bg-blue-600 text-white px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center shadow-sm">
+                            <Pin size={11} className="mr-1 fill-current" /> Đã ghim
+                          </div>
+                        )}
                      </div>
                      {item.isManual && (
                        <div className="absolute bottom-2 right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded shadow">
@@ -1373,15 +1442,38 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                       )}
                     </button>
 
-                    {item.table && (
-                      <span className="text-[11px] font-semibold text-gray-400 flex items-center bg-gray-100 px-2 py-0.5 rounded">
-                        <TableIcon size={12} className="mr-1 text-primary" /> Có bảng thông số
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-gray-400 flex items-center" title="Lượt xem bài viết">
+                        <Eye size={13} className="mr-1 text-gray-400" />
+                        {item.views || (item.isPinned ? 1520 : 340)}
                       </span>
-                    )}
+                      {item.table && (
+                        <span className="text-[11px] font-semibold text-gray-400 flex items-center bg-gray-100 px-2 py-0.5 rounded">
+                          <TableIcon size={12} className="mr-1 text-primary" /> Bảng
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* View All CTA Button */}
+        {onOpenCategoryPage && (
+          <div className="mt-12 text-center">
+            <button
+              onClick={() => onOpenCategoryPage(activeTab)}
+              className="inline-flex items-center gap-2 bg-white hover:bg-primary hover:text-white text-gray-800 font-bold px-8 py-3.5 rounded-full border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-200 text-sm group"
+            >
+              <span>
+                {activeTab === 'news' 
+                  ? 'Xem tất cả Tin tức chuyên ngành' 
+                  : 'Xem tất cả Kiến thức chuyên ngành'}
+              </span>
+              <ArrowRight size={16} className="text-primary group-hover:text-white transition-transform group-hover:translate-x-1" />
+            </button>
           </div>
         )}
       </div>
