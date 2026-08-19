@@ -1221,7 +1221,7 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
             {/* Modal Bottom Actions */}
             <div className="mt-12 pt-6 border-t border-gray-100 flex justify-between items-center">
               <div className="text-xs text-gray-400 font-medium">
-                Long Hoang Logistics Knowledge Base
+                Long Hoàng Logistics Knowledge Base
               </div>
               <button
                 onClick={() => setReadingArticle(null)}

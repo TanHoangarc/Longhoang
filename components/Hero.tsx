@@ -208,7 +208,7 @@ const Hero: React.FC<HeroProps> = ({ projects, onUpdateProjects, userRole }) => 
         <div className="max-w-3xl">
           <div className="flex items-center space-x-2 mb-4">
              <div className="h-1 w-12 bg-primary"></div>
-             <span className="text-primary font-bold tracking-widest uppercase text-sm">Long Hoang Logistics</span>
+             <span className="text-primary font-bold tracking-widest uppercase text-sm">Long Hoàng Logistics</span>
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white leading-tight mb-6">
             KẾT NỐI <br/>
@@ -383,7 +383,7 @@ const Hero: React.FC<HeroProps> = ({ projects, onUpdateProjects, userRole }) => 
                         <div className="mt-12 bg-[#1e2a3b] rounded-lg p-8 text-center text-white relative overflow-hidden">
                             <div className="relative z-10">
                             <h3 className="text-2xl font-bold mb-4">Bạn có dự án cần vận chuyển?</h3>
-                            <p className="text-gray-300 mb-6 max-w-2xl mx-auto">Liên hệ ngay với đội ngũ chuyên gia của Long Hoang Logistics để được tư vấn giải pháp tối ưu nhất cho dự án của bạn.</p>
+                            <p className="text-gray-300 mb-6 max-w-2xl mx-auto">Liên hệ ngay với đội ngũ chuyên gia của Long Hoàng Logistics để được tư vấn giải pháp tối ưu nhất cho dự án của bạn.</p>
                             <a href="#contact" onClick={() => setIsProjectModalOpen(false)} className="inline-block bg-primary hover:bg-primaryDark text-white px-8 py-3 rounded font-bold transition">
                                 Liên hệ ngay
                             </a>

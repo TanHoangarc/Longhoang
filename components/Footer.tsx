@@ -80,7 +80,7 @@ const Footer: React.FC<FooterProps> = ({ userRole, footerInfo, onUpdateFooter })
           {/* Company Info */}
           <div>
             <div className="mb-6 flex items-center">
-                 <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="Long Hoang Logistics Logo" className="h-10 w-auto object-contain brightness-0 invert" />
+                 <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="Long Hoàng Logistics Logo" className="h-10 w-auto object-contain brightness-0 invert" />
             </div>
             <p className="mb-6 leading-relaxed text-sm">
               {displayInfo.desc1}
@@ -151,7 +151,7 @@ const Footer: React.FC<FooterProps> = ({ userRole, footerInfo, onUpdateFooter })
         </div>
 
         <div className="border-t border-gray-800 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center text-sm">
-          <p>&copy; {new Date().getFullYear()} Long Hoang Logistics. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Long Hoàng Logistics. All rights reserved.</p>
         </div>
       </div>
     </footer>

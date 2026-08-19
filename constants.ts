@@ -101,7 +101,7 @@ export const SAFETY_FEATURES = [
 
 export const TESTIMONIALS = [
   {
-    text: "Long Hoang Logistics đã giúp chúng tôi tối ưu hóa quy trình nhập khẩu từ Trung Quốc về Việt Nam. Thời gian giao hàng nhanh chóng và chi phí rất hợp lý. Một đối tác thực sự tin cậy.",
+    text: "Long Hoàng Logistics đã giúp chúng tôi tối ưu hóa quy trình nhập khẩu từ Trung Quốc về Việt Nam. Thời gian giao hàng nhanh chóng và chi phí rất hợp lý. Một đối tác thực sự tin cậy.",
     author: "Nguyễn Văn An",
     role: "Giám đốc, Công ty XNK Á Châu"
   }

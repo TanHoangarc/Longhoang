@@ -95,7 +95,7 @@ const Header: React.FC<HeaderProps> = ({ activePage, onOpenPage }) => {
                  onClick={(e) => handleNavClick(e, '#')}
                  className="flex items-center"
                >
-                 <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="Long Hoang Logistics Logo" className="h-12 w-auto object-contain" />
+                 <img src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" alt="Long Hoàng Logistics Logo" className="h-12 w-auto object-contain" />
                </a>
             </div>
 

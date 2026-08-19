@@ -308,7 +308,7 @@ const About: React.FC<AboutProps> = ({
 
           {/* Text Section */}
           <div className="lg:w-1/2">
-            <h2 className="text-3xl font-bold text-gray-800 mb-6">Về Long Hoang Logistics</h2>
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">Về Long Hoàng Logistics</h2>
             <div className="w-20 h-1 bg-primary mb-6"></div>
             <h3 className="text-lg font-semibold text-gray-700 mb-4 italic border-l-4 border-primary pl-4">
               "Hơn hết, chúng tôi tin rằng sự thay đổi thực sự là có thể và ngày mai không nhất thiết phải giống như hôm nay."
@@ -317,7 +317,7 @@ const About: React.FC<AboutProps> = ({
               Giải quyết các vấn đề xã hội đòi hỏi các nhà lãnh đạo từ các tổ chức, doanh nghiệp, tổ chức phi lợi nhuận và chính phủ phải hình dung lại các hệ thống và mối quan hệ định hình thế giới của chúng ta. Chúng tôi phấn đấu để hiểu sâu sắc về cách tạo ra sự thay đổi xã hội thông qua các giải pháp logistics hiệu quả.
             </p>
             <p className="text-gray-500 mb-8 leading-relaxed">
-              Tại Long Hoang Logistics, chúng tôi cung cấp các giải pháp vận chuyển đa phương thức, giúp kết nối hàng hóa của bạn đến mọi nơi trên thế giới một cách nhanh chóng và an toàn nhất.
+              Tại Long Hoàng Logistics, chúng tôi cung cấp các giải pháp vận chuyển đa phương thức, giúp kết nối hàng hóa của bạn đến mọi nơi trên thế giới một cách nhanh chóng và an toàn nhất.
             </p>
             <button 
               onClick={() => setIsModalOpen(true)}

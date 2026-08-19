@@ -1,5 +1,8 @@
 {
-  "name": "Long Hoang Logistics",
-  "description": "Professional logistics and supply chain solutions website based on Long Hoang Logistics.",
-  "requestFramePermissions": []
+  "name": "Long Hoàng Logistics",
+  "description": "Professional logistics and supply chain solutions website based on Long Hoàng Logistics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
