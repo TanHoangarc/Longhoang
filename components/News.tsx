@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Loader2, 
   ExternalLink, 
@@ -81,7 +82,13 @@ Container tiêu chuẩn ISO là công cụ vận chuyển hàng hóa cốt lõi 
 - **Cont 40ft HC (High Cube):** Chiều cao vượt trội (2.698m), tối ưu chứa được nhiều kiện hàng cồng kềnh.
 
 ## 3. Bảng thông số kỹ thuật chi tiết
-Dưới đây là bảng thông số chuẩn xác cho từng loại container thông dụng trong logistics:`,
+Dưới đây là bảng thông số chuẩn xác cho từng loại container thông dụng trong logistics:
+
+[BANG_THONG_SO]
+
+## 4. Lời khuyên đóng hàng an toàn
+- Kiểm tra seal và tình trạng kín nước của vỏ container trước khi bốc hàng.
+- Phân bổ đều trọng lượng hàng hóa trên mặt sàn cont để đảm bảo an toàn khi cẩu và vận chuyển biển.`,
     table: {
       headers: ["Chỉ tiêu kỹ thuật", "Cont 20' Thường (20'DC)", "Cont 40' Thường (40'DC)", "Cont 40' Cao (40'HC)"],
       rows: [
@@ -119,9 +126,32 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const [showLinkPrompt, setShowLinkPrompt] = useState(false);
   const [imgUrlInput, setImgUrlInput] = useState('');
   const [imgCaptionInput, setImgCaptionInput] = useState('');
+
+  // Lock background scroll and handle Escape key when any modal is open
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(readingArticle || isAdding || isEditing !== null);
+    if (isAnyModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          if (readingArticle) setReadingArticle(null);
+          if (isAdding || isEditing !== null) cancelEdit();
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [readingArticle, isAdding, isEditing]);
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -218,7 +248,7 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
     setShowLinkPrompt(false);
   };
 
-  // Helper to insert formatting tags at cursor position
+  // Helper to insert formatting tags at cursor position WITHOUT jumping / scrolling
   const insertFormatAtCursor = (prefix: string, suffix: string = '', defaultPlaceholder: string = '') => {
     const textarea = contentTextareaRef.current;
     const currentVal = editData.content || '';
@@ -231,6 +261,10 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
       return;
     }
 
+    // Save exact scroll positions of both textarea and modal
+    const savedTextareaScrollTop = textarea.scrollTop;
+    const savedModalScrollTop = modalRef.current?.scrollTop;
+
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = currentVal.substring(start, end) || defaultPlaceholder;
@@ -239,10 +273,20 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews }) 
     const newVal = currentVal.substring(0, start) + replacement + currentVal.substring(end);
     setEditData(prev => ({ ...prev, content: newVal }));
 
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
-    }, 50);
+    const newSelStart = start + prefix.length;
+    const newSelEnd = newSelStart + selectedText.length;
+
+    // Use requestAnimationFrame to restore focus and exact scroll position
+    requestAnimationFrame(() => {
+      if (contentTextareaRef.current) {
+        contentTextareaRef.current.focus({ preventScroll: true });
+        contentTextareaRef.current.setSelectionRange(newSelStart, newSelEnd);
+        contentTextareaRef.current.scrollTop = savedTextareaScrollTop;
+      }
+      if (modalRef.current && savedModalScrollTop !== undefined) {
+        modalRef.current.scrollTop = savedModalScrollTop;
+      }
+    });
   };
 
   // Image Upload handler for Article Content
@@ -428,8 +472,45 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
     return parts;
   };
 
-  // Helper to parse rich markdown blocks (Headings, Bullet points, Numbered items, Paragraphs)
-  const renderTextBlock = (text: string, blockKey: string | number) => {
+  // Reusable Helper to render Specifications Dynamic Table
+  const renderSpecsTable = (tableData?: TableData, keyPrefix = 'specs-table') => {
+    if (!tableData || !tableData.headers || tableData.headers.length === 0) return null;
+    return (
+      <div key={keyPrefix} className="my-8">
+        <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
+          <TableIcon size={20} className="mr-2 text-primary" />
+          Bảng thông số kỹ thuật chi tiết
+        </h4>
+        <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm bg-white">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="bg-primary text-white">
+                {tableData.headers.map((h, i) => (
+                  <th key={i} className="p-3.5 border-b border-primaryDark font-bold whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {tableData.rows.map((row, rIdx) => (
+                <tr key={rIdx} className="even:bg-gray-50 hover:bg-primary/5 transition-colors border-b border-gray-100 last:border-0">
+                  {row.map((cell, cIdx) => (
+                    <td key={cIdx} className={`p-3.5 ${cIdx === 0 ? 'font-semibold text-gray-900' : 'text-gray-600'} whitespace-nowrap sm:whitespace-normal`}>
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Helper to parse rich markdown blocks (Headings, Bullet points, Numbered items, Tables, Paragraphs)
+  const renderTextBlock = (text: string, blockKey: string | number, tableData?: TableData) => {
     const lines = text.split('\n');
     return (
       <div key={blockKey} className="space-y-3.5 my-4">
@@ -437,6 +518,15 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
           const trimmed = line.trim();
           if (!trimmed) {
             return <div key={lIdx} className="h-1.5" />;
+          }
+
+          // Inline Specifications Table Command: [BANG_THONG_SO], [BANG], [TABLE], [SPECS_TABLE]
+          const TABLE_SHORTCODE_REGEX = /^\s*(\[(BANG_THONG_SO|BANG|TABLE|SPECS_TABLE|BANG_THONG_SO_CHI_TIET)\]|\{\{(BANG_THONG_SO|BANG|TABLE|SPECS_TABLE)\}\})\s*$/i;
+          if (TABLE_SHORTCODE_REGEX.test(trimmed)) {
+            if (tableData && tableData.headers && tableData.headers.length > 0) {
+              return renderSpecsTable(tableData, `table-inline-${blockKey}-${lIdx}`);
+            }
+            return null;
           }
 
           // Heading 1: # Tiêu đề chính
@@ -500,7 +590,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
   };
 
   // Robust Markdown and Image Content Parser for Reader Modal
-  const renderArticleContent = (content?: string) => {
+  const renderArticleContent = (content?: string, tableData?: TableData) => {
     if (!content) return null;
 
     // Pattern to identify markdown image syntax: ![alt text](image_url)
@@ -515,7 +605,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
       if (match.index > lastIndex) {
         const textSegment = content.substring(lastIndex, match.index);
         if (textSegment.trim()) {
-          elements.push(renderTextBlock(textSegment, `block-${partIndex++}`));
+          elements.push(renderTextBlock(textSegment, `block-${partIndex++}`, tableData));
         }
       }
 
@@ -550,7 +640,7 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
     if (lastIndex < content.length) {
       const remainingText = content.substring(lastIndex);
       if (remainingText.trim()) {
-        elements.push(renderTextBlock(remainingText, `block-${partIndex++}`));
+        elements.push(renderTextBlock(remainingText, `block-${partIndex++}`, tableData));
       }
     }
 
@@ -611,10 +701,17 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
           )}
         </div>
 
-        {/* Modal form for Adding/Editing Article */}
-        {(isAdding || isEditing !== null) && (
-          <div className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-             <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto border border-gray-200">
+        {/* Modal form for Adding/Editing Article - Rendered via Portal */}
+        {(isAdding || isEditing !== null) && createPortal(
+          <div 
+            className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+            onClick={cancelEdit}
+          >
+             <div 
+               ref={modalRef}
+               onClick={(e) => e.stopPropagation()}
+               className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto border border-gray-200 my-auto cursor-default"
+             >
                 <button onClick={cancelEdit} className="absolute top-5 right-5 text-gray-400 hover:text-red-500 p-1.5 rounded-full hover:bg-gray-100 transition">
                   <X size={22}/>
                 </button>
@@ -740,8 +837,9 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                         {/* Bold Button */}
                         <button
                           type="button"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => insertFormatAtCursor('**', '**', 'Chữ in đậm')}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border border-gray-200 shadow-sm active:scale-95"
                           title="Tô đậm chữ (**văn bản**)"
                         >
                           <Bold size={13} className="mr-1" /> Tô đậm
@@ -750,8 +848,9 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                         {/* Heading Button */}
                         <button
                           type="button"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => insertFormatAtCursor('\n## ', '\n', 'Tiêu đề mục')}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition border border-gray-200 shadow-sm active:scale-95"
                           title="Tạo tiêu đề mục lớn (## Tiêu đề)"
                         >
                           <Heading2 size={13} className="mr-1 text-primary" /> Tiêu đề mục
@@ -760,11 +859,28 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                         {/* List Button */}
                         <button
                           type="button"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => insertFormatAtCursor('\n- ', '\n', 'Nội dung danh sách')}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center transition border border-gray-200 shadow-sm active:scale-95"
                           title="Tạo gạch đầu dòng (- Mục)"
                         >
                           <List size={13} className="mr-1" /> Gạch đầu dòng
+                        </button>
+
+                        {/* Table Shortcode Button */}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            if (!editData.table) {
+                              handleToggleTable();
+                            }
+                            insertFormatAtCursor('\n\n[BANG_THONG_SO]\n\n', '', '');
+                          }}
+                          className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition shadow-sm active:scale-95"
+                          title="Chèn lệnh gọi bảng thông số kỹ thuật [BANG_THONG_SO] vào vị trí con trỏ trong nội dung"
+                        >
+                          <TableIcon size={13} className="mr-1 text-amber-700" /> Chèn Bảng vào bài
                         </button>
 
                         {/* Hidden file input */}
@@ -779,9 +895,10 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                         {/* Upload Image Button */}
                         <button
                           type="button"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => fileInputRef.current?.click()}
                           disabled={isUploadingImage}
-                          className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition shadow-sm"
+                          className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center transition shadow-sm active:scale-95"
                           title="Tải ảnh từ máy tính"
                         >
                           {isUploadingImage ? (
@@ -798,8 +915,9 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                         {/* Link Image Button */}
                         <button
                           type="button"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => setShowLinkPrompt(!showLinkPrompt)}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center transition border border-gray-200 shadow-sm"
+                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center transition border border-gray-200 shadow-sm active:scale-95"
                           title="Chèn ảnh từ link URL"
                         >
                           <Link2 size={13} className="mr-1" /> Link ảnh
@@ -856,11 +974,12 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                       onChange={e => setEditData({...editData, content: e.target.value})} 
                       placeholder="Nhập nội dung bài viết. Bạn có thể bôi đen chữ và bấm nút [Tô đậm], [Tiêu đề mục] ở thanh công cụ phía trên..."
                     />
-                    <div className="text-[11px] text-gray-500 mt-2 bg-gray-50 p-2.5 rounded-lg border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                      <span>📌 <b>Cách định dạng nhanh:</b></span>
+                    <div className="text-[11px] text-gray-500 mt-2 bg-gray-50 p-2.5 rounded-lg border border-gray-100 flex flex-wrap items-center justify-between gap-1.5">
+                      <span className="font-semibold text-gray-700">📌 <b>Mẹo định dạng nhanh:</b></span>
                       <span>• Tô đậm: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">**Chữ in đậm**</code></span>
-                      <span>• Tiêu đề mục: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">## Tên tiêu đề</code></span>
-                      <span>• Gạch đầu dòng: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">- Ý chính</code></span>
+                      <span>• Tiêu đề mục: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">## Tiêu đề</code></span>
+                      <span>• Danh sách: <code className="bg-white px-1.5 py-0.5 rounded border text-primary font-bold">- Ý chính</code></span>
+                      <span>• Vị trí bảng: <code className="bg-amber-50 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded font-bold">[BANG_THONG_SO]</code></span>
                     </div>
                   </div>
 
@@ -872,10 +991,23 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                           <TableIcon size={18} className="mr-2 text-primary" />
                           Bảng thông số / Dữ liệu kỹ thuật
                         </h4>
-                        <p className="text-xs text-gray-500 mt-0.5">Tùy biến không giới hạn số dòng và số cột</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Tùy biến số dòng & cột. Chèn mã lệnh <code className="bg-amber-50 text-amber-800 font-bold px-1 rounded border border-amber-200">[BANG_THONG_SO]</code> vào nội dung để chọn vị trí bảng hiển thị.
+                        </p>
                       </div>
                       
                       <div className="flex flex-wrap items-center gap-2">
+                        {editData.table && (
+                          <button
+                            type="button"
+                            onClick={() => insertFormatAtCursor('\n\n[BANG_THONG_SO]\n\n', '', '')}
+                            className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center transition shadow-sm"
+                            title="Chèn mã [BANG_THONG_SO] vào vị trí con trỏ trong nội dung bài viết ở trên"
+                          >
+                            <TableIcon size={13} className="mr-1 text-amber-700" /> Đặt bảng vào nội dung
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={handleToggleTable}
@@ -1010,17 +1142,25 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                   </button>
                 </div>
              </div>
-          </div>
+          </div>,
+          document.body
         )}
 
-        {/* Full Article / Knowledge Reader Modal */}
-        {readingArticle && (
-          <div className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-10 relative">
+        {/* Full Article / Knowledge Reader Modal - Rendered via Portal to avoid stacking context issues */}
+        {readingArticle && createPortal(
+          <div 
+            className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 md:p-8 overflow-y-auto animate-in fade-in duration-200"
+            onClick={() => setReadingArticle(null)}
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl max-w-5xl xl:max-w-6xl w-full max-h-[92vh] overflow-y-auto shadow-2xl p-6 sm:p-10 md:p-12 relative my-auto cursor-default border border-gray-100"
+            >
               {/* Close Button */}
               <button 
                 onClick={() => setReadingArticle(null)} 
-                className="absolute top-5 right-5 z-20 bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-full transition"
+                className="absolute top-5 right-5 z-20 bg-gray-100 hover:bg-red-50 hover:text-red-500 text-gray-700 p-2 rounded-full transition shadow-sm"
+                title="Đóng (hoặc nhấn phím Esc / bấm ra ngoài)"
               >
                 <X size={22} />
               </button>
@@ -1047,14 +1187,14 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
 
               {/* 3D Model or Image Viewer Header */}
               {readingArticle.mediaType === 'iframe' && readingArticle.iframeCode ? (
-                <div className="h-80 sm:h-96 rounded-2xl overflow-hidden mb-8 bg-gray-950 relative shadow-inner border border-gray-800">
+                <div className="h-80 sm:h-96 md:h-[440px] rounded-2xl overflow-hidden mb-8 bg-gray-950 relative shadow-inner border border-gray-800">
                   <div className="w-full h-full media-iframe-container" dangerouslySetInnerHTML={{ __html: readingArticle.iframeCode }} />
                   <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-[11px] text-white flex items-center pointer-events-none">
                     <Sparkles size={13} className="mr-1.5 text-amber-400" /> Mô hình 3D tương tác (Dùng chuột để xoay 360° & phóng to)
                   </div>
                 </div>
               ) : (
-                <div className="h-64 sm:h-80 rounded-2xl overflow-hidden mb-8 relative">
+                <div className="h-64 sm:h-80 md:h-[400px] rounded-2xl overflow-hidden mb-8 relative">
                   <img 
                     src={readingArticle.thumbnail || STOCK_IMAGES[0]} 
                     alt={readingArticle.title} 
@@ -1070,45 +1210,16 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                 </div>
               )}
 
-              {/* Full Content (with rich parsed headers, bold, lists, images) */}
+              {/* Full Content (with rich parsed headers, bold, lists, images, and inline tables) */}
               {readingArticle.content && (
                 <div className="my-6">
-                  {renderArticleContent(readingArticle.content)}
+                  {renderArticleContent(readingArticle.content, readingArticle.table)}
                 </div>
               )}
 
-              {/* Specifications Dynamic Table */}
-              {readingArticle.table && readingArticle.table.headers.length > 0 && (
-                <div className="my-8">
-                  <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
-                    <TableIcon size={20} className="mr-2 text-primary" />
-                    Bảng thông số kỹ thuật chi tiết
-                  </h4>
-                  <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
-                    <table className="w-full text-left border-collapse text-sm">
-                      <thead>
-                        <tr className="bg-primary text-white">
-                          {readingArticle.table.headers.map((h, i) => (
-                            <th key={i} className="p-3.5 border-b border-primaryDark font-bold whitespace-nowrap">
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {readingArticle.table.rows.map((row, rIdx) => (
-                          <tr key={rIdx} className="even:bg-gray-50 hover:bg-primary/5 transition-colors border-b border-gray-100 last:border-0">
-                            {row.map((cell, cIdx) => (
-                              <td key={cIdx} className={`p-3.5 ${cIdx === 0 ? 'font-semibold text-gray-900' : 'text-gray-600'} whitespace-nowrap sm:whitespace-normal`}>
-                                {cell}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+              {/* Specifications Dynamic Table (Fallback at bottom only if not already inserted inline in content) */}
+              {(!readingArticle.content || !/\[(BANG_THONG_SO|BANG|TABLE|SPECS_TABLE|BANG_THONG_SO_CHI_TIET)\]|\{\{(BANG_THONG_SO|BANG|TABLE|SPECS_TABLE)\}\}/i.test(readingArticle.content)) && (
+                renderSpecsTable(readingArticle.table, 'bottom-specs-table')
               )}
 
               {/* External link button if available */}
@@ -1149,7 +1260,8 @@ Dưới đây là bảng thông số kỹ thuật chuẩn chi tiết cho từng 
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {loading ? (
