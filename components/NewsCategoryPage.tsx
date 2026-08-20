@@ -41,6 +41,7 @@ interface NewsCategoryPageProps {
   manualNews?: NewsItem[];
   onUpdateNews?: (news: NewsItem[]) => void;
   onOpenPage?: (page: string | null) => void;
+  onSelectArticle?: (article: NewsItem) => void;
 }
 
 export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
@@ -50,7 +51,8 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
   userRole,
   manualNews = [],
   onUpdateNews,
-  onOpenPage
+  onOpenPage,
+  onSelectArticle
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [readingArticle, setReadingArticle] = useState<NewsItem | null>(null);
@@ -172,7 +174,9 @@ export const NewsCategoryPage: React.FC<NewsCategoryPageProps> = ({
       onUpdateNews(updated);
     }
 
-    if (item.content || item.table || item.category === 'knowledge' || !item.link || item.link === '#' || item.link.trim() === '') {
+    if (onSelectArticle) {
+      onSelectArticle(updatedItem);
+    } else if (item.content || item.table || item.category === 'knowledge' || !item.link || item.link === '#' || item.link.trim() === '') {
       setReadingArticle(updatedItem);
     } else if (item.link) {
       window.open(item.link, '_blank');

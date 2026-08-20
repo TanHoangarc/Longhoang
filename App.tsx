@@ -5,12 +5,13 @@ import About from './components/About';
 import Services from './components/Services';
 import News from './components/News';
 import NewsCategoryPage from './components/NewsCategoryPage';
+import { ArticleDetailPage } from './components/ArticleDetailPage';
 import Jobs from './components/Jobs';
 import ContactForm from './components/ContactForm';
 import Footer from './components/Footer';
 import ConsoleLogin from './components/ConsoleLogin';
 import { API_BASE_URL } from './constants';
-import { DEFAULT_NEWS_ITEMS } from './src/data/defaultArticles';
+import { DEFAULT_NEWS_ITEMS, NewsItem } from './src/data/defaultArticles';
 
 export type UserRole = 'admin' | 'manager' | 'staff' | 'customer' | null;
 
@@ -67,6 +68,8 @@ function App() {
   const [branches, setBranches] = useState<any[]>([]);
   const [footerInfo, setFooterInfo] = useState<any>(null);
   const [activePage, setActivePage] = useState<string | null>(null);
+  const [selectedArticle, setSelectedArticle] = useState<NewsItem | null>(null);
+  const [previousPage, setPreviousPage] = useState<string | null>(null);
   
   // Custom routing and auth
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -178,6 +181,19 @@ function App() {
     return <ConsoleLogin onLogin={handleLogin} />;
   }
 
+  const handleOpenArticle = (article: NewsItem) => {
+    setPreviousPage(activePage);
+    setSelectedArticle(article);
+    setActivePage('article-detail');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBackFromArticle = () => {
+    setActivePage(previousPage || null);
+    setSelectedArticle(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {userRole === 'admin' && (
@@ -194,12 +210,27 @@ function App() {
         currentUser={null} 
         onLogin={() => {}} 
         onLogout={handleLogout} 
-        onOpenPage={setActivePage}
+        onOpenPage={(page) => {
+          setSelectedArticle(null);
+          setActivePage(page);
+        }}
         users={[]} 
         activePage={activePage}
       />
       <main>
-        {activePage === 'news-page' ? (
+        {activePage === 'article-detail' && selectedArticle ? (
+          <ArticleDetailPage 
+            article={selectedArticle}
+            allArticles={manualNews}
+            onBack={handleBackFromArticle}
+            onSelectArticle={handleOpenArticle}
+            onOpenCategoryPage={(cat) => {
+              setSelectedArticle(null);
+              setActivePage(cat === 'news' ? 'news-page' : 'knowledge-page');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        ) : activePage === 'news-page' ? (
           <NewsCategoryPage 
             category="news"
             onBack={() => { setActivePage(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -208,6 +239,7 @@ function App() {
             manualNews={manualNews}
             onUpdateNews={(v: any) => handleUpdateSettings('manualNews', v)}
             onOpenPage={setActivePage}
+            onSelectArticle={handleOpenArticle}
           />
         ) : activePage === 'knowledge-page' ? (
           <NewsCategoryPage 
@@ -218,6 +250,7 @@ function App() {
             manualNews={manualNews}
             onUpdateNews={(v: any) => handleUpdateSettings('manualNews', v)}
             onOpenPage={setActivePage}
+            onSelectArticle={handleOpenArticle}
           />
         ) : (
           <>
@@ -235,9 +268,11 @@ function App() {
               manualNews={manualNews} 
               onUpdateNews={(v: any) => handleUpdateSettings('manualNews', v)} 
               onOpenCategoryPage={(cat) => {
+                setSelectedArticle(null);
                 setActivePage(cat === 'news' ? 'news-page' : 'knowledge-page');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
+              onSelectArticle={handleOpenArticle}
             />
             <Jobs jobs={jobs} onUpdateJobs={handleUpdateJobs} userRole={userRole} />
             <ContactForm onSubmitRequest={handleNewQuotationRequest} userRole={userRole} branches={branches} onUpdateBranches={(v: any) => handleUpdateSettings('branches', v)} />

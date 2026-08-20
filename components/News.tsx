@@ -33,9 +33,10 @@ interface NewsProps {
   manualNews?: NewsItem[];
   onUpdateNews?: (news: NewsItem[]) => void;
   onOpenCategoryPage?: (category: 'news' | 'knowledge') => void;
+  onSelectArticle?: (article: NewsItem) => void;
 }
 
-const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, onOpenCategoryPage }) => {
+const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, onOpenCategoryPage, onSelectArticle }) => {
   const [activeTab, setActiveTab] = useState<'news' | 'knowledge'>('news');
   
   const isAdmin = userRole === 'admin';
@@ -596,7 +597,9 @@ const News: React.FC<NewsProps> = ({ userRole, manualNews = [], onUpdateNews, on
   const displayNews = sortedTabItems.slice(0, 3);
 
   const handleArticleClick = (item: NewsItem) => {
-    if (item.content || item.table || item.category === 'knowledge' || !item.link || item.link === '#' || item.link.trim() === '') {
+    if (onSelectArticle) {
+      onSelectArticle(item);
+    } else if (item.content || item.table || item.category === 'knowledge' || !item.link || item.link === '#' || item.link.trim() === '') {
       setReadingArticle(item);
     } else if (item.link) {
       window.open(item.link, '_blank');
