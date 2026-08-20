@@ -1,77 +1,18 @@
-
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="vi" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Long Hoàng Logistics</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: '#f97316', // Orange-500
-              primaryDark: '#ea580c', // Orange-600
-            },
-            animation: {
-              'spin-slow': 'spin 3s linear infinite',
-            }
-          }
-        }
-      }
-    </script>
-    <style>
-      /* Custom scrollbar for better aesthetics */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #f1f1f1; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #cbd5e1; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8; 
-      }
-      
-      /* Hide scrollbar for elements with class .scrollbar-hide */
-      .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-      }
-      .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-      }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "express": "https://esm.sh/express@^5.2.1",
-    "cors": "https://esm.sh/cors@^2.8.5",
-    "body-parser": "https://esm.sh/body-parser@^2.2.2",
-    "fs": "https://esm.sh/fs@^0.0.1-security",
-    "path": "https://esm.sh/path@^0.12.7",
-    "multer": "https://esm.sh/multer@^2.0.2",
-    "url": "https://esm.sh/url@^0.11.4",
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "xlsx": "https://esm.sh/xlsx@0.18.5"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-</head>
-  <body>
+    <title>LONG HOÀNG LOGISTICS - Blue sea never sleeps | Logistics & Vận Tải Toàn Cầu</title>
+    <meta name="description" content="Long Hoàng Logistics - Đơn vị cung cấp các giải pháp logistics toàn diện và linh hoạt: Vận tải đa phương thức, đường biển, hàng không, cross-border." />
+    <link rel="icon" type="image/png" href="https://i.ibb.co/yc7Zwg89/LOGO-HD.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap" rel="stylesheet">
+  </head>
+  <body class="font-sans antialiased text-slate-800 bg-white">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+
