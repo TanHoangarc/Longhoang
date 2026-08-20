@@ -21,7 +21,9 @@ import {
   Upload,
   Download,
   AlertCircle,
-  FileText
+  FileText,
+  Cloud,
+  Database
 } from 'lucide-react';
 import { LongHoangLogo } from './LongHoangLogo';
 import { ContentStore } from '../data/contentStore';
@@ -29,8 +31,8 @@ import { NewsArticle, JobOpening } from '../types';
 
 interface ConsoleDashboardProps {
   onBackToHome: () => void;
-  onViewArticle: (id: string) => void;
-  onViewJob: (id: string) => void;
+  onViewArticle?: (id: string) => void;
+  onViewJob?: (id: string) => void;
 }
 
 // Preset images for convenient selection
@@ -192,7 +194,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     setIsNewsModalOpen(true);
   };
 
-  const handleSaveNews = (e: React.FormEvent) => {
+  const handleSaveNews = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newsFormTitle.trim()) {
       alert('Vui lòng nhập tiêu đề bài viết!');
@@ -259,15 +261,15 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
       },
     };
 
-    ContentStore.saveNews(newArticle);
+    await ContentStore.saveNews(newArticle);
     setIsNewsModalOpen(false);
-    showToast(editingNews ? 'Đã cập nhật bài viết thành công!' : 'Đã đăng bài viết mới thành công!');
+    showToast(editingNews ? 'Đã lưu & đồng bộ bài viết lên Firebase Cloud!' : 'Đã đăng bài & đồng bộ Firebase Cloud thành công!');
   };
 
-  const handleDeleteNews = (id: string, title: string) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa bài viết "${title}"?`)) {
-      ContentStore.deleteNews(id);
-      showToast('Đã xóa bài viết khỏi hệ thống!');
+  const handleDeleteNews = async (id: string, title: string) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa bài viết "${title}" khỏi hệ thống & Firebase?`)) {
+      await ContentStore.deleteNews(id);
+      showToast('Đã xóa bài viết khỏi Firebase & hệ thống!');
     }
   };
 
@@ -333,7 +335,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     setIsJobModalOpen(true);
   };
 
-  const handleSaveJob = (e: React.FormEvent) => {
+  const handleSaveJob = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!jobFormTitle.trim()) {
       alert('Vui lòng nhập tiêu đề bài tuyển dụng!');
@@ -402,15 +404,15 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
       },
     };
 
-    ContentStore.saveJob(newJob);
+    await ContentStore.saveJob(newJob);
     setIsJobModalOpen(false);
-    showToast(editingJob ? 'Đã cập nhật bài tuyển dụng!' : 'Đã đăng tin tuyển dụng mới!');
+    showToast(editingJob ? 'Đã cập nhật bài tuyển dụng lên Firebase Cloud!' : 'Đã đăng tin tuyển dụng & đồng bộ Firebase Cloud!');
   };
 
-  const handleDeleteJob = (id: string, title: string) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa tin tuyển dụng "${title}"?`)) {
-      ContentStore.deleteJob(id);
-      showToast('Đã xóa tin tuyển dụng!');
+  const handleDeleteJob = async (id: string, title: string) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa tin tuyển dụng "${title}" khỏi hệ thống & Firebase?`)) {
+      await ContentStore.deleteJob(id);
+      showToast('Đã xóa tin tuyển dụng khỏi Firebase & hệ thống!');
     }
   };
 
@@ -476,9 +478,10 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg text-xs text-slate-400">
+            <div className="hidden md:flex items-center gap-2 bg-slate-900 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs text-emerald-400">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Hệ thống trực tuyến: longhoanglogistics.com/console</span>
+              <Cloud className="w-3.5 h-3.5" />
+              <span>Firebase Cloud Firestore Active</span>
             </div>
 
             <button
@@ -533,12 +536,12 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
 
           <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-400">Trạng thái lưu trữ</p>
-              <h3 className="text-base font-bold text-white mt-1">Trực tiếp (Live)</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Tự động đồng bộ ngay</p>
+              <p className="text-xs font-medium text-slate-400">Cơ sở dữ liệu Đám mây</p>
+              <h3 className="text-base font-bold text-emerald-400 mt-1">Firebase Firestore</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Đồng bộ Cloud tức thì</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
-              <Save className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <Cloud className="w-6 h-6" />
             </div>
           </div>
         </div>
@@ -919,16 +922,16 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 Xóa tất cả các bài viết tự thêm mới/chỉnh sửa và đưa toàn bộ nội dung Tin tức và Tuyển dụng về trạng thái ban đầu của hệ thống.
               </p>
               <button
-                onClick={() => {
-                  if (window.confirm('Bạn có chắc chắn muốn khôi phục về dữ liệu mặc định ban đầu? Các bài viết bạn đã tạo sẽ bị xóa.')) {
-                    ContentStore.resetAll();
-                    showToast('Đã khôi phục dữ liệu ban đầu!');
+                onClick={async () => {
+                  if (window.confirm('Bạn có chắc chắn muốn khôi phục về dữ liệu mặc định ban đầu trên Firebase và hệ thống? Các bài viết bạn đã tạo sẽ bị xóa.')) {
+                    await ContentStore.resetAll();
+                    showToast('Đã khôi phục dữ liệu ban đầu trên Firebase & hệ thống!');
                   }
                 }}
                 className="px-4 py-2 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span>Khôi phục dữ liệu gốc</span>
+                <span>Khôi phục dữ liệu gốc trên Firebase</span>
               </button>
             </div>
           </div>

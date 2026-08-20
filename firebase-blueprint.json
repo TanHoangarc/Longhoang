@@ -1,0 +1,54 @@
+{
+  "entities": {
+    "NewsArticle": {
+      "title": "NewsArticle",
+      "description": "Logistics industry news, knowledge, and corporate announcements",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "type": { "type": "string", "enum": ["industry-news", "industry-knowledge", "company-news"] },
+        "date": { "type": "string" },
+        "day": { "type": "string" },
+        "month": { "type": "string" },
+        "summary": { "type": "string" },
+        "image": { "type": "string" },
+        "content": { "type": "object" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "title", "type", "date", "image", "summary"]
+    },
+    "JobOpening": {
+      "title": "JobOpening",
+      "description": "Recruitment postings and open vacancies",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "location": { "type": "string" },
+        "type": { "type": "string" },
+        "date": { "type": "string" },
+        "day": { "type": "string" },
+        "month": { "type": "string" },
+        "views": { "type": "number" },
+        "deadline": { "type": "string" },
+        "image": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "object" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "title", "location", "type", "date", "deadline", "image", "summary"]
+    }
+  },
+  "firestore": {
+    "news": {
+      "entity": "NewsArticle",
+      "description": "Collection of published news and articles"
+    },
+    "jobs": {
+      "entity": "JobOpening",
+      "description": "Collection of active recruitment postings"
+    }
+  }
+}
