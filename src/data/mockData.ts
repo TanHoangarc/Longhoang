@@ -623,7 +623,9 @@ export const NEWS_ARTICLES: NewsArticle[] = [
         {
           title: '3. Nhóm D (DAP, DPU, DDP) - Người bán chịu trách nhiệm đến đích',
           points: [
-            '*#DDP (Delivered Duty Paid) | Người bán chịu mọi chi phí và thuế nhập khẩu tại nước người mua#*'
+            '*#DDP (Delivered Duty Paid) | Người bán chịu mọi chi phí và thuế nhập khẩu tại nước người mua#*',
+            '**Lưu ý quan trọng:** Giao hàng tận nơi yêu cầu sự phối hợp chặt chẽ. Dưới đây là sơ đồ minh họa:',
+            '[img|https://images.unsplash.com/photo-1586528116311-ad8ed7c80a02?auto=format&fit=crop&w=800&q=80]'
           ]
         }
       ]

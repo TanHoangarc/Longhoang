@@ -56,25 +56,21 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
   return (
     <div className="min-h-screen bg-white">
       {/* 1. HERO BANNER: Standardized High-Key Banner matching screenshots */}
-      <div className="relative w-full h-[180px] sm:h-[220px] md:h-[260px] overflow-hidden flex items-center justify-center">
+      {/* 1. HERO BANNER: Standardized High-Key Banner matching News/Services */}
+      <div className="relative w-full h-36 sm:h-44 md:h-52 bg-slate-100 overflow-hidden flex items-center justify-center border-b border-slate-200/60">
         <img
           src="https://i.ibb.co/fVPWrC4L/Pic10.jpg"
           alt="Long Hoàng Logistics Cargo Ship Banner"
-          className="w-full h-full object-cover object-center"
+          className="absolute inset-0 w-full h-full object-cover object-center opacity-65"
           referrerPolicy="no-referrer"
         />
 
-        {/* High-Key Bright Overlay */}
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: 'linear-gradient(to bottom, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0.95) 100%)'
-          }}
-        />
+        {/* Soft High-Key White Tint Overlay matching News/Services */}
+        <div className="absolute inset-0 bg-white/85 sm:bg-white/80" />
 
         {/* Banner Title */}
-        <div className="relative z-10 text-center px-4">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] font-black uppercase tracking-wider text-[#0048ba] drop-shadow-xs">
+        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#0048ba] tracking-wider uppercase drop-shadow-xs">
             VỀ CHÚNG TÔI
           </h1>
         </div>
@@ -168,94 +164,107 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
         </div>
       </section>
 
-      {/* 4. GIÁ TRỊ CỐT LÕI SECTION (Exact layout with container vessel from Screenshot 1 & 2) */}
-      <section id="core-values" className="py-14 sm:py-20 relative overflow-hidden bg-gradient-to-b from-slate-50/60 via-white to-slate-50/40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      {/* 4. GIÁ TRỊ CỐT LÕI SECTION (Exact layout matching sample image) */}
+      <section id="core-values" className="py-16 sm:py-24 relative overflow-hidden bg-white flex flex-col items-center">
+        {/* Full-width Ship Background blending into white */}
+        <div className="absolute inset-0 z-0 pointer-events-none flex justify-center lg:justify-end opacity-90">
+          <img
+            src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=2000&q=80"
+            alt="Long Hoàng Logistics Cargo Vessel"
+            className="w-[150%] md:w-full h-full object-cover object-center lg:object-[center_right] opacity-60"
+            referrerPolicy="no-referrer"
+          />
+          {/* Gradients to recreate the faded vignette effect from the sample image */}
+          <div className="absolute inset-0 bg-white/40" />
+          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent w-full lg:w-2/3 left-0" />
+          <div className="absolute inset-0 bg-gradient-to-b from-white via-transparent to-white opacity-80" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_0%,_rgba(255,255,255,0.4)_50%,_#ffffff_100%)]" />
+        </div>
+
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col items-center">
           {/* Main Title */}
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#0048ba] uppercase tracking-wider">
+          <div className="text-center mb-16 sm:mb-20">
+            <h2 className="text-3xl sm:text-4xl md:text-[40px] font-light text-[#1544a0] uppercase tracking-wide">
               GIÁ TRỊ CỐT LÕI
             </h2>
           </div>
 
-          {/* 2x2 Grid with Background Ship Graphic on Right Side */}
-          <div className="relative">
-            {/* Ambient Ship Graphic floating on the right side */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1/3 lg:w-2/5 h-full opacity-20 lg:opacity-35 pointer-events-none overflow-hidden hidden md:block">
-              <img
-                src="https://i.ibb.co/fVPWrC4L/Pic10.jpg"
-                alt="Long Hoàng Logistics Cargo Vessel"
-                className="w-full h-full object-contain object-right"
-                referrerPolicy="no-referrer"
-              />
-              <div 
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: 'linear-gradient(to right, rgba(255,255,255,1) 0%, rgba(255,255,255,0.4) 40%, rgba(255,255,255,0) 100%)'
-                }}
-              />
+          {/* Core Values 4-Item Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16 lg:gap-x-24 relative z-10 w-full max-w-6xl">
+            {/* Value 1: CHUYÊN NGHIỆP */}
+            <div className="flex items-start gap-5 sm:gap-6">
+              <div className="w-14 h-14 flex items-center justify-center shrink-0 text-[#f59e0b]">
+                {/* Check circle thick stroke icon matching sample */}
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </div>
+              <div className="space-y-3 pt-1">
+                <h3 className="text-lg sm:text-xl font-bold text-[#1544a0] uppercase tracking-wide">
+                  CHUYÊN NGHIỆP
+                </h3>
+                <p className="text-sm sm:text-[15px] text-slate-600 leading-relaxed text-justify font-normal">
+                  Chúng tôi tin rằng với đội ngũ chuyên gia có hiểu biết cực kì sâu rộng cùng thâm niên gần 20 năm về lĩnh vực ngoại thương – logistics, chúng tôi có thể mang lại một chất lượng dịch vụ tốt nhất, tạo ra giá trị đích thực cho khách hàng.
+                </p>
+              </div>
             </div>
 
-            {/* Core Values 4-Item Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 relative z-10 max-w-5xl">
-              {/* Value 1: CHUYÊN NGHIỆP */}
-              <div className="flex items-start gap-4 sm:gap-5">
-                <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0 text-[#f59e0b] shadow-xs">
-                  <CheckCircle2 className="w-7 h-7" />
-                </div>
-                <div className="space-y-1.5">
-                  <h3 className="text-base sm:text-lg font-black text-[#0048ba] uppercase tracking-wide">
-                    CHUYÊN NGHIỆP
-                  </h3>
-                  <p className="text-xs sm:text-[13.5px] text-slate-700 leading-relaxed text-justify">
-                    Chúng tôi tin rằng với đội ngũ chuyên gia có hiểu biết cực kì sâu rộng cùng thâm niên gần 20 năm về lĩnh vực ngoại thương – logistics, chúng tôi có thể mang lại một chất lượng dịch vụ tốt nhất, tạo ra giá trị đích thực cho khách hàng.
-                  </p>
-                </div>
+            {/* Value 2: CHÍNH TRỰC */}
+            <div className="flex items-start gap-5 sm:gap-6">
+              <div className="w-14 h-14 flex items-center justify-center shrink-0 text-[#f59e0b]">
+                {/* Tag matching sample */}
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                  <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                </svg>
               </div>
-
-              {/* Value 2: CHÍNH TRỰC */}
-              <div className="flex items-start gap-4 sm:gap-5">
-                <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0 text-[#f59e0b] shadow-xs">
-                  <ShieldCheck className="w-7 h-7" />
-                </div>
-                <div className="space-y-1.5">
-                  <h3 className="text-base sm:text-lg font-black text-[#0048ba] uppercase tracking-wide">
-                    CHÍNH TRỰC
-                  </h3>
-                  <p className="text-xs sm:text-[13.5px] text-slate-700 leading-relaxed text-justify">
-                    Chúng tôi luôn đúng mực trong các quy tắc ứng xử và đặt sự liêm chính, trung thực vào trong tất cả các giao dịch.
-                  </p>
-                </div>
+              <div className="space-y-3 pt-1">
+                <h3 className="text-lg sm:text-xl font-bold text-[#1544a0] uppercase tracking-wide">
+                  CHÍNH TRỰC
+                </h3>
+                <p className="text-sm sm:text-[15px] text-slate-600 leading-relaxed text-justify font-normal">
+                  Chúng tôi luôn đúng mực trong các quy tắc ứng xử và đặt sự liêm chính, trung thực vào trong tất cả các giao dịch.
+                </p>
               </div>
+            </div>
 
-              {/* Value 3: CHIA SẺ */}
-              <div className="flex items-start gap-4 sm:gap-5">
-                <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0 text-[#f59e0b] shadow-xs">
-                  <ThumbsUp className="w-7 h-7" />
-                </div>
-                <div className="space-y-1.5">
-                  <h3 className="text-base sm:text-lg font-black text-[#0048ba] uppercase tracking-wide">
-                    CHIA SẺ
-                  </h3>
-                  <p className="text-xs sm:text-[13.5px] text-slate-700 leading-relaxed text-justify">
-                    Chúng tôi tin rằng, khi các thành viên trong công ty quan tâm, giúp đỡ lẫn nhau, chúng tôi có thể sáng tạo các giá trị mới cho đối tác, nhà đầu tư và cộng đồng.
-                  </p>
-                </div>
+            {/* Value 3: CHIA SẺ */}
+            <div className="flex items-start gap-5 sm:gap-6">
+              <div className="w-14 h-14 flex items-center justify-center shrink-0 text-[#f59e0b]">
+                {/* Thumbs up matching sample */}
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                </svg>
               </div>
+              <div className="space-y-3 pt-1">
+                <h3 className="text-lg sm:text-xl font-bold text-[#1544a0] uppercase tracking-wide">
+                  CHIA SẺ
+                </h3>
+                <p className="text-sm sm:text-[15px] text-slate-600 leading-relaxed text-justify font-normal">
+                  Chúng tôi tin rằng, khi các thành viên trong công ty quan tâm, giúp đỡ lẫn nhau, chúng tôi có thể sáng tạo các giá trị mới cho đối tác, nhà đầu tư và cộng đồng.
+                </p>
+              </div>
+            </div>
 
-              {/* Value 4: TẬN TÂM */}
-              <div className="flex items-start gap-4 sm:gap-5">
-                <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0 text-[#f59e0b] shadow-xs">
-                  <Users className="w-7 h-7" />
-                </div>
-                <div className="space-y-1.5">
-                  <h3 className="text-base sm:text-lg font-black text-[#0048ba] uppercase tracking-wide">
-                    TẬN TÂM
-                  </h3>
-                  <p className="text-xs sm:text-[13.5px] text-slate-700 leading-relaxed text-justify">
-                    Chúng tôi hiểu rằng, mỗi yêu cầu của khách hàng đều là những yêu cầu cấp thiết và chính đáng, vì thế chúng tôi nỗ lực xây dựng hệ thống dịch vụ 24/7 để có thể hỗ trợ khách hàng một cách chính xác và kịp thời.
-                  </p>
-                </div>
+            {/* Value 4: TẬN TÂM */}
+            <div className="flex items-start gap-5 sm:gap-6">
+              <div className="w-14 h-14 flex items-center justify-center shrink-0 text-[#f59e0b]">
+                {/* People matching sample */}
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+              </div>
+              <div className="space-y-3 pt-1">
+                <h3 className="text-lg sm:text-xl font-bold text-[#1544a0] uppercase tracking-wide">
+                  TẬN TÂM
+                </h3>
+                <p className="text-sm sm:text-[15px] text-slate-600 leading-relaxed text-justify font-normal">
+                  Chúng tôi hiểu rằng, mỗi yêu cầu của khách hàng đều là những yêu cầu cấp thiết và chính đáng, vì thế chúng tôi nỗ lực xây dựng hệ thống dịch vụ 24/7 để có thể hỗ trợ khách hàng một cách chính xác và kịp thời.
+                </p>
               </div>
             </div>
           </div>

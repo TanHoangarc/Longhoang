@@ -71,26 +71,21 @@ export const CompanyProfilePage: React.FC<CompanyProfilePageProps> = ({
 
   return (
     <div className="min-h-screen bg-[#f8fafc]">
-      {/* 1. HERO BANNER: Standardized High-Key Banner matching screenshots */}
-      <div className="relative w-full h-[180px] sm:h-[220px] md:h-[260px] overflow-hidden flex items-center justify-center">
+      {/* 1. HERO BANNER: Standardized High-Key Banner matching News/Services */}
+      <div className="relative w-full h-36 sm:h-44 md:h-52 bg-slate-100 overflow-hidden flex items-center justify-center border-b border-slate-200/60">
         <img
           src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=2000&q=80"
           alt="Long Hoàng Logistics Cargo Ship Banner"
-          className="w-full h-full object-cover object-center"
+          className="absolute inset-0 w-full h-full object-cover object-center opacity-65"
           referrerPolicy="no-referrer"
         />
 
-        {/* High-Key Bright Overlay */}
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: 'linear-gradient(to bottom, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0.95) 100%)'
-          }}
-        />
+        {/* Soft High-Key White Tint Overlay matching News/Services */}
+        <div className="absolute inset-0 bg-white/85 sm:bg-white/80" />
 
         {/* Banner Title */}
-        <div className="relative z-10 text-center px-4">
-          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-wider text-[#0048ba] drop-shadow-xs">
+        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#0048ba] tracking-wider uppercase drop-shadow-xs">
             COMPANY PROFILE – LONG HOANG GROUP
           </h1>
         </div>
