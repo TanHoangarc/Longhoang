@@ -159,8 +159,8 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
                       </h4>
                       <div className="space-y-1.5 text-xs sm:text-sm text-slate-600">
                         {sec.points.map((pt, ptIdx) => {
-                          const isBullet = /^[-*•]\s*/.test(pt);
-                          const text = pt.replace(/^[-*•]\s*/, '');
+                          const isBullet = /^[-*•]\s+/.test(pt);
+                          const text = pt.replace(/^[-*•]\s+/, '');
                           
                           if (isBullet) {
                             return (

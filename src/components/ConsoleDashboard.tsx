@@ -388,15 +388,15 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
       salary: pos.salary.trim() || undefined,
       description: pos.description
         .split('\n')
-        .map((s) => s.replace(/^[-*•]\s*/, '').trim())
+        .map((s) => s.replace(/^[-*•]\s+/, '').trim())
         .filter(Boolean),
       requirements: pos.requirements
         .split('\n')
-        .map((s) => s.replace(/^[-*•]\s*/, '').trim())
+        .map((s) => s.replace(/^[-*•]\s+/, '').trim())
         .filter(Boolean),
       benefits: pos.benefits
         .split('\n')
-        .map((s) => s.replace(/^[-*•]\s*/, '').trim())
+        .map((s) => s.replace(/^[-*•]\s+/, '').trim())
         .filter(Boolean),
     }));
 
