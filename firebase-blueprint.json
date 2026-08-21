@@ -5,40 +5,166 @@
       "description": "Logistics industry news, knowledge, and corporate announcements",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "category": { "type": "string" },
-        "type": { "type": "string", "enum": ["industry-news", "industry-knowledge", "company-news"] },
-        "date": { "type": "string" },
-        "day": { "type": "string" },
-        "month": { "type": "string" },
-        "summary": { "type": "string" },
-        "image": { "type": "string" },
-        "content": { "type": "object" },
-        "updatedAt": { "type": "string" }
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "industry-news",
+            "industry-knowledge",
+            "company-news"
+          ]
+        },
+        "date": {
+          "type": "string"
+        },
+        "day": {
+          "type": "string"
+        },
+        "month": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "content": {
+          "type": "object"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
       },
-      "required": ["id", "title", "type", "date", "image", "summary"]
+      "required": [
+        "id",
+        "title",
+        "type",
+        "date",
+        "image",
+        "summary"
+      ]
     },
     "JobOpening": {
       "title": "JobOpening",
       "description": "Recruitment postings and open vacancies",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "location": { "type": "string" },
-        "type": { "type": "string" },
-        "date": { "type": "string" },
-        "day": { "type": "string" },
-        "month": { "type": "string" },
-        "views": { "type": "number" },
-        "deadline": { "type": "string" },
-        "image": { "type": "string" },
-        "summary": { "type": "string" },
-        "content": { "type": "object" },
-        "updatedAt": { "type": "string" }
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "day": {
+          "type": "string"
+        },
+        "month": {
+          "type": "string"
+        },
+        "views": {
+          "type": "number"
+        },
+        "deadline": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "content": {
+          "type": "object"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
       },
-      "required": ["id", "title", "location", "type", "date", "deadline", "image", "summary"]
+      "required": [
+        "id",
+        "title",
+        "location",
+        "type",
+        "date",
+        "deadline",
+        "image",
+        "summary"
+      ]
+    },
+    "QuoteRequest": {
+      "title": "QuoteRequest",
+      "description": "Customer contact and quote requests",
+      "type": "object",
+      "properties": {
+        "fullName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "commodity": {
+          "type": "string"
+        },
+        "volume": {
+          "type": "string"
+        },
+        "origin": {
+          "type": "string"
+        },
+        "destination": {
+          "type": "string"
+        },
+        "service": {
+          "type": "string"
+        },
+        "otherRequirements": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "new",
+            "contacted",
+            "resolved",
+            "archived"
+          ]
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "fullName",
+        "email",
+        "phone",
+        "service",
+        "status",
+        "createdAt"
+      ]
     }
   },
   "firestore": {
@@ -49,6 +175,12 @@
     "jobs": {
       "entity": "JobOpening",
       "description": "Collection of active recruitment postings"
+    },
+    "quotes": {
+      "schema": {
+        "$ref": "QuoteRequest"
+      },
+      "description": "Collection of quote requests submitted by customers"
     }
   }
 }

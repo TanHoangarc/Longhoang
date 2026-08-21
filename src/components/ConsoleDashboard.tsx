@@ -23,11 +23,13 @@ import {
   AlertCircle,
   FileText,
   Cloud,
-  Database
+  Database,
+  MessageSquare
 } from 'lucide-react';
 import { LongHoangLogo } from './LongHoangLogo';
 import { ContentStore } from '../data/contentStore';
 import { NewsArticle, JobOpening } from '../types';
+import { ConsoleQuotesTab } from './ConsoleQuotesTab';
 
 interface ConsoleDashboardProps {
   onBackToHome: () => void;
@@ -57,7 +59,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   onViewArticle,
   onViewJob,
 }) => {
-  const [activeTab, setActiveTab] = useState<'news' | 'careers' | 'settings'>('news');
+  const [activeTab, setActiveTab] = useState<'news' | 'careers' | 'quotes' | 'settings'>('quotes');
   const [newsList, setNewsList] = useState<NewsArticle[]>([]);
   const [jobsList, setJobsList] = useState<JobOpening[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -659,6 +661,18 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
             </button>
 
             <button
+              onClick={() => setActiveTab('quotes')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'quotes'
+                  ? 'bg-blue-600 text-white shadow font-black'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>Khách hàng Liên hệ</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('settings')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'settings'
@@ -962,6 +976,9 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
             )}
           </div>
         )}
+
+        {/* ================= SECTION: QUOTES/CONTACTS ================= */}
+        {activeTab === 'quotes' && <ConsoleQuotesTab />}
 
         {/* ================= SECTION 3: SETTINGS & BACKUP ================= */}
         {activeTab === 'settings' && (

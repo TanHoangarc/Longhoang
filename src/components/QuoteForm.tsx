@@ -49,7 +49,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ prefilledService }) => {
     }, 900);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.fullName.trim()) {
@@ -82,10 +82,30 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ prefilledService }) => {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
+
+    try {
+      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      
+      await addDoc(collection(db, 'quotes'), {
+        ...formData,
+        status: 'new',
+        createdAt: serverTimestamp(),
+      });
+      
       setIsSubmitting(false);
       setSubmitSuccess(true);
-    }, 1200);
+      
+      // Mở Zalo sau khi gửi thành công
+      setTimeout(() => {
+        window.open('https://zalo.me/0867141877', '_blank');
+      }, 800);
+
+    } catch (err) {
+      console.error('Lỗi khi lưu yêu cầu báo giá:', err);
+      setErrorMessage('Đã xảy ra lỗi khi gửi yêu cầu. Vui lòng thử lại sau.');
+      setIsSubmitting(false);
+    }
   };
 
   const handleReset = () => {

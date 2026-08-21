@@ -37,7 +37,7 @@ export const CompanyProfilePage: React.FC<CompanyProfilePageProps> = ({
     const dummyContent = `LONG HOÀNG LOGISTICS - COMPANY PROFILE (${langName})\n\n` +
       `think logistics - think us\n` +
       `Comprehensive Logistics Solutions: Sea, Air, Multimodal, Inland Trucking & Warehousing.\n` +
-      `Hotline: 0903 000 888 | Website: longhoanglogistics.com`;
+      `Hotline: 0867 141 877 | Website: longhoanglogistics.com`;
     const blob = new Blob([dummyContent], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

@@ -37,20 +37,42 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({
     message: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fullName || !formData.phone) return;
-    setFormSubmitted(true);
-    setTimeout(() => {
-      setFormSubmitted(false);
-      setFormData({
-        fullName: '',
-        phone: '',
-        email: '',
-        company: '',
-        message: '',
+    
+    try {
+      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      
+      await addDoc(collection(db, 'quotes'), {
+        ...formData,
+        service: 'Liên hệ chung (Từ trang Về Chúng Tôi)',
+        status: 'new',
+        createdAt: serverTimestamp(),
       });
-    }, 4000);
+      
+      setFormSubmitted(true);
+      
+      // Mở Zalo sau khi gửi thành công
+      setTimeout(() => {
+        window.open('https://zalo.me/0867141877', '_blank');
+      }, 800);
+      
+      setTimeout(() => {
+        setFormSubmitted(false);
+        setFormData({
+          fullName: '',
+          phone: '',
+          email: '',
+          company: '',
+          message: '',
+        });
+      }, 4000);
+    } catch (err) {
+      console.error('Error submitting contact form:', err);
+      alert('Đã xảy ra lỗi khi gửi yêu cầu. Vui lòng thử lại sau.');
+    }
   };
 
   return (

@@ -41,7 +41,7 @@ export const ServiceDetailPage: React.FC<ServiceDetailPageProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentService]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fullName || !formData.phone || !formData.email) {
       alert('Vui lòng điền đầy đủ các thông tin bắt buộc (*)');
@@ -53,10 +53,31 @@ export const ServiceDetailPage: React.FC<ServiceDetailPageProps> = ({
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
+    
+    try {
+      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      
+      await addDoc(collection(db, 'quotes'), {
+        ...formData,
+        service: currentService?.title || 'Dịch vụ',
+        status: 'new',
+        createdAt: serverTimestamp(),
+      });
+      
       setIsSubmitting(false);
       setSubmitSuccess(true);
-    }, 1000);
+      
+      // Mở Zalo sau khi gửi thành công
+      setTimeout(() => {
+        window.open('https://zalo.me/0867141877', '_blank');
+      }, 800);
+      
+    } catch (err) {
+      console.error('Error submitting form:', err);
+      alert('Đã xảy ra lỗi khi gửi yêu cầu. Vui lòng thử lại sau.');
+      setIsSubmitting(false);
+    }
   };
 
   return (
