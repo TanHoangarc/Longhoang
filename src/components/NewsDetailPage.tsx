@@ -3,6 +3,7 @@ import { SERVICES_LIST, COMPANY_SOCIAL_LINKS } from '../data/mockData';
 import { ContentStore } from '../data/contentStore';
 import { NewsArticle } from '../types';
 import { FileText, ChevronRight, Phone, MessageSquare } from 'lucide-react';
+import { renderTextWithTooltips } from '../utils/tooltipParser';
 
 interface NewsDetailPageProps {
   articleId: string;
@@ -127,22 +128,22 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
             <div className="space-y-4 text-slate-700 leading-relaxed text-justify text-sm sm:text-[15px]">
               {article.content?.lead && (
                 <p className="font-bold text-slate-900 leading-relaxed">
-                  {article.content.lead}
+                  {renderTextWithTooltips(article.content.lead)}
                 </p>
               )}
 
               {article.content?.paragraphs.map((p, idx) => (
                 <p key={idx} className="leading-relaxed">
-                  {p}
+                  {renderTextWithTooltips(p)}
                 </p>
               ))}
             </div>
 
             {/* Structured Info Box with Border matching Screenshot 3 */}
             {article.content?.detailsList && (
-              <div className="mt-8 border border-slate-300/80 rounded-lg overflow-hidden bg-[#fafcff]">
+              <div className="mt-8 border border-slate-300/80 rounded-lg bg-[#fafcff]">
                 {/* Box Header (Green dash title e.g. "— Chi tiết giải" in Screenshot 3) */}
-                <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+                <div className="px-5 py-3.5 bg-slate-50 rounded-t-lg border-b border-slate-200 flex items-center gap-2">
                   <span className="text-emerald-600 font-black text-base">—</span>
                   <h3 className="font-bold text-emerald-700 text-sm sm:text-base">
                     {article.content.detailsCardTitle || 'Chi tiết nội dung'}
@@ -154,12 +155,12 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
                   {article.content.detailsList.map((sec, secIdx) => (
                     <div key={secIdx} className="space-y-2">
                       <h4 className="text-sm font-bold text-slate-900">
-                        {sec.title}
+                        {renderTextWithTooltips(sec.title)}
                       </h4>
                       <ul className="space-y-1.5 pl-4 text-xs sm:text-sm text-slate-600 list-disc marker:text-slate-400">
                         {sec.points.map((pt, ptIdx) => (
                           <li key={ptIdx} className="leading-relaxed">
-                            {pt}
+                            {renderTextWithTooltips(pt)}
                           </li>
                         ))}
                       </ul>

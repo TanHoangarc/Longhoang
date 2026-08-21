@@ -415,7 +415,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
         subLead: 'Môi trường làm việc năng động, lộ trình phát triển rõ ràng cùng nhiều cơ hội thăng tiến.',
         positions,
         howToApply: {
-          email: 'hr@longhoang.vn',
+          email: 'Teddy.diem@longhoanglogistics.com',
           hotline: '0867 141 877',
           zalo: '0867 141 877',
           address: 'Tầng 4, Tòa nhà D-Head, 371 Nguyễn Kiệm, P.3, Q. Gò Vấp, TP. Hồ Chí Minh',
@@ -1222,7 +1222,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 </div>
                 <div>
                   <textarea
-                    rows={4}
+                    rows={18}
                     value={newsFormDetailsRaw}
                     onChange={(e) => setNewsFormDetailsRaw(e.target.value)}
                     placeholder={`Cú pháp: Dùng ## cho tên mục và - cho các gạch đầu dòng.\nVí dụ:\n## 1. Đối tượng tham gia\n- Tất cả cán bộ nhân viên Long Hoàng\n- Đối tác và khách hàng thân thiết\n\n## 2. Thời gian và địa điểm\n- Thời gian: 06h00 ngày 25/08/2026\n- Địa điểm: KĐT Sala, TP. Thủ Đức`}

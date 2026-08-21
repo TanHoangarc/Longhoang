@@ -477,7 +477,7 @@ export const NEWS_ARTICLES: NewsArticle[] = [
           ]
         }
       ],
-      note: 'Mọi thắc mắc về quy chế thi đấu và đăng ký vui lòng liên hệ Ban Tổ Chức qua email: hr@longhoang.vn hoặc Hotline Zalo: 0867 141 877.'
+      note: 'Mọi thắc mắc về quy chế thi đấu và đăng ký vui lòng liên hệ Ban Tổ Chức qua email: Teddy.diem@longhoanglogistics.com hoặc Vincent@longhoanglogistics.com hoặc Hotline Zalo: 0867 141 877.'
     }
   },
   {
@@ -750,7 +750,7 @@ export const JOB_OPENINGS: JobOpening[] = [
         }
       ],
       howToApply: {
-        email: 'hr@longhoang.vn',
+        email: 'Teddy.diem@longhoanglogistics.com hoặc Vincent@longhoanglogistics.com',
         hotline: '028 7303 2677',
         zalo: '0867 141 877',
         address: 'Tòa nhà Long Hoàng, Số 168 Đường số 2, Vạn Phúc City, P. Hiệp Bình Phước, TP. Thủ Đức, TP. Hồ Chí Minh'
@@ -794,7 +794,7 @@ export const JOB_OPENINGS: JobOpening[] = [
         }
       ],
       howToApply: {
-        email: 'hr@longhoang.vn',
+        email: 'Teddy.diem@longhoanglogistics.com hoặc Vincent@longhoanglogistics.com',
         hotline: '028 7303 2677',
         zalo: '0867 141 877',
         address: 'Bãi xe Long Hoàng Logistics, KCN Hòa Cầm, Cẩm Lệ, TP. Đà Nẵng'
@@ -837,7 +837,7 @@ export const JOB_OPENINGS: JobOpening[] = [
         }
       ],
       howToApply: {
-        email: 'hr@longhoang.vn',
+        email: 'Teddy.diem@longhoanglogistics.com hoặc Vincent@longhoanglogistics.com',
         hotline: '028 7303 2677',
         zalo: '0867 141 877',
         address: 'Văn phòng Long Hoàng Logistics tại Hải Phòng / Đà Nẵng / TP.HCM'
