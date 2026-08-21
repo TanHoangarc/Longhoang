@@ -204,7 +204,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     // Convert detailsList to raw text
     if (article.content?.detailsList) {
       const raw = article.content.detailsList
-        .map((sec) => `## ${sec.title}\n${sec.points.map((p) => `- ${p}`).join('\n')}`)
+        .map((sec) => `## ${sec.title}\n${sec.points.join('\n')}`)
         .join('\n\n');
       setNewsFormDetailsRaw(raw);
     } else {
@@ -239,7 +239,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
         const title = lines[0].replace(/^#+\s*/, '').trim();
         const points = lines
           .slice(1)
-          .map((l) => l.replace(/^[-*•]\s*/, '').trim())
+          .map((l) => l.trim())
           .filter(Boolean);
         return { title, points };
       });
@@ -1248,7 +1248,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                     rows={18}
                     value={newsFormDetailsRaw}
                     onChange={(e) => setNewsFormDetailsRaw(e.target.value)}
-                    placeholder={`Cú pháp:\n- Dùng ## cho tên mục và - cho các gạch đầu dòng.\n- Dùng *#Từ khóa | Mô tả | Link_ảnh#* để chèn Tooltip tùy chỉnh.\n\nVí dụ:\n## 1. Incoterms trọng tâm\n- *#DAT | Giao hàng tại bến | https://linkanh.com/a.jpg#*`}
+                    placeholder={`Cú pháp:\n- Dùng ## cho tên mục lớn.\n- Bắt đầu dòng bằng dấu trừ (-) nếu muốn tạo gạch đầu dòng, hoặc viết bình thường để tạo đoạn văn.\n- Dùng *#Từ khóa | Mô tả | Link_ảnh#* để chèn Tooltip tùy chỉnh.\n\nVí dụ:\n## 1. Incoterms trọng tâm\n- *#DAT | Giao hàng tại bến | https://linkanh.com/a.jpg#*\nĐây là một đoạn văn bản bình thường không có dấu chấm tròn.`}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                 </div>

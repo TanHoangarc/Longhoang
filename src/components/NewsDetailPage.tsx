@@ -157,13 +157,26 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
                       <h4 className="text-sm font-bold text-slate-900">
                         {renderTextWithTooltips(sec.title)}
                       </h4>
-                      <ul className="space-y-1.5 pl-4 text-xs sm:text-sm text-slate-600 list-disc marker:text-slate-400">
-                        {sec.points.map((pt, ptIdx) => (
-                          <li key={ptIdx} className="leading-relaxed">
-                            {renderTextWithTooltips(pt)}
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="space-y-1.5 text-xs sm:text-sm text-slate-600">
+                        {sec.points.map((pt, ptIdx) => {
+                          const isBullet = /^[-*•]\s*/.test(pt);
+                          const text = pt.replace(/^[-*•]\s*/, '');
+                          
+                          if (isBullet) {
+                            return (
+                              <ul key={ptIdx} className="pl-4 list-disc marker:text-slate-400">
+                                <li className="leading-relaxed">{renderTextWithTooltips(text)}</li>
+                              </ul>
+                            );
+                          }
+                          
+                          return (
+                            <p key={ptIdx} className="leading-relaxed">
+                              {renderTextWithTooltips(text)}
+                            </p>
+                          );
+                        })}
+                      </div>
                     </div>
                   ))}
                 </div>

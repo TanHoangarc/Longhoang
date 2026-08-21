@@ -456,24 +456,24 @@ export const NEWS_ARTICLES: NewsArticle[] = [
         {
           title: '1. Đối tượng tham gia',
           points: [
-            'Tất cả cán bộ công nhân viên Long Hoàng Logistics trên toàn quốc',
-            'Khách hàng, đại lý và đối tác thân thiết của công ty'
+            '- Tất cả cán bộ công nhân viên Long Hoàng Logistics trên toàn quốc',
+            '- Khách hàng, đại lý và đối tác thân thiết của công ty'
           ]
         },
         {
           title: '2. Thời gian & Lộ trình',
           points: [
-            'Thời gian đăng ký: 06/04 - 09/04/2026',
-            'Thời gian ghi nhận thành tích: 00h ngày 12/04/2026 – 8h00 ngày 25/04/2026',
-            'Tổng kết – Trao giải: 25/04/2026 tại Headoffice HCM & Chi nhánh HPH'
+            '- Thời gian đăng ký: 06/04 - 09/04/2026',
+            '- Thời gian ghi nhận thành tích: 00h ngày 12/04/2026 – 8h00 ngày 25/04/2026',
+            '- Tổng kết – Trao giải: 25/04/2026 tại Headoffice HCM & Chi nhánh HPH'
           ]
         },
         {
           title: '3. Hình thức thi đấu & Cơ cấu giải thưởng',
           points: [
-            'Chạy cá nhân & Chạy tiếp sức theo nhóm (Đội 5 người)',
-            'Ghi nhận cự ly tự động qua ứng dụng Strava liên kết hệ thống',
-            'Giải Nhất, Nhì, Ba tập thể và cá nhân nam/nữ xuất sắc nhất'
+            '- Chạy cá nhân & Chạy tiếp sức theo nhóm (Đội 5 người)',
+            '- Ghi nhận cự ly tự động qua ứng dụng Strava liên kết hệ thống',
+            '- Giải Nhất, Nhì, Ba tập thể và cá nhân nam/nữ xuất sắc nhất'
           ]
         }
       ],
@@ -501,17 +501,17 @@ export const NEWS_ARTICLES: NewsArticle[] = [
         {
           title: '1. Kênh tiếp nhận thông tin chính thức',
           points: [
-            'Website duy nhất: www.longhoang.vn',
-            'Fanpage chính thức: fb.com/longhoanglogistics (có tick xác thực)',
-            'Email tuyển dụng có đuôi @longhoang.vn'
+            '- Website duy nhất: www.longhoang.vn',
+            '- Fanpage chính thức: fb.com/longhoanglogistics (có tick xác thực)',
+            '- Email tuyển dụng có đuôi @longhoang.vn'
           ]
         },
         {
           title: '2. Các dấu hiệu lừa đảo phổ biến',
           points: [
-            'Yêu cầu chuyển tiền đặt cọc hoặc mở tài khoản ngân hàng liên kết',
-            'Sử dụng địa chỉ email miễn phí như @gmail.com, @yahoo.com để gửi thư mời phỏng vấn',
-            'Hứa hẹn mức lương bất thường kèm công việc online nhẹ nhàng'
+            '- Yêu cầu chuyển tiền đặt cọc hoặc mở tài khoản ngân hàng liên kết',
+            '- Sử dụng địa chỉ email miễn phí như @gmail.com, @yahoo.com để gửi thư mời phỏng vấn',
+            '- Hứa hẹn mức lương bất thường kèm công việc online nhẹ nhàng'
           ]
         }
       ],
@@ -539,15 +539,15 @@ export const NEWS_ARTICLES: NewsArticle[] = [
         {
           title: '1. Mở rộng tuyến vận tải đường biển FCL/LCL',
           points: [
-            'Tăng cường hợp tác với các hãng tàu Maersk, MSC, CMA CGM, COSCO, ONE',
-            'Giữ chỗ (space) cố định ngay trong mùa cao điểm xuất hàng đi bờ Tây & bờ Đông nước Mỹ'
+            '- Tăng cường hợp tác với các hãng tàu Maersk, MSC, CMA CGM, COSCO, ONE',
+            '- Giữ chỗ (space) cố định ngay trong mùa cao điểm xuất hàng đi bờ Tây & bờ Đông nước Mỹ'
           ]
         },
         {
           title: '2. Phát triển dịch vụ E-commerce Logistics xuyên biên giới',
           points: [
-            'Xây dựng tuyến đường bay chuyên dụng (Air Charter) kết nối Hà Nội/TP.HCM với Frankfurt và Incheon',
-            'Dịch vụ DDP/DAP tận tay người nhận với giải pháp công nghệ theo dõi trực tuyến 24/7'
+            '- Xây dựng tuyến đường bay chuyên dụng (Air Charter) kết nối Hà Nội/TP.HCM với Frankfurt và Incheon',
+            '- Dịch vụ DDP/DAP tận tay người nhận với giải pháp công nghệ theo dõi trực tuyến 24/7'
           ]
         }
       ]
@@ -574,15 +574,15 @@ export const NEWS_ARTICLES: NewsArticle[] = [
         {
           title: '1. Kế hoạch đóng hàng và book tàu sớm',
           points: [
-            'Book chỗ trước ngày tàu chạy tối thiểu 10-14 ngày đối với tuyến xa (Mỹ, Châu Âu)',
-            'Kiểm tra kỹ hạn lưu bãi (Demurrage & Detention) tại cảng đích để tránh phát sinh chi phí'
+            '- Book chỗ trước ngày tàu chạy tối thiểu 10-14 ngày đối với tuyến xa (Mỹ, Châu Âu)',
+            '- Kiểm tra kỹ hạn lưu bãi (Demurrage & Detention) tại cảng đích để tránh phát sinh chi phí'
           ]
         },
         {
           title: '2. Tận dụng mạng lưới đại lý gom hàng',
           points: [
-            'Sử dụng dịch vụ gom hàng Consol trực tiếp từ cảng Cát Lái/Hải Phòng thay vì chuyển tải qua cảng trung gian',
-            'Được hỗ trợ kiểm dịch, hun trùng và đóng gói kiện hàng đạt chuẩn quốc tế'
+            '- Sử dụng dịch vụ gom hàng Consol trực tiếp từ cảng Cát Lái/Hải Phòng thay vì chuyển tải qua cảng trung gian',
+            '- Được hỗ trợ kiểm dịch, hun trùng và đóng gói kiện hàng đạt chuẩn quốc tế'
           ]
         }
       ]
@@ -624,7 +624,7 @@ export const NEWS_ARTICLES: NewsArticle[] = [
           title: '3. Nhóm D (DAP, DPU, DDP) - Người bán chịu trách nhiệm đến đích',
           points: [
             '*#DDP (Delivered Duty Paid) | Người bán chịu mọi chi phí và thuế nhập khẩu tại nước người mua#*',
-            '**Lưu ý quan trọng:** Giao hàng tận nơi yêu cầu sự phối hợp chặt chẽ. Dưới đây là sơ đồ minh họa:',
+            '- **Lưu ý quan trọng:** Giao hàng tận nơi yêu cầu sự phối hợp chặt chẽ. Dưới đây là sơ đồ minh họa:',
             '[img|https://images.unsplash.com/photo-1586528116311-ad8ed7c80a02?auto=format&fit=crop&w=800&q=80]'
           ]
         }
@@ -652,22 +652,22 @@ export const NEWS_ARTICLES: NewsArticle[] = [
         {
           title: 'Bước 1: Chuẩn bị và kiểm tra bộ chứng từ',
           points: [
-            'Hợp đồng thương mại (Sales Contract), Hóa đơn (Commercial Invoice)',
-            'Phiếu đóng gói (Packing List), Vận đơn (Bill of Lading / Airway Bill)',
-            'Chứng nhận xuất xứ (C/O), Giấy phép chuyên ngành (nếu có)'
+            '- Hợp đồng thương mại (Sales Contract), Hóa đơn (Commercial Invoice)',
+            '- Phiếu đóng gói (Packing List), Vận đơn (Bill of Lading / Airway Bill)',
+            '- Chứng nhận xuất xứ (C/O), Giấy phép chuyên ngành (nếu có)'
           ]
         },
         {
           title: 'Bước 2: Lên tờ khai và truyền số liệu VNACCS',
           points: [
-            'Phân luồng tự động: Luồng Xanh (Thông quan ngay), Luồng Vàng (Kiểm tra hồ sơ giấy), Luồng Đỏ (Kiểm tra thực tế hàng)'
+            '- Phân luồng tự động: Luồng Xanh (Thông quan ngay), Luồng Vàng (Kiểm tra hồ sơ giấy), Luồng Đỏ (Kiểm tra thực tế hàng)'
           ]
         },
         {
           title: 'Bước 3: Nộp thuế và thanh lý tờ khai tại cảng/ICD',
           points: [
-            'Nộp thuế điện tử 24/7 qua cổng thanh toán liên ngân hàng của Tổng cục Hải quan',
-            'In mã vạch tờ khai và thanh lý hải quan giám sát cảng'
+            '- Nộp thuế điện tử 24/7 qua cổng thanh toán liên ngân hàng của Tổng cục Hải quan',
+            '- In mã vạch tờ khai và thanh lý hải quan giám sát cảng'
           ]
         }
       ]
