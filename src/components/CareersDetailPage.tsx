@@ -220,14 +220,18 @@ export const CareersDetailPage: React.FC<CareersDetailPageProps> = ({
                 HƯỚNG DẪN NỘP HỒ SƠ & LIÊN HỆ PHÒNG NHÂN SỰ
               </h4>
               <p className="leading-relaxed">
-                Ứng viên gửi CV về email:{' '}
-                <a
-                  href="mailto:hr@longhoang.vn"
-                  className="font-bold text-[#0048ba] hover:underline"
-                >
-                  hr@longhoang.vn
-                </a>{' '}
-                với tiêu đề [Họ tên] - [Vị trí ứng tuyển] - [Khu vực].
+                Ứng viên gửi CV về email khu vực làm việc tương ứng:
+              </p>
+              <ul className="list-disc pl-4 space-y-1">
+                <li>
+                  Khu vực HCM: <a href="mailto:Teddy.diem@longhoanglogistics.com" className="font-bold text-[#0048ba] hover:underline">Teddy.diem@longhoanglogistics.com</a>
+                </li>
+                <li>
+                  Khu vực Hải Phòng: <a href="mailto:Vincent@longhoanglogistics.com" className="font-bold text-[#0048ba] hover:underline">Vincent@longhoanglogistics.com</a>
+                </li>
+              </ul>
+              <p className="leading-relaxed">
+                Vui lòng ghi rõ tiêu đề email: [Họ tên] - [Vị trí ứng tuyển] - [Khu vực].
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-medium text-xs">
                 <div>
