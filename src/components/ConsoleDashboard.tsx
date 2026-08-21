@@ -84,6 +84,25 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<JobOpening | null>(null);
 
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return typeof sessionStorage !== 'undefined' && sessionStorage.getItem('lh_admin_auth') === 'true';
+  });
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginUsername === 'admin' && loginPassword === 'admin@7602') {
+      setIsAuthenticated(true);
+      sessionStorage.setItem('lh_admin_auth', 'true');
+      setLoginError('');
+    } else {
+      setLoginError('Tài khoản hoặc mật khẩu không chính xác.');
+    }
+  };
+
   // Form State for Job
   const [jobFormTitle, setJobFormTitle] = useState('');
   const [jobFormLocation, setJobFormLocation] = useState('Hồ Chí Minh');
@@ -432,6 +451,72 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
       j.location.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center font-sans relative overflow-hidden">
+        {/* Background elements */}
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-96 h-96 bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none" />
+        
+        <div className="relative bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 p-8 rounded-2xl w-full max-w-md shadow-2xl">
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#0048ba] to-[#0284c7] flex items-center justify-center font-black text-white text-xl shadow-md mb-4">
+              LH
+            </div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Console Quản Trị</h1>
+            <p className="text-slate-400 text-sm mt-2 text-center">Đăng nhập để quản lý nội dung website</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Tài khoản</label>
+              <input
+                type="text"
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                placeholder="Nhập tên tài khoản"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mật khẩu</label>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                placeholder="Nhập mật khẩu"
+                required
+              />
+            </div>
+
+            {loginError && (
+              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-4 py-3 rounded-xl text-xs font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm px-4 py-3.5 rounded-xl transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98]"
+            >
+              Đăng nhập hệ thống
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <button onClick={onBackToHome} className="text-slate-400 hover:text-white text-xs inline-flex items-center gap-1.5 transition-colors">
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Quay lại trang chủ
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans selection:bg-[#0048ba] selection:text-white">

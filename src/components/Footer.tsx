@@ -132,21 +132,6 @@ export const Footer: React.FC<FooterProps> = ({ onOpenConsole }) => {
             <span className="hover:text-blue-900 cursor-pointer">Term of use</span>
             <span>-</span>
             <span className="hover:text-blue-900 cursor-pointer">Privacy policy</span>
-            <span>-</span>
-            <button
-              onClick={() => {
-                if (onOpenConsole) {
-                  onOpenConsole();
-                } else {
-                  window.location.hash = '#/console';
-                }
-              }}
-              className="text-[#0048ba] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-              title="Cổng Quản trị Tin tức & Tuyển dụng (longhoanglogistics.com/console)"
-            >
-              <Lock className="w-3 h-3" />
-              <span>Console Quản trị (/console)</span>
-            </button>
           </div>
         </div>
       </div>
