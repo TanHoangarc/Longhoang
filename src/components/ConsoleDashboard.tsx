@@ -1211,6 +1211,12 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 <label className="block text-slate-200 font-bold text-xs uppercase tracking-wider">
                   Khung thông tin có cấu trúc (Tùy chọn - Hiển thị trong khung viền đẹp mắt)
                 </label>
+                <div className="text-slate-400 text-xs space-y-1 mb-2 bg-slate-900/50 p-3 rounded border border-slate-800/80">
+                  <p><strong className="text-blue-400">Tạo thẻ ghi chú (Tooltip) Tùy chỉnh:</strong></p>
+                  <p>Sử dụng cú pháp: <code className="text-emerald-400 font-mono">*#Từ khóa | Nội dung giải thích | Link ảnh#*</code></p>
+                  <p>Ví dụ có ảnh: <code className="text-emerald-400 font-mono">*#DAT | Giao hàng tại bến | https://linkanh.com/anh.jpg#*</code></p>
+                  <p>Ví dụ không ảnh: <code className="text-emerald-400 font-mono">*#DAT | Giao hàng tại bến#*</code></p>
+                </div>
                 <div>
                   <input
                     type="text"
@@ -1225,7 +1231,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                     rows={18}
                     value={newsFormDetailsRaw}
                     onChange={(e) => setNewsFormDetailsRaw(e.target.value)}
-                    placeholder={`Cú pháp: Dùng ## cho tên mục và - cho các gạch đầu dòng.\nVí dụ:\n## 1. Đối tượng tham gia\n- Tất cả cán bộ nhân viên Long Hoàng\n- Đối tác và khách hàng thân thiết\n\n## 2. Thời gian và địa điểm\n- Thời gian: 06h00 ngày 25/08/2026\n- Địa điểm: KĐT Sala, TP. Thủ Đức`}
+                    placeholder={`Cú pháp:\n- Dùng ## cho tên mục và - cho các gạch đầu dòng.\n- Dùng *#Từ khóa | Mô tả | Link_ảnh#* để chèn Tooltip tùy chỉnh.\n\nVí dụ:\n## 1. Incoterms trọng tâm\n- *#DAT | Giao hàng tại bến | https://linkanh.com/a.jpg#*`}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                 </div>
