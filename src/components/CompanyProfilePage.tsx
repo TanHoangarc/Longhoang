@@ -31,22 +31,18 @@ export const CompanyProfilePage: React.FC<CompanyProfilePageProps> = ({
   const [downloadSuccessLang, setDownloadSuccessLang] = useState<string | null>(null);
 
   const handleDownload = (langCode: string, langName: string) => {
+    if (langCode === 'CN') {
+      alert('Tài liệu tiếng Trung đang được cập nhật. Xin vui lòng quay lại sau!\n\nThe Chinese version is being updated. Please come back later!');
+      return;
+    }
+
     setDownloadSuccessLang(langCode);
     
-    // Simulate direct download of Company Profile PDF
-    const dummyContent = `LONG HOÀNG LOGISTICS - COMPANY PROFILE (${langName})\n\n` +
-      `think logistics - think us\n` +
-      `Comprehensive Logistics Solutions: Sea, Air, Multimodal, Inland Trucking & Warehousing.\n` +
-      `Hotline: 0867 141 877 | Website: longhoanglogistics.com`;
-    const blob = new Blob([dummyContent], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Long_Hoang_Logistics_Company_Profile_${langCode}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    if (langCode === 'VN') {
+      window.open('https://drive.google.com/file/d/1eyhPtYIpZgw0CQ4G_8ensXr7WbsIH5me/view?usp=drive_link', '_blank');
+    } else if (langCode === 'GB') {
+      window.open('https://drive.google.com/file/d/1wyPCBaCLTiUx3aWMwIX3X1WryfnTL-Lp/view?usp=drive_link', '_blank');
+    }
 
     setTimeout(() => {
       setDownloadSuccessLang(null);
@@ -102,7 +98,7 @@ export const CompanyProfilePage: React.FC<CompanyProfilePageProps> = ({
               Trang chủ
             </button>
             <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-800 font-bold">COMPANY PROFILE – LONG HOANG GROUP</span>
+            <span className="text-slate-800 font-bold">COMPANY PROFILE – LONG HOANG LOGISTICS</span>
           </nav>
         </div>
       </div>
@@ -177,7 +173,7 @@ export const CompanyProfilePage: React.FC<CompanyProfilePageProps> = ({
               </div>
 
               <p className="text-xs sm:text-sm text-[#0048ba] max-w-xl mx-auto leading-relaxed pt-2">
-                Long Hoang Group is committed to providing the best logistics solutions and services to our customers. Thank you for your interest in our company. For more detailed information, please download our company profile in your preferred language below.
+                Long Hoang Logistics is committed to providing the best logistics solutions and services to our customers. Thank you for your interest in our company. For more detailed information, please download our company profile in your preferred language below.
               </p>
             </div>
 
