@@ -82,7 +82,7 @@ export const CompanyProfilePage: React.FC<CompanyProfilePageProps> = ({
         {/* Banner Title */}
         <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
           <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#0048ba] tracking-wider uppercase drop-shadow-xs">
-            COMPANY PROFILE – LONG HOANG GROUP
+            COMPANY PROFILE – LONG HOANG LOGISTICS
           </h1>
         </div>
       </div>
@@ -165,7 +165,7 @@ export const CompanyProfilePage: React.FC<CompanyProfilePageProps> = ({
                   referrerPolicy="no-referrer"
                 />
                 <h2 className="text-2xl sm:text-3xl font-black text-[#0048ba] tracking-tight uppercase mt-2">
-                  LONG HOANG GROUP
+                  LONG HOANG LOGISTICS
                 </h2>
                 <p className="text-sm sm:text-base font-serif italic text-amber-500 font-semibold tracking-wide">
                   think logistics - think us
@@ -323,7 +323,7 @@ export const CompanyProfilePage: React.FC<CompanyProfilePageProps> = ({
                           <h4 className="text-xs sm:text-sm font-bold drop-shadow">
                             Long Hoang Logistics Corporate Video
                           </h4>
-                          <p className="text-[10px] text-slate-300">Long Hoang Group</p>
+                          <p className="text-[10px] text-slate-300">Long Hoang Logistics</p>
                         </div>
                       </div>
 
