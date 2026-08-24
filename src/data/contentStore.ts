@@ -107,7 +107,9 @@ export const ContentStore = {
   async seedDefaultNews() {
     try {
       for (const article of DEFAULT_NEWS) {
-        await setDoc(doc(db, 'news', article.id), {
+        const cleanArticle = JSON.parse(JSON.stringify(article));
+      await setDoc(doc(db, 'news', article.id), {
+        ...cleanArticle,
           ...article,
           updatedAt: new Date().toISOString(),
         });
@@ -121,7 +123,9 @@ export const ContentStore = {
   async seedDefaultJobs() {
     try {
       for (const job of DEFAULT_JOBS) {
-        await setDoc(doc(db, 'jobs', job.id), {
+        const cleanJob = JSON.parse(JSON.stringify(job));
+      await setDoc(doc(db, 'jobs', job.id), {
+        ...cleanJob,
           ...job,
           updatedAt: new Date().toISOString(),
         });
@@ -154,8 +158,9 @@ export const ContentStore = {
 
     // 2. Persist to Firebase Firestore
     try {
+      const cleanArticle = JSON.parse(JSON.stringify(article));
       await setDoc(doc(db, 'news', article.id), {
-        ...article,
+        ...cleanArticle,
         updatedAt: new Date().toISOString(),
       });
     } catch (err) {
@@ -200,8 +205,9 @@ export const ContentStore = {
 
     // 2. Persist to Firebase Firestore
     try {
+      const cleanJob = JSON.parse(JSON.stringify(job));
       await setDoc(doc(db, 'jobs', job.id), {
-        ...job,
+        ...cleanJob,
         updatedAt: new Date().toISOString(),
       });
     } catch (err) {

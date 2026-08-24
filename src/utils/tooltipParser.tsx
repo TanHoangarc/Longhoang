@@ -22,10 +22,18 @@ export function renderTextWithTooltips(text: string) {
       
       // 2. Inline Image
       if (part.startsWith('[img|') && part.endsWith(']')) {
-        const url = part.slice(5, -1).trim();
+        const content = part.slice(5, -1).trim();
+        const segments = content.split('|').map(s => s.trim());
+        const url = segments[0] || '';
+        const caption = segments[1] || '';
         return (
-          <span key={`img-${index}`} className="block my-4">
-            <img src={url} alt="Minh hoạ" className="w-full max-w-3xl mx-auto h-auto rounded-lg shadow-sm border border-slate-200 object-cover" />
+          <span key={`img-${index}`} className="block my-6">
+            <img src={url} alt={caption || "Minh hoạ"} className="w-full max-w-3xl mx-auto h-auto rounded-lg shadow-sm border border-slate-200 object-cover" />
+            {caption && (
+              <span className="block text-center text-sm text-slate-500 mt-2 italic">
+                {caption}
+              </span>
+            )}
           </span>
         );
       }

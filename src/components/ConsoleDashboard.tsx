@@ -1237,6 +1237,10 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                   <p><strong className="text-blue-400">Chèn đường dẫn (Link):</strong></p>
                   <p>Sử dụng cú pháp: <code className="text-emerald-400 font-mono">[Tên hiển thị](Đường dẫn URL)</code></p>
                   <p>Ví dụ: <code className="text-emerald-400 font-mono">[Nhấn vào đây](https://google.com)</code></p>
+                  <div className="h-px bg-slate-800/80 my-2" />
+                  <p><strong className="text-blue-400">Chèn ảnh nội dung (có ghi chú):</strong></p>
+                  <p>Sử dụng cú pháp: <code className="text-emerald-400 font-mono">[img|Đường dẫn ảnh|Ghi chú dưới ảnh]</code></p>
+                  <p>Ví dụ: <code className="text-emerald-400 font-mono">[img|https://anh.com/a.jpg|Ảnh minh hoạ]</code></p>
                 </div>
                 <div>
                   <input
@@ -1252,7 +1256,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                     rows={18}
                     value={newsFormDetailsRaw}
                     onChange={(e) => setNewsFormDetailsRaw(e.target.value)}
-                    placeholder={`Cú pháp:\n- Dùng ## cho tên mục lớn.\n- Bắt đầu dòng bằng dấu trừ (-) nếu muốn tạo gạch đầu dòng.\n- Chèn Link (Liên kết): [Tên hiển thị](Đường_dẫn_URL)\n- Chèn Tooltip: *#Từ khóa | Mô tả | Link_ảnh#*\n\nVí dụ:\n## 1. Hướng dẫn\n- Tham khảo thêm tại [Google](https://google.com)\n- Hoặc xem giải thích *#FOB | Free on Board#*`}
+                    placeholder={`Cú pháp:\n- Dùng ## cho tên mục lớn.\n- Bắt đầu dòng bằng dấu trừ (-) nếu muốn tạo gạch đầu dòng.\n- Chèn Ảnh: [img|Đường_dẫn_ảnh|Ghi_chú_ảnh]\n- Chèn Link (Liên kết): [Tên hiển thị](Đường_dẫn_URL)\n- Chèn Tooltip: *#Từ khóa | Mô tả | Link_ảnh#*`}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                 </div>
