@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Bold,
+  Link as LinkIcon,
+  HelpCircle,
   Newspaper,
   Briefcase,
   Plus,
@@ -82,6 +85,34 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [helperImageUrl, setHelperImageUrl] = useState('');
   const [isUploadingHelper, setIsUploadingHelper] = useState(false);
   const [helperUploadProgress, setHelperUploadProgress] = useState(0);
+
+
+  const handleFormatText = (prefix: string, suffix: string, defaultText: string) => {
+    const activeEl = document.activeElement as HTMLTextAreaElement | HTMLInputElement;
+    if (!activeEl || (activeEl.tagName !== 'TEXTAREA' && activeEl.tagName !== 'INPUT')) {
+      alert('Vui lòng click chuột vào ô nhập liệu bên dưới và chọn đoạn chữ (nếu có) trước khi bấm nút chèn!');
+      return;
+    }
+
+    const start = activeEl.selectionStart || 0;
+    const end = activeEl.selectionEnd || 0;
+    const value = activeEl.value || '';
+    const selectedText = value.substring(start, end) || defaultText;
+
+    const newText = value.substring(0, start) + prefix + selectedText + suffix + value.substring(end);
+
+    // Call the native setter to bypass React's tracking, then dispatch input event
+    const prototype = activeEl.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+    nativeInputValueSetter?.call(activeEl, newText);
+    activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Restore focus and selection
+    setTimeout(() => {
+      activeEl.focus();
+      activeEl.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
+    }, 0);
+  };
 
   const handleHelperImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1327,13 +1358,44 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
               {/* Content Formatting Guide */}
               <div className="p-3 bg-slate-900/50 rounded-xl border border-slate-800 space-y-2">
                 <label className="block text-slate-200 font-bold text-xs uppercase tracking-wider mb-1">
-                  Cú pháp định dạng nhanh (Áp dụng cho mọi ô nhập liệu bên dưới)
+                  Cú pháp định dạng nhanh (Click để gán vào văn bản đang chọn)
                 </label>
-                <div className="text-slate-400 text-[11px] grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 leading-relaxed">
-                  <p><strong className="text-blue-400">In đậm:</strong> <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">**Văn bản**</code></p>
-                  <p><strong className="text-blue-400">Chèn Link:</strong> <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[Tên hiển thị](URL)</code></p>
-                  <p><strong className="text-blue-400">Chèn Ảnh:</strong> <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[img|Link_ảnh|Ghi_chú]</code></p>
-                  <p><strong className="text-blue-400">Tooltip:</strong> <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">*#Từ khóa | Giải thích | Link_ảnh_tùy_chọn#*</code></p>
+                <div className="text-slate-400 text-[11px] flex flex-wrap gap-2 leading-relaxed">
+                  <button 
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('**', '**', 'Văn bản in đậm'); }}
+                    className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors group cursor-pointer"
+                  >
+                    <Bold className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
+                    <span>In đậm: <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">**chữ**</code></span>
+                  </button>
+                  
+                  <button 
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('[', '](URL)', 'Tên hiển thị'); }}
+                    className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors group cursor-pointer"
+                  >
+                    <LinkIcon className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
+                    <span>Link: <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[Tên](URL)</code></span>
+                  </button>
+                  
+                  <button 
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('[img|', '|Ghi_chú_ảnh]', 'Đường_dẫn_ảnh'); }}
+                    className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors group cursor-pointer"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
+                    <span>Ảnh: <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[img|Link|Ghi_chú]</code></span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('*#', ' | Giải thích#*', 'Từ khóa'); }}
+                    className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors group cursor-pointer"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
+                    <span>Tooltip: <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">*#Từ khóa | Giải thích#*</code></span>
+                  </button>
                 </div>
               </div>
 
