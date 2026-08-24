@@ -186,7 +186,7 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
             {/* Note & Contact footer */}
             {article.content?.note && (
               <div className="p-4 bg-amber-50/70 border-l-4 border-amber-500 rounded-r-md text-xs sm:text-sm text-amber-900 italic">
-                {article.content.note}
+                {renderTextWithTooltips(article.content.note)}
               </div>
             )}
 
