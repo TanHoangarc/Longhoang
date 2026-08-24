@@ -29,6 +29,8 @@ import {
 import { LongHoangLogo } from './LongHoangLogo';
 import { ContentStore } from '../data/contentStore';
 import { NewsArticle, JobOpening } from '../types';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { storage } from '../firebase';
 import { ConsoleQuotesTab } from './ConsoleQuotesTab';
 
 interface ConsoleDashboardProps {
@@ -75,6 +77,144 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [newsFormType, setNewsFormType] = useState<'industry-news' | 'industry-knowledge' | 'company-news'>('industry-news');
   const [newsFormDate, setNewsFormDate] = useState('');
   const [newsFormImage, setNewsFormImage] = useState('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [helperImageUrl, setHelperImageUrl] = useState('');
+  const [isUploadingHelper, setIsUploadingHelper] = useState(false);
+  const [helperUploadProgress, setHelperUploadProgress] = useState(0);
+
+  const handleHelperImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Vui lòng chọn ảnh có kích thước dưới 5MB.');
+      return;
+    }
+
+    setIsUploadingHelper(true);
+    setHelperUploadProgress(0);
+    try {
+      const storageRef = ref(storage, `news_images/${Date.now()}_${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setHelperUploadProgress(Math.round(progress));
+        },
+        (error) => {
+          console.error('Lỗi tải ảnh (Storage):', error);
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            if (ev.target?.result) {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width, height = img.height;
+                const MAX = 1200;
+                if (width > height && width > MAX) { height *= MAX / width; width = MAX; }
+                else if (height > MAX) { width *= MAX / height; height = MAX; }
+                canvas.width = width; canvas.height = height;
+                canvas.getContext('2d')?.drawImage(img, 0, 0, width, height);
+                setHelperImageUrl(canvas.toDataURL('image/jpeg', 0.8));
+                setIsUploadingHelper(false);
+              };
+              img.src = ev.target.result as string;
+            } else setIsUploadingHelper(false);
+          };
+          reader.readAsDataURL(file);
+        },
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          setHelperImageUrl(downloadURL);
+          setIsUploadingHelper(false);
+          setHelperUploadProgress(0);
+        }
+      );
+    } catch (err) {
+      console.error('Error starting upload:', err);
+      setIsUploadingHelper(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Vui lòng chọn ảnh có kích thước dưới 5MB.');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    setUploadProgress(0);
+    try {
+      const storageRef = ref(storage, `news_images/${Date.now()}_${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(Math.round(progress));
+        },
+        (error) => {
+          console.error('Lỗi tải ảnh (Storage):', error);
+          // Fallback: Compress and convert to Base64
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (e.target?.result) {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1200;
+                const MAX_HEIGHT = 1200;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                  if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                  }
+                } else {
+                  if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                  }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+                
+                // Compress to WebP or JPEG
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                setNewsFormImage(dataUrl);
+                alert('Tải ảnh thành công (Chế độ lưu nội bộ do chưa mở quyền Firebase Storage).');
+                setIsUploadingImage(false);
+              };
+              img.src = e.target.result as string;
+            } else {
+              setIsUploadingImage(false);
+            }
+          };
+          reader.readAsDataURL(file);
+        },
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          setNewsFormImage(downloadURL);
+          setIsUploadingImage(false);
+          setUploadProgress(0);
+        }
+      );
+    } catch (err) {
+      console.error('Error starting upload:', err);
+      setIsUploadingImage(false);
+    }
+  };
   const [newsFormSummary, setNewsFormSummary] = useState('');
   const [newsFormLead, setNewsFormLead] = useState('');
   const [newsFormParagraphs, setNewsFormParagraphs] = useState<string[]>(['']);
@@ -1113,15 +1253,34 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">
-                    Đường dẫn ảnh đại diện (Image URL) *
+                  <label className="block text-slate-300 font-semibold mb-1 flex justify-between items-center">
+                    <span>Ảnh đại diện (Image URL) *</span>
+                    <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded text-[10px] transition-colors flex items-center gap-1">
+                      {isUploadingImage ? (
+                        <span>Đang tải... {uploadProgress}%</span>
+                      ) : (
+                        <>
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          </svg>
+                          Tải ảnh từ máy
+                        </>
+                      )}
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleImageUpload}
+                        disabled={isUploadingImage}
+                      />
+                    </label>
                   </label>
                   <input
                     type="url"
                     required
                     value={newsFormImage}
                     onChange={(e) => setNewsFormImage(e.target.value)}
-                    placeholder="https://..."
+                    placeholder="Dán link ảnh hoặc tải ảnh từ máy tính..."
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                 </div>
@@ -1163,6 +1322,19 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                   placeholder="Tóm tắt ngắn gọn 2 - 3 câu về nội dung chính của bài viết..."
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
+              </div>
+
+              {/* Content Formatting Guide */}
+              <div className="p-3 bg-slate-900/50 rounded-xl border border-slate-800 space-y-2">
+                <label className="block text-slate-200 font-bold text-xs uppercase tracking-wider mb-1">
+                  Cú pháp định dạng nhanh (Áp dụng cho mọi ô nhập liệu bên dưới)
+                </label>
+                <div className="text-slate-400 text-[11px] grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 leading-relaxed">
+                  <p><strong className="text-blue-400">In đậm:</strong> <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">**Văn bản**</code></p>
+                  <p><strong className="text-blue-400">Chèn Link:</strong> <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[Tên hiển thị](URL)</code></p>
+                  <p><strong className="text-blue-400">Chèn Ảnh:</strong> <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[img|Link_ảnh|Ghi_chú]</code></p>
+                  <p><strong className="text-blue-400">Tooltip:</strong> <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">*#Từ khóa | Giải thích | Link_ảnh_tùy_chọn#*</code></p>
+                </div>
               </div>
 
               {/* Lead paragraph */}
@@ -1228,20 +1400,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 <label className="block text-slate-200 font-bold text-xs uppercase tracking-wider">
                   Khung thông tin có cấu trúc (Tùy chọn - Hiển thị trong khung viền đẹp mắt)
                 </label>
-                <div className="text-slate-400 text-xs space-y-1 mb-2 bg-slate-900/50 p-3 rounded border border-slate-800/80">
-                  <p><strong className="text-blue-400">Tạo thẻ ghi chú (Tooltip) Tùy chỉnh:</strong></p>
-                  <p>Sử dụng cú pháp: <code className="text-emerald-400 font-mono">*#Từ khóa | Nội dung giải thích | Link ảnh#*</code></p>
-                  <p>Ví dụ có ảnh: <code className="text-emerald-400 font-mono">*#DAT | Giao hàng tại bến | https://linkanh.com/anh.jpg#*</code></p>
-                  <p>Ví dụ không ảnh: <code className="text-emerald-400 font-mono">*#DAT | Giao hàng tại bến#*</code></p>
-                  <div className="h-px bg-slate-800/80 my-2" />
-                  <p><strong className="text-blue-400">Chèn đường dẫn (Link):</strong></p>
-                  <p>Sử dụng cú pháp: <code className="text-emerald-400 font-mono">[Tên hiển thị](Đường dẫn URL)</code></p>
-                  <p>Ví dụ: <code className="text-emerald-400 font-mono">[Nhấn vào đây](https://google.com)</code></p>
-                  <div className="h-px bg-slate-800/80 my-2" />
-                  <p><strong className="text-blue-400">Chèn ảnh nội dung (có ghi chú):</strong></p>
-                  <p>Sử dụng cú pháp: <code className="text-emerald-400 font-mono">[img|Đường dẫn ảnh|Ghi chú dưới ảnh]</code></p>
-                  <p>Ví dụ: <code className="text-emerald-400 font-mono">[img|https://anh.com/a.jpg|Ảnh minh hoạ]</code></p>
-                </div>
+
                 <div>
                   <input
                     type="text"
@@ -1256,10 +1415,57 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                     rows={18}
                     value={newsFormDetailsRaw}
                     onChange={(e) => setNewsFormDetailsRaw(e.target.value)}
-                    placeholder={`Cú pháp:\n- Dùng ## cho tên mục lớn.\n- Bắt đầu dòng bằng dấu trừ (-) nếu muốn tạo gạch đầu dòng.\n- Chèn Ảnh: [img|Đường_dẫn_ảnh|Ghi_chú_ảnh]\n- Chèn Link (Liên kết): [Tên hiển thị](Đường_dẫn_URL)\n- Chèn Tooltip: *#Từ khóa | Mô tả | Link_ảnh#*`}
+                    placeholder={`Cú pháp đặc biệt cho khung này:\n- Dùng ## cho tên mục lớn.\n- Bắt đầu dòng bằng dấu trừ (-) để tạo danh sách.\n(Các cú pháp in đậm, ảnh, link, tooltip ở trên đều dùng được ở đây)`}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                 </div>
+              </div>
+
+              {/* Image Link Generator Tool */}
+              <div className="p-4 bg-slate-900/50 border border-slate-800 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-blue-400 font-bold text-xs uppercase tracking-wider">
+                    Công cụ lấy link ảnh chèn vào bài viết
+                  </label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-2 border border-slate-600 shrink-0">
+                    {isUploadingHelper ? (
+                      <span>Đang tải... {helperUploadProgress}%</span>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        Chọn ảnh từ máy
+                      </>
+                    )}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleHelperImageUpload}
+                      disabled={isUploadingHelper}
+                    />
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={helperImageUrl}
+                    placeholder="Link ảnh sẽ hiện ở đây sau khi tải lên..."
+                    className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-emerald-400 font-mono text-[10px] focus:outline-none"
+                    onClick={(e) => {
+                      if (helperImageUrl) {
+                        (e.target as HTMLInputElement).select();
+                        navigator.clipboard.writeText(helperImageUrl);
+                        alert('Đã copy link ảnh!');
+                      }
+                    }}
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500 italic">
+                  * Mẹo: Click vào ô chứa link để Copy. Sau đó dán vào khung nội dung bên trên theo cú pháp <code className="text-emerald-500">[img|Link vừa copy|Ghi chú]</code>
+                </p>
               </div>
 
               {/* Note / Footer */}

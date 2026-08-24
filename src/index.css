@@ -37,3 +37,25 @@
   animation: slowBounce 2s infinite ease-in-out;
 }
 
+
+/* Google Translate Hide UI */
+.goog-te-banner-frame.skiptranslate, .goog-te-banner-frame {
+    display: none !important;
+} 
+body {
+    top: 0px !important; 
+}
+.goog-tooltip {
+    display: none !important;
+}
+.goog-tooltip:hover {
+    display: none !important;
+}
+.goog-text-highlight {
+    background-color: transparent !important;
+    border: none !important; 
+    box-shadow: none !important;
+}
+#google_translate_element {
+    display: none !important;
+}

@@ -1,4 +1,11 @@
 import React, { useState, useEffect } from 'react';
+
+declare global {
+  interface Window {
+    googleTranslateElementInit: () => void;
+    google: any;
+  }
+}
 import { Navbar } from './components/Navbar';
 import { HeroSlider } from './components/HeroSlider';
 import { AboutSection } from './components/AboutSection';
@@ -28,6 +35,47 @@ export default function App() {
   const [activeArticleId, setActiveArticleId] = useState<string>('lh-race-2026');
   const [activeJobId, setActiveJobId] = useState<string>('tuyen-dung-co-hoi-nghe-nghiep');
   const [currentLang, setCurrentLang] = useState<Language>('vi');
+  useEffect(() => {
+    // Check initial language from cookie
+    const match = document.cookie.match(/googtrans=\/vi\/([^;]+)/);
+    if (match && match[1]) {
+      const code = match[1];
+      if (code === 'en') setCurrentLang('en');
+      else if (code === 'zh-CN') setCurrentLang('zh');
+    }
+
+    if (!document.getElementById('google-translate-script')) {
+      const script = document.createElement('script');
+      script.id = 'google-translate-script';
+      script.type = 'text/javascript';
+      script.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+      document.body.appendChild(script);
+
+      window.googleTranslateElementInit = () => {
+        new window.google.translate.TranslateElement(
+          { pageLanguage: 'vi', includedLanguages: 'en,zh-CN,vi', autoDisplay: false },
+          'google_translate_element'
+        );
+      };
+    }
+  }, []);
+
+  const handleSelectLang = (lang: Language) => {
+    setCurrentLang(lang);
+    const targetCode = lang === 'zh' ? 'zh-CN' : lang;
+    
+    if (lang === 'vi') {
+      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" + window.location.hostname;
+      window.location.reload();
+      return;
+    }
+
+    document.cookie = `googtrans=/vi/${targetCode}; path=/; domain=${window.location.hostname}`;
+    document.cookie = `googtrans=/vi/${targetCode}; path=/`;
+    window.location.reload();
+  };
+
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [newsInitialTab, setNewsInitialTab] = useState<'news' | 'careers'>('news');
@@ -182,7 +230,7 @@ export default function App() {
       {currentView !== 'console' && (
         <Navbar
           currentLang={currentLang}
-          onSelectLang={setCurrentLang}
+          onSelectLang={handleSelectLang}
           onOpenSearch={() => setIsSearchOpen(true)}
           onOpenNews={handleOpenNews}
           onOpenNewsCategory={handleOpenNewsCategory}
