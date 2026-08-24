@@ -7,7 +7,8 @@ export function renderTextWithTooltips(text: string) {
   // 1. Tooltips: *#Keyword|Description|ImageUrl#*
   // 2. Bold text: **Bold Text**
   // 3. Inline images: [img|https://image.url]
-  const combinedPattern = /(\*\#.*?\#\*|\*\*.*?\*\*|\[img\|.*?\])/g;
+  // 4. Links: [text](url)
+  const combinedPattern = /(\*\#.*?\#\*|\*\*.*?\*\*|\[img\|.*?\]|\[.*?\]\(.*?\))/g;
   const parts = text.split(combinedPattern);
 
   return parts.map((part, index) => {
@@ -27,6 +28,27 @@ export function renderTextWithTooltips(text: string) {
             <img src={url} alt="Minh hoạ" className="w-full max-w-3xl mx-auto h-auto rounded-lg shadow-sm border border-slate-200 object-cover" />
           </span>
         );
+      }
+
+      // 4. Links
+      if (part.startsWith('[') && part.includes('](') && part.endsWith(')')) {
+        const textMatch = part.match(/\[(.*?)\]/);
+        const urlMatch = part.match(/\((.*?)\)/);
+        if (textMatch && urlMatch) {
+          const linkText = textMatch[1];
+          const linkUrl = urlMatch[1];
+          return (
+            <a 
+              key={`link-${index}`} 
+              href={linkUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-emerald-600 hover:text-emerald-700 underline transition-colors font-medium"
+            >
+              {linkText}
+            </a>
+          );
+        }
       }
 
       // 3. Tooltips
