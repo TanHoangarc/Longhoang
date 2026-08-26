@@ -25,12 +25,18 @@ export function renderTextWithTooltips(text: string) {
         const content = part.slice(5, -1).trim();
         const segments = content.split('|').map(s => s.trim());
         const url = segments[0] || '';
-        const caption = segments[1] || '';
+        const caption = segments.slice(1).join(' | ');
         return (
           <span key={`img-${index}`} className="block my-6">
-            <img src={url} alt={caption || "Minh hoạ"} className="w-full max-w-3xl mx-auto h-auto rounded-lg shadow-sm border border-slate-200 object-cover" />
+            <img 
+              src={url} 
+              alt={caption || "Hình ảnh minh họa"} 
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              className="w-full max-w-3xl mx-auto h-auto rounded-xl shadow-md border border-slate-200 object-cover" 
+            />
             {caption && (
-              <span className="block text-center text-sm text-slate-500 mt-2 italic">
+              <span className="block text-center text-xs sm:text-sm text-slate-500 mt-2 italic font-normal">
                 {caption}
               </span>
             )}

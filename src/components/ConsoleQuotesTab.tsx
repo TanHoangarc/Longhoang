@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Mail, Phone, Calendar, Package, MapPin, Search, Trash2, CheckCircle2 } from 'lucide-react';
+import { Mail, Phone, Calendar, Package, MapPin, Search, Trash2, CheckCircle2, MessageSquare } from 'lucide-react';
 
 interface QuoteRequest {
   id: string;
