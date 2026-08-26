@@ -391,7 +391,7 @@ export const CORE_VALUES: CoreValue[] = [
     id: 'val-4',
     title: 'TẬN TÂM',
     shortDesc: 'Phục vụ 24/7/365 với tinh thần trách nhiệm cao nhất.',
-    fullDesc: 'Đúng như khẩu hiệu "Blue sea never sleeps", đội ngũ hỗ trợ của Long Hoàng luôn túc trực ngày đêm, sẵn sàng giải quyết phát sinh kịp thời, theo dõi đơn hàng từng phút và cập nhật liên tục cho khách hàng.',
+    fullDesc: 'Đúng như khẩu hiệu "Think logistics - think us", đội ngũ hỗ trợ của Long Hoàng luôn túc trực ngày đêm, sẵn sàng giải quyết phát sinh kịp thời, theo dõi đơn hàng từng phút và cập nhật liên tục cho khách hàng.',
     icon: 'heart'
   }
 ];

@@ -257,7 +257,7 @@ export default function App() {
           {/* 1. Hero Carousel */}
           <HeroSlider onScrollToContent={() => handleScrollToSection('about')} />
 
-          {/* 2. About Section: "LONG HOÀNG LOGISTICS" - Blue sea never sleeps */}
+          {/* 2. About Section: "LONG HOÀNG LOGISTICS" - Think logistics - think us */}
           <AboutSection onLearnMoreServices={() => handleScrollToSection('services')} />
 
           {/* 3. Services Section: "DỊCH VỤ" 6 Interactive Cards Grid */}
