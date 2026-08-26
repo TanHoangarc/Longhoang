@@ -4,7 +4,7 @@ export function renderTextWithTooltips(text: string) {
   if (!text) return text;
 
   // Pattern matches:
-  // 1. Tooltips: *#Keyword|Description|ImageUrl#*
+  // 1. Tooltips: *#Keyword|ImageUrl|Description#*
   // 2. Bold text: **Bold Text**
   // 3. Inline images: [img|https://image.url]
   // 4. Links: [text](url)
@@ -44,7 +44,7 @@ export function renderTextWithTooltips(text: string) {
         );
       }
 
-      // 4. Links
+      // 3. Links
       if (part.startsWith('[') && part.includes('](') && part.endsWith(')')) {
         const textMatch = part.match(/\[(.*?)\]/);
         const urlMatch = part.match(/\((.*?)\)/);
@@ -65,13 +65,37 @@ export function renderTextWithTooltips(text: string) {
         }
       }
 
-      // 3. Tooltips
+      // 4. Tooltips: *#Từ khóa | Link ảnh | Giải thích#*
       if (part.startsWith('*#') && part.endsWith('#*')) {
         const content = part.slice(2, -2);
         const segments = content.split('|').map(s => s.trim());
         const term = segments[0] || '';
-        const description = segments[1] || '';
-        const image = segments[2] || ''; // Optional
+        let image = '';
+        let description = '';
+
+        if (segments.length >= 3) {
+          const seg1IsUrl = /^(https?:\/\/|data:image|\/)/i.test(segments[1]);
+          const seg2IsUrl = /^(https?:\/\/|data:image|\/)/i.test(segments[2]);
+
+          if (!seg1IsUrl && seg2IsUrl) {
+            // Backward compatibility for *#Từ khóa | Giải thích | Link ảnh#*
+            description = segments[1];
+            image = segments.slice(2).join(' | ');
+          } else {
+            // Standard format: *#Từ khóa | Link ảnh | Giải thích#*
+            image = segments[1];
+            description = segments.slice(2).join(' | ');
+          }
+        } else if (segments.length === 2) {
+          const seg1IsUrl = /^(https?:\/\/|data:image|\/)/i.test(segments[1]);
+          if (seg1IsUrl) {
+            image = segments[1];
+            description = '';
+          } else {
+            description = segments[1];
+            image = '';
+          }
+        }
         
         return (
           <span key={`custom-${index}`} className="relative group inline-block font-semibold text-emerald-600 cursor-help border-b border-dashed border-emerald-600/40 hover:border-emerald-600 transition-colors">
@@ -80,12 +104,20 @@ export function renderTextWithTooltips(text: string) {
               <span className="block overflow-hidden rounded-2xl">
                 {image && (
                   <span className="block w-full h-56 bg-slate-100">
-                    <img src={image} alt={term} className="w-full h-full object-cover" />
+                    <img 
+                      src={image} 
+                      alt={term} 
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover" 
+                    />
                   </span>
                 )}
                 <span className="block p-6">
                   <strong className="block text-emerald-700 mb-2.5 text-lg">{term}</strong>
-                  <span className="block leading-relaxed text-slate-600 font-normal text-base">{description}</span>
+                  {description && (
+                    <span className="block leading-relaxed text-slate-600 font-normal text-base">{description}</span>
+                  )}
                 </span>
               </span>
               {/* Arrow */}

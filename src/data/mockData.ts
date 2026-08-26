@@ -609,14 +609,14 @@ export const NEWS_ARTICLES: NewsArticle[] = [
         {
           title: '1. Nhóm F (FCA, FAS, FOB) - Người mua chịu trách nhiệm vận tải chính',
           points: [
-            '*#FOB (Free on Board) | Người bán giao hàng qua lan can tàu tại cảng bốc, rủi ro chuyển giao ngay khi hàng nằm trên boong tàu | https://images.unsplash.com/photo-1605810730811-40b541bb8eb7?auto=format&fit=crop&w=800&q=80#*',
-            '*#FCA (Free Carrier) | Áp dụng rất linh hoạt cho mọi phương thức vận tải đường bộ, đường biển, hàng không. Rủi ro chuyển giao khi hàng được giao cho người vận chuyển. | https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80#*'
+            '*#FOB (Free on Board) | https://images.unsplash.com/photo-1605810730811-40b541bb8eb7?auto=format&fit=crop&w=800&q=80 | Người bán giao hàng qua lan can tàu tại cảng bốc, rủi ro chuyển giao ngay khi hàng nằm trên boong tàu#*',
+            '*#FCA (Free Carrier) | https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80 | Áp dụng rất linh hoạt cho mọi phương thức vận tải đường bộ, đường biển, hàng không. Rủi ro chuyển giao khi hàng được giao cho người vận chuyển.#*'
           ]
         },
         {
           title: '2. Nhóm C (CFR, CIF, CPT, CIP) - Người bán chịu chi phí cước vận tải',
           points: [
-            '*#CIF (Cost, Insurance and Freight) | Người bán mua bảo hiểm hàng hóa tối thiểu cho người mua | https://images.unsplash.com/photo-1565891741441-64926e441838?auto=format&fit=crop&w=800&q=80#*',
+            '*#CIF (Cost, Insurance and Freight) | https://images.unsplash.com/photo-1565891741441-64926e441838?auto=format&fit=crop&w=800&q=80 | Người bán mua bảo hiểm hàng hóa tối thiểu cho người mua#*',
             '*#CIP (Carriage and Insurance Paid to) | Quy định mức bảo hiểm loại A cao nhất theo Incoterms 2020#*'
           ]
         },

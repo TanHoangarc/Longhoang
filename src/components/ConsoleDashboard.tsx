@@ -1439,11 +1439,11 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
 
                   <button 
                     type="button"
-                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('*#', ' | Giải thích#*', 'Từ khóa'); }}
+                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('*#', ' | Link_ảnh | Giải thích#*', 'Từ khóa'); }}
                     className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors group cursor-pointer"
                   >
                     <HelpCircle className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
-                    <span>Tooltip: <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">*#Từ khóa | Giải thích#*</code></span>
+                    <span>Tooltip: <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">*#Từ khóa | Link ảnh | Giải thích#*</code></span>
                   </button>
                 </div>
               </div>
@@ -1622,7 +1622,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                       />
                     </div>
                     <div className="text-[11px] text-slate-400 leading-relaxed">
-                      <span className="text-emerald-400 font-medium">✓ Đã tự động nén & copy link.</span> Bạn có thể click <strong className="text-white">"Chèn nhanh vào bài"</strong> hoặc dán theo cú pháp <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[img|Link|Ghi chú]</code> vào ô nội dung.
+                      <span className="text-emerald-400 font-medium">✓ Đã tự động nén & copy link.</span> Bạn có thể click <strong className="text-white">"Chèn nhanh vào bài"</strong> hoặc dán theo cú pháp ảnh <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[img|Link|Ghi chú]</code> hoặc tooltip <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">*#Từ khóa|Link ảnh|Giải thích#*</code> vào ô nội dung.
                     </div>
                   </div>
                 )}
