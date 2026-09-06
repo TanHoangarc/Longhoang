@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logoHd from '../assets/logo-hd.png';
 import { 
   ChevronRight, 
   Download, 
@@ -159,10 +160,9 @@ export const CompanyProfilePage: React.FC<CompanyProfilePageProps> = ({
             <div className="text-center py-4 space-y-2">
               <div className="inline-flex flex-col items-center justify-center">
                 <img
-                  src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png"
+                  src={logoHd}
                   alt="Long Hoàng Group Logo"
                   className="h-16 sm:h-20 w-auto object-contain mx-auto drop-shadow-sm"
-                  referrerPolicy="no-referrer"
                 />
                 <h2 className="text-2xl sm:text-3xl font-black text-[#0048ba] tracking-tight uppercase mt-2">
                   LONG HOANG LOGISTICS
@@ -314,7 +314,7 @@ export const CompanyProfilePage: React.FC<CompanyProfilePageProps> = ({
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md p-1.5 border border-white/30 flex items-center justify-center">
                           <img
-                            src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png"
+                            src={logoHd}
                             alt="Logo"
                             className="w-full h-full object-contain"
                           />

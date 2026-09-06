@@ -1,4 +1,5 @@
 import React from 'react';
+import logoHd from '../assets/logo-hd.png';
 
 interface LogoProps {
   className?: string;
@@ -12,12 +13,12 @@ export const LongHoangLogo: React.FC<LogoProps> = ({
   return (
     <div className={`flex items-center justify-center select-none cursor-pointer ${className}`}>
       <img
-        src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png"
+        src={logoHd}
         alt="Long Hoàng Logistics Logo"
         className="max-h-12 md:max-h-14 w-auto object-contain transition-transform duration-300 hover:scale-105"
-        referrerPolicy="no-referrer"
         loading="eager"
       />
     </div>
   );
 };
+

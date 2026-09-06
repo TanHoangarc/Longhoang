@@ -349,13 +349,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center justify-center group focus:outline-none transition-transform hover:scale-105"
               title="Long Hoàng Logistics"
             >
-              <img
-                src="https://i.ibb.co/yc7Zwg89/LOGO-HD.png"
-                alt="Long Hoàng Logistics"
-                className="h-10 sm:h-12 md:h-14 lg:h-16 w-auto object-contain drop-shadow-md"
-                referrerPolicy="no-referrer"
-                loading="eager"
-              />
+              <LongHoangLogo className="h-10 sm:h-12 md:h-14 lg:h-16" />
             </a>
           </div>
 
