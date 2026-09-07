@@ -264,7 +264,11 @@ export default function App() {
       {/* Main Content Area */}
       {currentView === 'console' && (
         <main className="flex-1">
-          <ConsoleDashboard onBackToHome={handleBackToHome} />
+          <ConsoleDashboard
+            onBackToHome={handleBackToHome}
+            onViewArticle={handleOpenArticle}
+            onViewJob={handleOpenJobDetail}
+          />
         </main>
       )}
 
