@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Bold,
   Heading,
@@ -37,7 +37,10 @@ import {
   BookOpen,
   Sparkles,
   RefreshCw,
-  CloudUpload
+  CloudUpload,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb
 } from 'lucide-react';
 import { LongHoangLogo } from './LongHoangLogo';
 import { ContentStore, sortNewsArticles, CloudSyncStatus } from '../data/contentStore';
@@ -483,6 +486,91 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [newsFormNote, setNewsFormNote] = useState('');
   const [newsFormIsPinned, setNewsFormIsPinned] = useState(false);
 
+  // Suggestions for Note / Footer of News
+  const [showNoteSuggestions, setShowNoteSuggestions] = useState(false);
+  const [noteSuggestionSearch, setNoteSuggestionSearch] = useState('');
+  const [customNotesHistory, setCustomNotesHistory] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('lh_news_notes_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Built-in presets for Logistics & Industry News
+  const DEFAULT_INDUSTRY_NOTE_PRESETS = [
+    'Long Hoàng Logistics – Đồng hành cùng sự phát triển bền vững của doanh nghiệp bạn.',
+    'Thông tin mang tính chất tham khảo. Quý doanh nghiệp cần tư vấn chuyên sâu về thuế và thủ tục hải quan, vui lòng liên hệ đội ngũ chuyên gia Long Hoàng Logistics.',
+    'Để nhận báo giá cước vận tải biển/hàng không ưu đãi và lịch tàu mới nhất, quý khách vui lòng liên hệ Hotline: 0867 141 877.',
+    'Long Hoàng Logistics – Giải pháp vận chuyển toàn diện, an toàn và tối ưu chi phí cho chuỗi cung ứng của bạn.',
+    'Các quy định và biểu thuế có thể thay đổi theo văn bản pháp luật hiện hành. Vui lòng liên hệ trực tiếp để được cập nhật kịp thời.',
+    'Quý doanh nghiệp cần hỗ trợ tư vấn hồ sơ hải quan hoặc thủ tục chuyên ngành, vui lòng liên hệ hotline: 0867 141 877.',
+  ];
+
+  const noteSuggestions = useMemo(() => {
+    const list: { text: string; source: string; isIndustry: boolean; articleTitle?: string }[] = [];
+    const seen = new Set<string>();
+
+    const addSug = (text: string, source: string, isIndustry: boolean, articleTitle?: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      const key = trimmed.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      list.push({ text: trimmed, source, isIndustry, articleTitle });
+    };
+
+    // 1. First priority: Notes from existing Industry News / Industry Knowledge articles
+    newsList.forEach((article) => {
+      const note = article.content?.note?.trim();
+      if (note) {
+        const isInd = article.type === 'industry-news' || article.type === 'industry-knowledge';
+        const sourceLabel = isInd ? 'Tin tức chuyên ngành' : 'Tin tức công ty';
+        addSug(note, `${sourceLabel}`, isInd, article.title);
+      }
+    });
+
+    // 2. Custom notes previously saved/entered by the user
+    customNotesHistory.forEach((note) => {
+      addSug(note, 'Đã nhập trước đó', true);
+    });
+
+    // 3. Preset recommendations for Long Hoàng Logistics
+    DEFAULT_INDUSTRY_NOTE_PRESETS.forEach((preset) => {
+      addSug(preset, 'Mẫu chuyên ngành đề xuất', true);
+    });
+
+    // Filter by search query if any
+    let result = list;
+    if (noteSuggestionSearch.trim()) {
+      const q = noteSuggestionSearch.toLowerCase();
+      result = result.filter(
+        (item) =>
+          item.text.toLowerCase().includes(q) ||
+          item.source.toLowerCase().includes(q) ||
+          (item.articleTitle && item.articleTitle.toLowerCase().includes(q))
+      );
+    }
+
+    // Sort: if current article type is industry-news, keep industry notes first
+    if (newsFormType === 'industry-news' || newsFormType === 'industry-knowledge') {
+      return [...result].sort((a, b) => (b.isIndustry ? 1 : 0) - (a.isIndustry ? 1 : 0));
+    }
+
+    return result;
+  }, [newsList, customNotesHistory, noteSuggestionSearch, newsFormType]);
+
+  const handleSelectNoteSuggestion = (noteText: string, append = false) => {
+    if (append && newsFormNote.trim()) {
+      setNewsFormNote(`${newsFormNote.trim()} ${noteText.trim()}`);
+      showToast('Đã nối thêm lời kết vào cuối!');
+    } else {
+      setNewsFormNote(noteText.trim());
+      showToast('Đã áp dụng lời kết thành công!');
+    }
+  };
+
   // Edit / Create Job Modal State
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<JobOpening | null>(null);
@@ -725,6 +813,18 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
         note: newsFormNote.trim() || undefined,
       },
     };
+
+    if (newsFormNote.trim()) {
+      const trimmedNote = newsFormNote.trim();
+      const updatedHistory = [
+        trimmedNote,
+        ...customNotesHistory.filter((n) => n.toLowerCase() !== trimmedNote.toLowerCase()),
+      ].slice(0, 50);
+      setCustomNotesHistory(updatedHistory);
+      try {
+        localStorage.setItem('lh_news_notes_history', JSON.stringify(updatedHistory));
+      } catch {}
+    }
 
     const saveResult = await ContentStore.saveNews(newArticle);
     setIsNewsModalOpen(false);
@@ -2232,18 +2332,201 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 </p>
               </div>
 
-              {/* Note / Footer */}
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Ghi chú hoặc lời kết cuối bài (Note)
-                </label>
-                <input
-                  type="text"
-                  value={newsFormNote}
-                  onChange={(e) => setNewsFormNote(e.target.value)}
-                  placeholder="Ghi chú in nghiêng cuối bài..."
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
+              {/* Note / Footer with Previous Suggestions */}
+              <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-slate-300 font-semibold text-xs flex items-center gap-1.5">
+                      <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Ghi chú hoặc lời kết cuối bài (Note)</span>
+                    </label>
+                    {newsFormType === 'industry-news' ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        Tin tức chuyên ngành
+                      </span>
+                    ) : newsFormType === 'industry-knowledge' ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        Kiến thức chuyên ngành
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowNoteSuggestions(!showNoteSuggestions)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold transition-all cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Gợi ý lời kết đã nhập ({noteSuggestions.length})</span>
+                    {showNoteSuggestions ? (
+                      <ChevronUp className="w-3 h-3 text-amber-400" />
+                    ) : (
+                      <ChevronDown className="w-3 h-3 text-amber-400" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <textarea
+                    rows={2}
+                    value={newsFormNote}
+                    onChange={(e) => setNewsFormNote(e.target.value)}
+                    placeholder="Ghi chú in nghiêng cuối bài (VD: Long Hoàng Logistics – Đồng hành cùng sự phát triển bền vững của doanh nghiệp bạn)..."
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y"
+                  />
+                  {newsFormNote && (
+                    <button
+                      type="button"
+                      onClick={() => setNewsFormNote('')}
+                      className="absolute top-2 right-2 p-1 text-slate-500 hover:text-slate-300 hover:bg-slate-800 rounded transition-colors"
+                      title="Xóa nội dung ghi chú"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Suggestion Chips (Top most relevant previous notes) */}
+                {noteSuggestions.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] font-medium text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                        <span>Gợi ý nhanh từ các bài đã nhập:</span>
+                      </span>
+                      {!showNoteSuggestions && (
+                        <button
+                          type="button"
+                          onClick={() => setShowNoteSuggestions(true)}
+                          className="text-blue-400 hover:text-blue-300 hover:underline text-[10px] cursor-pointer"
+                        >
+                          Xem tất cả ({noteSuggestions.length}) &rarr;
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                      {noteSuggestions.slice(0, 4).map((sug, idx) => {
+                        const isCurrent = newsFormNote.trim() === sug.text.trim();
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleSelectNoteSuggestion(sug.text, false)}
+                            title={`Nhấn để áp dụng: "${sug.text}"`}
+                            className={`group text-left px-2.5 py-1 rounded-md text-[11px] transition-all flex items-center gap-1.5 border cursor-pointer ${
+                              isCurrent
+                                ? 'bg-blue-600/30 border-blue-500 text-blue-200 font-semibold'
+                                : 'bg-slate-900/90 hover:bg-slate-800 border-slate-700/80 text-slate-300 hover:text-white'
+                            }`}
+                          >
+                            <span className="truncate max-w-[260px] sm:max-w-[340px]">{sug.text}</span>
+                            {isCurrent && <Check className="w-3 h-3 text-blue-400 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Expanded Suggestions Drawer / Panel */}
+                {showNoteSuggestions && (
+                  <div className="bg-slate-900 border border-amber-500/30 rounded-xl p-3.5 space-y-3 shadow-xl">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-400" />
+                        <h4 className="text-xs font-bold text-white">
+                          Danh sách lời kết & ghi chú đã dùng trước đó ({noteSuggestions.length})
+                        </h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowNoteSuggestions(false)}
+                        className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 cursor-pointer"
+                        title="Đóng bảng gợi ý"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Search filter within suggestions */}
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
+                      <input
+                        type="text"
+                        value={noteSuggestionSearch}
+                        onChange={(e) => setNoteSuggestionSearch(e.target.value)}
+                        placeholder="Tìm kiếm lời kết đã nhập theo từ khóa..."
+                        className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
+                      />
+                    </div>
+
+                    {/* Suggestions scroll list */}
+                    <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                      {noteSuggestions.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic text-center py-4">
+                          Không tìm thấy lời kết phù hợp với từ khóa tìm kiếm.
+                        </p>
+                      ) : (
+                        noteSuggestions.map((sug, idx) => {
+                          const isCurrent = newsFormNote.trim() === sug.text.trim();
+                          return (
+                            <div
+                              key={idx}
+                              className={`p-2.5 rounded-lg border transition-all text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                                isCurrent
+                                  ? 'bg-blue-950/40 border-blue-500/50 text-slate-200'
+                                  : 'bg-slate-950/60 hover:bg-slate-950 border-slate-800 text-slate-300'
+                              }`}
+                            >
+                              <div className="space-y-1 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${
+                                      sug.isIndustry
+                                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                        : 'bg-slate-800 text-slate-400'
+                                    }`}
+                                  >
+                                    {sug.source}
+                                  </span>
+                                  {isCurrent && (
+                                    <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-0.5">
+                                      <Check className="w-3 h-3" /> Đang dùng
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-slate-200 leading-relaxed font-normal">
+                                  {sug.text}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectNoteSuggestion(sug.text, false)}
+                                  className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold transition-all shadow cursor-pointer"
+                                  title="Thay thế nội dung ghi chú bằng mẫu này"
+                                >
+                                  Áp dụng
+                                </button>
+                                {newsFormNote.trim() && !isCurrent && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSelectNoteSuggestion(sug.text, true)}
+                                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium transition-all cursor-pointer"
+                                    title="Nối thêm mẫu này vào sau ghi chú hiện tại"
+                                  >
+                                    + Nối thêm
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Submit Buttons */}
