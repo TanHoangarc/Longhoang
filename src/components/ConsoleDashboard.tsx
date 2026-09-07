@@ -1881,11 +1881,11 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
 
                 {helperImageUrl && (
                   <div className="flex items-center gap-3 pt-1">
-                    <div className="w-16 h-12 rounded-lg border border-slate-700 bg-slate-950 overflow-hidden shrink-0 flex items-center justify-center">
+                    <div className="w-16 h-12 rounded-lg border border-slate-700 bg-slate-950 p-0.5 overflow-hidden shrink-0 flex items-center justify-center">
                       <img 
                         src={helperImageUrl} 
                         alt="Preview" 
-                        className="w-full h-full object-cover" 
+                        className="max-w-full max-h-full object-contain" 
                       />
                     </div>
                     <div className="text-[11px] text-slate-400 leading-relaxed">

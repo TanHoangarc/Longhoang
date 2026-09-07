@@ -3,6 +3,7 @@ import { COMPANY_SOCIAL_LINKS } from '../data/mockData';
 import { ContentStore } from '../data/contentStore';
 import { JobOpening, NewsArticle } from '../types';
 import { Calendar, Eye, MapPin, DollarSign, CheckCircle2, Phone, Mail, Send, Check, Clock, AlertCircle } from 'lucide-react';
+import { renderTextWithTooltips } from '../utils/tooltipParser';
 
 interface CareersDetailPageProps {
   jobId: string;
@@ -154,11 +155,11 @@ export const CareersDetailPage: React.FC<CareersDetailPageProps> = ({
             {/* Introductory text */}
             <div className="space-y-3 text-slate-700 text-sm sm:text-[15px] leading-relaxed text-justify">
               <p className="leading-relaxed font-normal">
-                {job.content?.lead || job.summary}
+                {renderTextWithTooltips(job.content?.lead || job.summary)}
               </p>
               {job.content?.subLead && (
                 <p className="leading-relaxed font-normal">
-                  {job.content.subLead}
+                  {renderTextWithTooltips(job.content.subLead)}
                 </p>
               )}
               <p className="font-semibold text-slate-900 pt-1">
@@ -202,7 +203,7 @@ export const CareersDetailPage: React.FC<CareersDetailPageProps> = ({
                       </h4>
                       <ul className="space-y-1 pl-4 text-xs sm:text-[13px] text-slate-600 list-disc marker:text-slate-400">
                         {pos.description.map((d, dIdx) => (
-                          <li key={dIdx} className="leading-relaxed">{d}</li>
+                          <li key={dIdx} className="leading-relaxed">{renderTextWithTooltips(d)}</li>
                         ))}
                       </ul>
                     </div>
@@ -214,7 +215,7 @@ export const CareersDetailPage: React.FC<CareersDetailPageProps> = ({
                       </h4>
                       <ul className="space-y-1 pl-4 text-xs sm:text-[13px] text-slate-600 list-disc marker:text-slate-400">
                         {pos.requirements.map((r, rIdx) => (
-                          <li key={rIdx} className="leading-relaxed">{r}</li>
+                          <li key={rIdx} className="leading-relaxed">{renderTextWithTooltips(r)}</li>
                         ))}
                       </ul>
                     </div>
