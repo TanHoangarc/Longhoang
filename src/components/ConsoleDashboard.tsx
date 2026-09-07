@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Bold,
   Heading,
@@ -101,13 +101,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     try {
       const res = await ContentStore.syncAllLocalToFirestore();
       if (res.success) {
-        if (res.imgbbSavedCount && res.imgbbSavedCount > 0) {
-          showToast(`Đã tải & lưu ${res.imgbbSavedCount} ảnh ImgBB về thư mục public/img, đồng bộ ${res.newsCount} bài viết & ${res.jobsCount} tin tuyển dụng lên Firebase Cloud thành công!`);
-        } else {
-          showToast(`Đã đồng bộ ${res.newsCount} bài viết & ${res.jobsCount} tin tuyển dụng lên Firebase Cloud! (Tất cả ảnh đã an toàn trong hệ thống)`);
-        }
-        setNewsList(ContentStore.getNews());
-        setJobsList(ContentStore.getJobs());
+        showToast(`Đã đồng bộ ${res.newsCount} bài viết & ${res.jobsCount} tin tuyển dụng lên Firebase Cloud!`);
       } else {
         showToast(`Lỗi đồng bộ: ${res.error || 'Vui lòng kiểm tra mạng'}`);
       }
@@ -635,22 +629,6 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [previewJob, setPreviewJob] = useState<JobOpening | null>(null);
   const [isJobPreviewOpen, setIsJobPreviewOpen] = useState(false);
   const [previewJobDevice, setPreviewJobDevice] = useState<'desktop' | 'mobile'>('desktop');
-
-  // Preview Scroll Container Refs & Reset
-  const articleScrollRef = useRef<HTMLDivElement>(null);
-  const jobScrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (isArticlePreviewOpen && articleScrollRef.current) {
-      articleScrollRef.current.scrollTop = 0;
-    }
-  }, [isArticlePreviewOpen, previewDevice]);
-
-  useEffect(() => {
-    if (isJobPreviewOpen && jobScrollRef.current) {
-      jobScrollRef.current.scrollTop = 0;
-    }
-  }, [isJobPreviewOpen, previewJobDevice]);
 
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -1379,11 +1357,11 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
             <button
               onClick={handleSyncAllToFirestore}
               disabled={isSyncingAll}
-              title="Đẩy lên Cloud: Tự động lưu tất cả ảnh ImgBB về thư mục public/img để tránh lỗi hiển thị và đồng bộ dữ liệu lên Firebase Firestore"
+              title="Đẩy tất cả bài viết và tuyển dụng từ bộ nhớ máy lên Firebase Cloud"
               className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-all shadow cursor-pointer disabled:opacity-50"
             >
               <CloudUpload className={`w-4 h-4 ${isSyncingAll ? 'animate-bounce' : ''}`} />
-              <span>{isSyncingAll ? 'Đang lưu ảnh & đẩy Cloud...' : 'Đẩy lên Cloud'}</span>
+              <span>Đẩy lên Cloud</span>
             </button>
 
             {/* Quick Action Button for current active tab */}
@@ -1898,7 +1876,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
               </div>
 
               <p className="text-xs text-slate-300 leading-relaxed">
-                Hệ thống tự động lưu hai chiều: khi bạn tạo hoặc chỉnh sửa bài viết/tin tuyển dụng, dữ liệu sẽ được lưu đồng thời vào Firebase Cloud Firestore và bộ nhớ đệm máy bạn. Nhấn nút dưới đây để <strong>tự động tải & lưu tất cả ảnh ImgBB về thư mục <code className="text-emerald-400 font-mono">public/img</code></strong> (giúp tránh lỗi hiển thị/chặn link) và đẩy toàn bộ dữ liệu lên Firebase Cloud ngay lập tức.
+                Hệ thống tự động lưu hai chiều: khi bạn tạo hoặc chỉnh sửa bài viết/tin tuyển dụng, dữ liệu sẽ được lưu đồng thời vào Firebase Cloud Firestore và bộ nhớ đệm máy bạn. Nhấn nút dưới đây để đẩy toàn bộ dữ liệu từ máy lên Firebase Cloud ngay lập tức.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -1908,7 +1886,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                   className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg active:scale-95 disabled:opacity-50 transition-all"
                 >
                   <CloudUpload className={`w-4 h-4 ${isSyncingAll ? 'animate-bounce' : ''}`} />
-                  <span>{isSyncingAll ? 'Đang lưu ảnh ImgBB & đẩy lên Firebase...' : 'Đẩy tất cả dữ liệu lên Firebase Cloud (Tự động lưu ảnh ImgBB)'}</span>
+                  <span>{isSyncingAll ? 'Đang tải lên Firebase...' : 'Đẩy tất cả dữ liệu lên Firebase Cloud'}</span>
                 </button>
               </div>
             </div>
@@ -2114,11 +2092,6 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                       </div>
                     )}
                   </div>
-                  {(newsFormImage.includes('ibb.co') || newsFormImage.includes('imgbb.com')) && (
-                    <p className="text-[10px] text-emerald-400 font-medium mt-1 flex items-center gap-1">
-                      <span>✓</span> Link ImgBB sẽ tự động được tải & lưu an toàn về thư mục <code className="font-mono bg-emerald-950/60 px-1 py-0.2 rounded border border-emerald-500/20">public/img</code> khi lưu hoặc bấm 'Đẩy lên Cloud'.
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -3406,43 +3379,14 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
             </div>
 
             {/* Scrollable Stage */}
-            <div
-              ref={articleScrollRef}
-              tabIndex={0}
-              className="flex-1 min-h-0 w-full bg-slate-950/70 p-3 sm:p-6 overflow-y-auto overscroll-contain flex justify-center items-start focus:outline-none scroll-smooth"
-            >
+            <div className="flex-1 bg-slate-950/70 p-3 sm:p-6 overflow-y-auto flex justify-center">
               <div
-                className={`transition-all duration-300 w-full shrink-0 ${
+                className={`transition-all duration-300 ${
                   previewDevice === 'desktop'
-                    ? 'max-w-4xl bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 overflow-hidden my-0'
-                    : 'max-w-[390px] bg-white text-slate-800 rounded-[38px] shadow-2xl border-[8px] border-slate-800 overflow-hidden my-4'
+                    ? 'w-full max-w-4xl bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 overflow-hidden'
+                    : 'w-[390px] max-w-full bg-white text-slate-800 rounded-[38px] shadow-2xl border-[8px] border-slate-800 overflow-hidden my-auto relative'
                 }`}
               >
-                {/* Desktop browser mockup top bar */}
-                {previewDevice === 'desktop' && (
-                  <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center justify-between gap-3 text-xs text-slate-600 select-none">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                    </div>
-                    <div className="flex-1 max-w-md mx-auto bg-white border border-slate-300 rounded px-3 py-1 font-mono text-[11px] text-slate-500 flex items-center gap-2">
-                      <span className="text-emerald-600 font-bold text-xs">🔒</span>
-                      <span className="truncate">https://longhoanglogistics.com/tin-tuc/{previewArticle.id}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                      <button
-                        type="button"
-                        onClick={() => articleScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="hover:text-blue-600 font-semibold cursor-pointer"
-                        title="Cuộn lên đầu trang"
-                      >
-                        ↑ Lên đầu
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {/* Mobile mock speaker bar if mobile device */}
                 {previewDevice === 'mobile' && (
                   <div className="w-full bg-slate-800 py-1.5 flex justify-center items-center">
@@ -3635,17 +3579,6 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 )}
               </div>
             </div>
-
-            {/* Floating scroll to top button */}
-            <button
-              type="button"
-              onClick={() => articleScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="absolute bottom-5 right-6 p-2.5 bg-[#0048ba] hover:bg-[#00368a] text-white rounded-full shadow-2xl transition-all cursor-pointer border border-blue-400/40 hover:scale-105 z-20 flex items-center gap-1.5 text-xs font-semibold px-3.5"
-              title="Cuộn nhanh lên đầu trang"
-            >
-              <ChevronUp className="w-4 h-4" />
-              <span className="hidden sm:inline">Lên đầu trang</span>
-            </button>
           </div>
         </div>
       )}
@@ -3746,43 +3679,14 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
             </div>
 
             {/* Scrollable Stage */}
-            <div
-              ref={jobScrollRef}
-              tabIndex={0}
-              className="flex-1 min-h-0 w-full bg-slate-950/70 p-3 sm:p-6 overflow-y-auto overscroll-contain flex justify-center items-start focus:outline-none scroll-smooth"
-            >
+            <div className="flex-1 bg-slate-950/70 p-3 sm:p-6 overflow-y-auto flex justify-center">
               <div
-                className={`transition-all duration-300 w-full shrink-0 ${
+                className={`transition-all duration-300 ${
                   previewJobDevice === 'desktop'
-                    ? 'max-w-4xl bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 overflow-hidden my-0'
-                    : 'max-w-[390px] bg-white text-slate-800 rounded-[38px] shadow-2xl border-[8px] border-slate-800 overflow-hidden my-4'
+                    ? 'w-full max-w-4xl bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 overflow-hidden'
+                    : 'w-[390px] max-w-full bg-white text-slate-800 rounded-[38px] shadow-2xl border-[8px] border-slate-800 overflow-hidden my-auto relative'
                 }`}
               >
-                {/* Desktop browser mockup top bar */}
-                {previewJobDevice === 'desktop' && (
-                  <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center justify-between gap-3 text-xs text-slate-600 select-none">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                    </div>
-                    <div className="flex-1 max-w-md mx-auto bg-white border border-slate-300 rounded px-3 py-1 font-mono text-[11px] text-slate-500 flex items-center gap-2">
-                      <span className="text-emerald-600 font-bold text-xs">🔒</span>
-                      <span className="truncate">https://longhoanglogistics.com/tuyen-dung/{previewJob.id}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                      <button
-                        type="button"
-                        onClick={() => jobScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="hover:text-emerald-600 font-semibold cursor-pointer"
-                        title="Cuộn lên đầu trang"
-                      >
-                        ↑ Lên đầu
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {/* Mobile mock notch */}
                 {previewJobDevice === 'mobile' && (
                   <div className="w-full bg-slate-800 py-1.5 flex justify-center items-center">
@@ -3897,17 +3801,6 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 )}
               </div>
             </div>
-
-            {/* Floating scroll to top button */}
-            <button
-              type="button"
-              onClick={() => jobScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="absolute bottom-5 right-6 p-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full shadow-2xl transition-all cursor-pointer border border-emerald-400/40 hover:scale-105 z-20 flex items-center gap-1.5 text-xs font-semibold px-3.5"
-              title="Cuộn nhanh lên đầu trang"
-            >
-              <ChevronUp className="w-4 h-4" />
-              <span className="hidden sm:inline">Lên đầu trang</span>
-            </button>
           </div>
         </div>
       )}
