@@ -2,6 +2,12 @@ import { NewsArticle, JobOpening } from '../types';
 import { NEWS_ARTICLES as DEFAULT_NEWS, JOB_OPENINGS as DEFAULT_JOBS } from './mockData';
 import { db, auth } from '../firebase';
 import {
+  convertAllImgbbToLocalImg,
+  extractAllImgbbUrls,
+  downloadAndSaveImgbbUrls,
+  replaceImgbbUrls,
+} from '../utils/imgbbSync';
+import {
   collection,
   doc,
   setDoc,
@@ -378,10 +384,12 @@ export const ContentStore = {
     }
   },
 
-  // Manual trigger to force upload ALL local news and jobs to Firestore Cloud
+  // Manual trigger to force upload ALL local news and jobs to Firestore Cloud,
+  // while automatically downloading and saving all ImgBB images to public/img to avoid display errors
   async syncAllLocalToFirestore(): Promise<{
     newsCount: number;
     jobsCount: number;
+    imgbbSavedCount: number;
     success: boolean;
     error?: string;
   }> {
@@ -389,6 +397,24 @@ export const ContentStore = {
     this.notifySyncState();
 
     try {
+      // 0. Automatically scan, download, and convert all ImgBB images into public/img
+      let imgbbSavedCount = 0;
+      try {
+        const migration = await convertAllImgbbToLocalImg(inMemoryNews, inMemoryJobs);
+        if (migration.hasChanges) {
+          inMemoryNews = migration.updatedNews;
+          inMemoryJobs = migration.updatedJobs;
+          imgbbSavedCount = migration.savedCount;
+          try {
+            localStorage.setItem(NEWS_STORAGE_KEY, JSON.stringify(inMemoryNews));
+            localStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(inMemoryJobs));
+          } catch (e) {}
+          this.notifyUpdate();
+        }
+      } catch (imgErr) {
+        console.warn('[ImgBB Sync Warning] Could not migrate ImgBB images:', imgErr);
+      }
+
       let newsPushed = 0;
       let jobsPushed = 0;
 
@@ -425,6 +451,7 @@ export const ContentStore = {
       return {
         newsCount: newsPushed,
         jobsCount: jobsPushed,
+        imgbbSavedCount,
         success: true,
       };
     } catch (err) {
@@ -435,6 +462,7 @@ export const ContentStore = {
       return {
         newsCount: 0,
         jobsCount: 0,
+        imgbbSavedCount: 0,
         success: false,
         error: errInfo.error,
       };
@@ -494,12 +522,25 @@ export const ContentStore = {
   },
 
   async saveNews(article: NewsArticle): Promise<{ success: boolean; error?: string }> {
+    let articleToSave = article;
+    const imgbbUrls = extractAllImgbbUrls(article);
+    if (imgbbUrls.length > 0) {
+      try {
+        const { mapping } = await downloadAndSaveImgbbUrls(imgbbUrls);
+        if (Object.keys(mapping).length > 0) {
+          articleToSave = replaceImgbbUrls(article, mapping);
+        }
+      } catch (err) {
+        console.warn('Could not auto-save ImgBB image during saveNews:', err);
+      }
+    }
+
     // 1. Update local state immediately for zero-latency UI response
-    const existingIdx = inMemoryNews.findIndex((a) => a.id === article.id);
+    const existingIdx = inMemoryNews.findIndex((a) => a.id === articleToSave.id);
     if (existingIdx >= 0) {
-      inMemoryNews[existingIdx] = article;
+      inMemoryNews[existingIdx] = articleToSave;
     } else {
-      inMemoryNews = [article, ...inMemoryNews];
+      inMemoryNews = [articleToSave, ...inMemoryNews];
     }
     try {
       localStorage.setItem(NEWS_STORAGE_KEY, JSON.stringify(inMemoryNews));
@@ -508,8 +549,8 @@ export const ContentStore = {
 
     // 2. Persist to Firebase Firestore
     try {
-      const cleanArticle = JSON.parse(JSON.stringify(article));
-      await setDoc(doc(db, 'news', article.id), {
+      const cleanArticle = JSON.parse(JSON.stringify(articleToSave));
+      await setDoc(doc(db, 'news', articleToSave.id), {
         ...cleanArticle,
         updatedAt: new Date().toISOString(),
       });
@@ -519,7 +560,7 @@ export const ContentStore = {
       this.notifySyncState();
       return { success: true };
     } catch (err) {
-      const errInfo = handleFirestoreError(err, OperationType.WRITE, `news/${article.id}`);
+      const errInfo = handleFirestoreError(err, OperationType.WRITE, `news/${articleToSave.id}`);
       syncStatus.state = 'error';
       syncStatus.errorMessage = errInfo.error;
       this.notifySyncState();
@@ -570,12 +611,25 @@ export const ContentStore = {
   },
 
   async saveJob(job: JobOpening): Promise<{ success: boolean; error?: string }> {
+    let jobToSave = job;
+    const imgbbUrls = extractAllImgbbUrls(job);
+    if (imgbbUrls.length > 0) {
+      try {
+        const { mapping } = await downloadAndSaveImgbbUrls(imgbbUrls);
+        if (Object.keys(mapping).length > 0) {
+          jobToSave = replaceImgbbUrls(job, mapping);
+        }
+      } catch (err) {
+        console.warn('Could not auto-save ImgBB image during saveJob:', err);
+      }
+    }
+
     // 1. Update local cache
-    const existingIdx = inMemoryJobs.findIndex((j) => j.id === job.id);
+    const existingIdx = inMemoryJobs.findIndex((j) => j.id === jobToSave.id);
     if (existingIdx >= 0) {
-      inMemoryJobs[existingIdx] = job;
+      inMemoryJobs[existingIdx] = jobToSave;
     } else {
-      inMemoryJobs = [job, ...inMemoryJobs];
+      inMemoryJobs = [jobToSave, ...inMemoryJobs];
     }
     try {
       localStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(inMemoryJobs));
@@ -584,7 +638,7 @@ export const ContentStore = {
 
     // 2. Persist to Firebase Firestore
     try {
-      const cleanJob = JSON.parse(JSON.stringify(job));
+      const cleanJob = JSON.parse(JSON.stringify(jobToSave));
       await setDoc(doc(db, 'jobs', job.id), {
         ...cleanJob,
         updatedAt: new Date().toISOString(),
@@ -595,7 +649,7 @@ export const ContentStore = {
       this.notifySyncState();
       return { success: true };
     } catch (err) {
-      const errInfo = handleFirestoreError(err, OperationType.WRITE, `jobs/${job.id}`);
+      const errInfo = handleFirestoreError(err, OperationType.WRITE, `jobs/${jobToSave.id}`);
       syncStatus.state = 'error';
       syncStatus.errorMessage = errInfo.error;
       this.notifySyncState();
