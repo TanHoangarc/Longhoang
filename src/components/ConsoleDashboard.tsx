@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Bold,
   Heading,
@@ -629,6 +629,22 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [previewJob, setPreviewJob] = useState<JobOpening | null>(null);
   const [isJobPreviewOpen, setIsJobPreviewOpen] = useState(false);
   const [previewJobDevice, setPreviewJobDevice] = useState<'desktop' | 'mobile'>('desktop');
+
+  // Preview Scroll Container Refs & Reset
+  const articleScrollRef = useRef<HTMLDivElement>(null);
+  const jobScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isArticlePreviewOpen && articleScrollRef.current) {
+      articleScrollRef.current.scrollTop = 0;
+    }
+  }, [isArticlePreviewOpen, previewDevice]);
+
+  useEffect(() => {
+    if (isJobPreviewOpen && jobScrollRef.current) {
+      jobScrollRef.current.scrollTop = 0;
+    }
+  }, [isJobPreviewOpen, previewJobDevice]);
 
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -3379,14 +3395,43 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
             </div>
 
             {/* Scrollable Stage */}
-            <div className="flex-1 bg-slate-950/70 p-3 sm:p-6 overflow-y-auto flex justify-center">
+            <div
+              ref={articleScrollRef}
+              tabIndex={0}
+              className="flex-1 min-h-0 w-full bg-slate-950/70 p-3 sm:p-6 overflow-y-auto overscroll-contain flex justify-center items-start focus:outline-none scroll-smooth"
+            >
               <div
-                className={`transition-all duration-300 ${
+                className={`transition-all duration-300 w-full shrink-0 ${
                   previewDevice === 'desktop'
-                    ? 'w-full max-w-4xl bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 overflow-hidden'
-                    : 'w-[390px] max-w-full bg-white text-slate-800 rounded-[38px] shadow-2xl border-[8px] border-slate-800 overflow-hidden my-auto relative'
+                    ? 'max-w-4xl bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 overflow-hidden my-0'
+                    : 'max-w-[390px] bg-white text-slate-800 rounded-[38px] shadow-2xl border-[8px] border-slate-800 overflow-hidden my-4'
                 }`}
               >
+                {/* Desktop browser mockup top bar */}
+                {previewDevice === 'desktop' && (
+                  <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center justify-between gap-3 text-xs text-slate-600 select-none">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                    </div>
+                    <div className="flex-1 max-w-md mx-auto bg-white border border-slate-300 rounded px-3 py-1 font-mono text-[11px] text-slate-500 flex items-center gap-2">
+                      <span className="text-emerald-600 font-bold text-xs">🔒</span>
+                      <span className="truncate">https://longhoanglogistics.com/tin-tuc/{previewArticle.id}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                      <button
+                        type="button"
+                        onClick={() => articleScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="hover:text-blue-600 font-semibold cursor-pointer"
+                        title="Cuộn lên đầu trang"
+                      >
+                        ↑ Lên đầu
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Mobile mock speaker bar if mobile device */}
                 {previewDevice === 'mobile' && (
                   <div className="w-full bg-slate-800 py-1.5 flex justify-center items-center">
@@ -3579,6 +3624,17 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Floating scroll to top button */}
+            <button
+              type="button"
+              onClick={() => articleScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="absolute bottom-5 right-6 p-2.5 bg-[#0048ba] hover:bg-[#00368a] text-white rounded-full shadow-2xl transition-all cursor-pointer border border-blue-400/40 hover:scale-105 z-20 flex items-center gap-1.5 text-xs font-semibold px-3.5"
+              title="Cuộn nhanh lên đầu trang"
+            >
+              <ChevronUp className="w-4 h-4" />
+              <span className="hidden sm:inline">Lên đầu trang</span>
+            </button>
           </div>
         </div>
       )}
@@ -3679,14 +3735,43 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
             </div>
 
             {/* Scrollable Stage */}
-            <div className="flex-1 bg-slate-950/70 p-3 sm:p-6 overflow-y-auto flex justify-center">
+            <div
+              ref={jobScrollRef}
+              tabIndex={0}
+              className="flex-1 min-h-0 w-full bg-slate-950/70 p-3 sm:p-6 overflow-y-auto overscroll-contain flex justify-center items-start focus:outline-none scroll-smooth"
+            >
               <div
-                className={`transition-all duration-300 ${
+                className={`transition-all duration-300 w-full shrink-0 ${
                   previewJobDevice === 'desktop'
-                    ? 'w-full max-w-4xl bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 overflow-hidden'
-                    : 'w-[390px] max-w-full bg-white text-slate-800 rounded-[38px] shadow-2xl border-[8px] border-slate-800 overflow-hidden my-auto relative'
+                    ? 'max-w-4xl bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 overflow-hidden my-0'
+                    : 'max-w-[390px] bg-white text-slate-800 rounded-[38px] shadow-2xl border-[8px] border-slate-800 overflow-hidden my-4'
                 }`}
               >
+                {/* Desktop browser mockup top bar */}
+                {previewJobDevice === 'desktop' && (
+                  <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center justify-between gap-3 text-xs text-slate-600 select-none">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                    </div>
+                    <div className="flex-1 max-w-md mx-auto bg-white border border-slate-300 rounded px-3 py-1 font-mono text-[11px] text-slate-500 flex items-center gap-2">
+                      <span className="text-emerald-600 font-bold text-xs">🔒</span>
+                      <span className="truncate">https://longhoanglogistics.com/tuyen-dung/{previewJob.id}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                      <button
+                        type="button"
+                        onClick={() => jobScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="hover:text-emerald-600 font-semibold cursor-pointer"
+                        title="Cuộn lên đầu trang"
+                      >
+                        ↑ Lên đầu
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Mobile mock notch */}
                 {previewJobDevice === 'mobile' && (
                   <div className="w-full bg-slate-800 py-1.5 flex justify-center items-center">
@@ -3801,6 +3886,17 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Floating scroll to top button */}
+            <button
+              type="button"
+              onClick={() => jobScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="absolute bottom-5 right-6 p-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full shadow-2xl transition-all cursor-pointer border border-emerald-400/40 hover:scale-105 z-20 flex items-center gap-1.5 text-xs font-semibold px-3.5"
+              title="Cuộn nhanh lên đầu trang"
+            >
+              <ChevronUp className="w-4 h-4" />
+              <span className="hidden sm:inline">Lên đầu trang</span>
+            </button>
           </div>
         </div>
       )}
