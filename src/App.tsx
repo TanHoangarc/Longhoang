@@ -82,22 +82,38 @@ export default function App() {
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
   const [prefilledQuoteService, setPrefilledQuoteService] = useState<string>('');
 
-  // Check URL pathname or hash for /console routing
+  // Check URL pathname or hash for /console routing and article links
   useEffect(() => {
     const checkRoute = () => {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
       if (path.includes('/console') || hash.includes('/console') || hash.includes('console')) {
         setCurrentView('console');
+      } else if (window.location.hash.startsWith('#article-')) {
+        const artId = window.location.hash.replace('#article-', '');
+        if (artId) {
+          setActiveArticleId(artId);
+          setCurrentView('news-detail');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    };
+
+    const handleCustomOpenArticle = (e: Event) => {
+      const customEvent = e as CustomEvent<{ articleId: string }>;
+      if (customEvent.detail?.articleId) {
+        handleOpenArticle(customEvent.detail.articleId);
       }
     };
 
     checkRoute();
     window.addEventListener('popstate', checkRoute);
     window.addEventListener('hashchange', checkRoute);
+    window.addEventListener('open-article', handleCustomOpenArticle);
     return () => {
       window.removeEventListener('popstate', checkRoute);
       window.removeEventListener('hashchange', checkRoute);
+      window.removeEventListener('open-article', handleCustomOpenArticle);
     };
   }, []);
 

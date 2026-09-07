@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Bold,
   Heading,
+  List,
   Link as LinkIcon,
   HelpCircle,
   Newspaper,
@@ -32,7 +33,9 @@ import {
   Pin,
   PinOff,
   CheckCircle2,
-  Clock
+  Clock,
+  BookOpen,
+  Sparkles
 } from 'lucide-react';
 import { LongHoangLogo } from './LongHoangLogo';
 import { ContentStore, sortNewsArticles } from '../data/contentStore';
@@ -91,6 +94,25 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [helperUploadProgress, setHelperUploadProgress] = useState(0);
 
 
+  const applyTextChange = (
+    activeEl: HTMLTextAreaElement | HTMLInputElement,
+    newText: string,
+    newSelectionStart: number,
+    newSelectionEnd: number
+  ) => {
+    // Call the native setter to bypass React's tracking, then dispatch input event
+    const prototype = activeEl.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+    nativeInputValueSetter?.call(activeEl, newText);
+    activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Restore focus and selection
+    setTimeout(() => {
+      activeEl.focus();
+      activeEl.setSelectionRange(newSelectionStart, newSelectionEnd);
+    }, 0);
+  };
+
   const handleFormatText = (prefix: string, suffix: string, defaultText: string) => {
     const activeEl = document.activeElement as HTMLTextAreaElement | HTMLInputElement;
     if (!activeEl || (activeEl.tagName !== 'TEXTAREA' && activeEl.tagName !== 'INPUT')) {
@@ -104,19 +126,188 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     const selectedText = value.substring(start, end) || defaultText;
 
     const newText = value.substring(0, start) + prefix + selectedText + suffix + value.substring(end);
-
-    // Call the native setter to bypass React's tracking, then dispatch input event
-    const prototype = activeEl.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
-    nativeInputValueSetter?.call(activeEl, newText);
-    activeEl.dispatchEvent(new Event('input', { bubbles: true }));
-
-    // Restore focus and selection
-    setTimeout(() => {
-      activeEl.focus();
-      activeEl.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
-    }, 0);
+    applyTextChange(activeEl, newText, start + prefix.length, start + prefix.length + selectedText.length);
   };
+
+  // Format one or multiple selected lines with '* ' bullet point
+  const handleBulletList = () => {
+    const activeEl = document.activeElement as HTMLTextAreaElement | HTMLInputElement;
+    if (!activeEl || (activeEl.tagName !== 'TEXTAREA' && activeEl.tagName !== 'INPUT')) {
+      alert('Vui lòng click chuột vào ô nhập liệu bên dưới và bôi đen một hoặc nhiều hàng cần thêm dấu đầu dòng * trước khi bấm nút!');
+      return;
+    }
+
+    const start = activeEl.selectionStart || 0;
+    const end = activeEl.selectionEnd || 0;
+    const value = activeEl.value || '';
+
+    // If no text is selected (single cursor position)
+    if (start === end) {
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+      let lineEnd = value.indexOf('\n', start);
+      if (lineEnd === -1) lineEnd = value.length;
+
+      const currentLine = value.substring(lineStart, lineEnd);
+      let newLine = '';
+      let newCursorPos = start;
+
+      if (currentLine.trim() === '') {
+        newLine = '* ';
+        newCursorPos = lineStart + 2;
+      } else if (currentLine.startsWith('* ')) {
+        // Toggle off
+        newLine = currentLine.substring(2);
+        newCursorPos = Math.max(lineStart, start - 2);
+      } else if (currentLine.startsWith('*')) {
+        newLine = currentLine.substring(1).trimStart();
+        newCursorPos = Math.max(lineStart, start - (currentLine.length - newLine.length));
+      } else {
+        // Prepend '* '
+        newLine = '* ' + currentLine;
+        newCursorPos = start + 2;
+      }
+
+      const newText = value.substring(0, lineStart) + newLine + value.substring(lineEnd);
+      applyTextChange(activeEl, newText, newCursorPos, newCursorPos);
+      return;
+    }
+
+    // Text is selected across one or more rows/lines
+    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+    let lineEnd = value.indexOf('\n', end > 0 && value[end - 1] === '\n' ? end - 1 : end);
+    if (lineEnd === -1) lineEnd = value.length;
+
+    const selectedBlock = value.substring(lineStart, lineEnd);
+    const lines = selectedBlock.split('\n');
+
+    // Check if all non-empty lines already start with '* '
+    const nonEmptyLines = lines.filter((l) => l.trim().length > 0);
+    const allBulleted = nonEmptyLines.length > 0 && nonEmptyLines.every((l) => l.startsWith('* '));
+
+    const updatedLines = lines.map((line) => {
+      if (allBulleted) {
+        // Toggle off: remove '* ' or '*'
+        if (line.startsWith('* ')) return line.substring(2);
+        if (line.startsWith('*')) return line.substring(1).trimStart();
+        return line;
+      } else {
+        // Toggle on: add '* '
+        if (line.trim().length === 0) return line;
+        if (line.startsWith('* ')) return line;
+        if (line.startsWith('*')) return '* ' + line.substring(1).trimStart();
+        return '* ' + line;
+      }
+    });
+
+    const replacement = updatedLines.join('\n');
+    const newText = value.substring(0, lineStart) + replacement + value.substring(lineEnd);
+    applyTextChange(activeEl, newText, lineStart, lineStart + replacement.length);
+  };
+
+  // State for Suggest & Assign Existing Article to Selected Keyword
+  const [isArticleSuggestModalOpen, setIsArticleSuggestModalOpen] = useState(false);
+  const [selectedArticleForKeyword, setSelectedArticleForKeyword] = useState<NewsArticle | null>(null);
+  const [suggestedKeyword, setSuggestedKeyword] = useState('');
+  const [articleSearchQuery, setArticleSearchQuery] = useState('');
+  const [articleAssignMode, setArticleAssignMode] = useState<'link' | 'tooltip'>('link');
+  const targetInputRef = React.useRef<{
+    element: HTMLTextAreaElement | HTMLInputElement | null;
+    start: number;
+    end: number;
+    value: string;
+  } | null>(null);
+
+  const handleOpenArticleSuggestModal = () => {
+    const activeEl = document.activeElement as HTMLTextAreaElement | HTMLInputElement;
+    if (!activeEl || (activeEl.tagName !== 'TEXTAREA' && activeEl.tagName !== 'INPUT')) {
+      alert('Vui lòng click chuột vào ô nội dung/đoạn văn và bôi đen từ khóa cần gán bài viết trước khi bấm nút!');
+      return;
+    }
+
+    const start = activeEl.selectionStart || 0;
+    const end = activeEl.selectionEnd || 0;
+    const value = activeEl.value || '';
+    const selectedText = value.substring(start, end).trim();
+
+    targetInputRef.current = {
+      element: activeEl,
+      start,
+      end,
+      value,
+    };
+
+    const initialKeyword = selectedText || '';
+    setSuggestedKeyword(initialKeyword);
+    setArticleSearchQuery(selectedText || '');
+
+    // Auto-match best existing article if user selected a keyword
+    const lower = selectedText.toLowerCase();
+    const bestMatch = lower
+      ? newsList.find(
+          (a) =>
+            a.title.toLowerCase().includes(lower) ||
+            a.summary.toLowerCase().includes(lower) ||
+            (a.categoryTitle && a.categoryTitle.toLowerCase().includes(lower))
+        )
+      : null;
+
+    setSelectedArticleForKeyword(bestMatch || newsList[0] || null);
+    setIsArticleSuggestModalOpen(true);
+  };
+
+  const handleConfirmAssignArticle = () => {
+    if (!selectedArticleForKeyword) {
+      alert('Vui lòng chọn một bài viết từ danh sách gợi ý!');
+      return;
+    }
+
+    const keyword = suggestedKeyword.trim() || selectedArticleForKeyword.title;
+    let replacement = '';
+    if (articleAssignMode === 'link') {
+      replacement = `[${keyword}](#article-${selectedArticleForKeyword.id})`;
+    } else {
+      const cleanSummary = (selectedArticleForKeyword.summary || selectedArticleForKeyword.title)
+        .replace(/\|/g, '-')
+        .replace(/\n/g, ' ')
+        .slice(0, 140);
+      replacement = `*#${keyword} | ${selectedArticleForKeyword.image} | ${selectedArticleForKeyword.title}: ${cleanSummary}#*`;
+    }
+
+    const target = targetInputRef.current;
+    if (target && target.element) {
+      const { element, start, end } = target;
+      const currentVal = element.value || '';
+      const newText = currentVal.substring(0, start) + replacement + currentVal.substring(end);
+      applyTextChange(element, newText, start, start + replacement.length);
+      setToastMessage(`Đã gán bài viết "${selectedArticleForKeyword.title}" vào từ khóa "${keyword}"!`);
+    } else {
+      handleFormatText(replacement, '', '');
+      setToastMessage(`Đã gán bài viết vào vị trí con trỏ!`);
+    }
+
+    setIsArticleSuggestModalOpen(false);
+  };
+
+  const filteredArticlesForKeyword = newsList
+    .filter((art) => {
+      if (!articleSearchQuery.trim()) return true;
+      const q = articleSearchQuery.toLowerCase().trim();
+      return (
+        art.title.toLowerCase().includes(q) ||
+        art.summary.toLowerCase().includes(q) ||
+        (art.categoryTitle && art.categoryTitle.toLowerCase().includes(q)) ||
+        art.id.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (!articleSearchQuery.trim()) return 0;
+      const q = articleSearchQuery.toLowerCase().trim();
+      const aTitleMatch = a.title.toLowerCase().includes(q);
+      const bTitleMatch = b.title.toLowerCase().includes(q);
+      if (aTitleMatch && !bTitleMatch) return -1;
+      if (!aTitleMatch && bTitleMatch) return 1;
+      return 0;
+    });
 
   // Fast, zero-failure client-side image compressor (max 1280px, WebP/JPEG, ~60-120KB)
   const compressAndLoadImage = (file: File): Promise<string> => {
@@ -1680,12 +1871,22 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 <div className="text-slate-300 text-xs flex flex-wrap gap-2">
                   <button 
                     type="button"
-                    title="Chèn tiêu đề (## Tiêu đề)"
+                    title="Chèn tiêu đề (## Tiêu đề) - Chữ hiển thị màu xanh đậm"
                     onMouseDown={(e) => { e.preventDefault(); handleFormatText('## ', '', 'Tiêu đề mục'); }}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg transition-colors text-slate-200 hover:text-white font-medium group cursor-pointer active:scale-95"
                   >
-                    <Heading className="w-3.5 h-3.5 text-amber-400 group-hover:text-amber-300" />
+                    <Heading className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
                     <span>Tiêu đề</span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    title="Thêm dấu đầu dòng * cho một hoặc nhiều hàng được chọn"
+                    onMouseDown={(e) => { e.preventDefault(); handleBulletList(); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg transition-colors text-slate-200 hover:text-white font-medium group cursor-pointer active:scale-95"
+                  >
+                    <List className="w-3.5 h-3.5 text-amber-400 group-hover:text-amber-300" />
+                    <span>Đầu dòng *</span>
                   </button>
 
                   <button 
@@ -1706,6 +1907,18 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                   >
                     <LinkIcon className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
                     <span>Link</span>
+                  </button>
+
+                  {/* Nút gợi ý gán bài viết đã có vào từ khóa */}
+                  <button 
+                    type="button"
+                    title="Gợi ý bài viết đã có để gán vào từ khóa được chọn"
+                    onMouseDown={(e) => { e.preventDefault(); handleOpenArticleSuggestModal(); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-900 hover:bg-blue-800 border border-blue-500 hover:border-blue-400 rounded-lg transition-all text-white font-semibold group cursor-pointer active:scale-95 shadow-xs ring-1 ring-blue-500/30"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-cyan-300 group-hover:text-white" />
+                    <Sparkles className="w-3 h-3 text-amber-300 group-hover:rotate-12 transition-transform" />
+                    <span>Gợi ý gán bài viết</span>
                   </button>
                   
                   <button 
@@ -1808,7 +2021,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                     rows={18}
                     value={newsFormDetailsRaw}
                     onChange={(e) => setNewsFormDetailsRaw(e.target.value)}
-                    placeholder={`Cú pháp đặc biệt cho khung này:\n- Dùng ## cho tên mục lớn.\n- Bắt đầu dòng bằng dấu trừ (-) để tạo danh sách.\n(Các cú pháp in đậm, ảnh, link, tooltip ở trên đều dùng được ở đây)`}
+                    placeholder={`Cú pháp đặc biệt cho khung này:\n- Dùng ## cho tên mục lớn (chữ màu xanh đậm).\n- Dùng nút "Đầu dòng *" hoặc bắt đầu dòng bằng dấu sao (*) / dấu trừ (-) để tạo danh sách.\n(Các cú pháp in đậm, ảnh, link, tooltip ở trên đều dùng được ở đây)`}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                 </div>
@@ -1946,6 +2159,250 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: GỢI Ý & GÁN BÀI VIẾT VÀO TỪ KHÓA ================= */}
+      {isArticleSuggestModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="px-5 py-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-500/50 flex items-center justify-center text-blue-400">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <span>Gợi ý gán bài viết vào từ khóa</span>
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Chọn bài viết đã có để liên kết trực tiếp vào từ khóa đang chọn trong nội dung
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsArticleSuggestModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs">
+              {/* Keyword input */}
+              <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-2">
+                <label className="block text-slate-300 font-semibold">
+                  Từ khóa hiển thị trong bài viết <span className="text-blue-400">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={suggestedKeyword}
+                    onChange={(e) => setSuggestedKeyword(e.target.value)}
+                    placeholder="Nhập hoặc chỉnh sửa từ khóa hiển thị..."
+                    className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                  {suggestedKeyword && (
+                    <span className="px-2.5 py-1.5 bg-blue-950 text-blue-300 border border-blue-800 rounded-md font-mono text-[11px] shrink-0">
+                      Từ khóa: "{suggestedKeyword}"
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Search & Suggestions */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-300 font-semibold flex items-center gap-1.5">
+                    <Search className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Chọn bài viết để gán ({filteredArticlesForKeyword.length}/{newsList.length} bài):</span>
+                  </label>
+                  {articleSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setArticleSearchQuery('')}
+                      className="text-[11px] text-blue-400 hover:underline cursor-pointer"
+                    >
+                      Xem tất cả bài viết
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    value={articleSearchQuery}
+                    onChange={(e) => setArticleSearchQuery(e.target.value)}
+                    placeholder="Gõ tiêu đề bài viết, chủ đề, mã ID để tìm..."
+                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Articles List */}
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {filteredArticlesForKeyword.length === 0 ? (
+                  <div className="py-8 text-center bg-slate-950/40 rounded-xl border border-slate-800 text-slate-400">
+                    <p>Không tìm thấy bài viết nào khớp với từ khóa "{articleSearchQuery}"</p>
+                    <button
+                      type="button"
+                      onClick={() => setArticleSearchQuery('')}
+                      className="mt-2 text-blue-400 hover:underline text-xs"
+                    >
+                      Bấm để hiển thị toàn bộ bài viết
+                    </button>
+                  </div>
+                ) : (
+                  filteredArticlesForKeyword.map((art) => {
+                    const isSelected = selectedArticleForKeyword?.id === art.id;
+                    return (
+                      <div
+                        key={art.id}
+                        onClick={() => setSelectedArticleForKeyword(art)}
+                        className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+                          isSelected
+                            ? 'bg-blue-950/60 border-blue-500 ring-1 ring-blue-500/50 shadow-md'
+                            : 'bg-slate-950/50 border-slate-800 hover:border-slate-700 hover:bg-slate-800/40'
+                        }`}
+                      >
+                        {/* Thumbnail */}
+                        <img
+                          src={art.image}
+                          alt={art.title}
+                          className="w-16 h-14 object-cover rounded-lg bg-slate-800 shrink-0 border border-slate-700"
+                        />
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-900/60 text-blue-300 border border-blue-800 shrink-0">
+                              {art.categoryTitle || 'Tin tức'}
+                            </span>
+                            <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {art.date}
+                            </span>
+                          </div>
+                          <h4 className={`text-xs sm:text-sm font-bold line-clamp-1 ${isSelected ? 'text-blue-300' : 'text-white'}`}>
+                            {art.title}
+                          </h4>
+                          <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
+                            {art.summary}
+                          </p>
+                        </div>
+
+                        {/* Checkmark */}
+                        <div className="shrink-0 pt-2">
+                          <div
+                            className={`w-5 h-5 rounded-full flex items-center justify-center border ${
+                              isSelected
+                                ? 'bg-blue-600 border-blue-400 text-white'
+                                : 'border-slate-600 text-transparent'
+                            }`}
+                          >
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Assignment Format Mode */}
+              <div className="p-3 bg-slate-950/90 rounded-xl border border-slate-800 space-y-2">
+                <label className="block text-slate-300 font-semibold">
+                  Kiểu gán vào từ khóa:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <label
+                    className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                      articleAssignMode === 'link'
+                        ? 'bg-blue-950/70 border-blue-500 text-white'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="assignMode"
+                      checked={articleAssignMode === 'link'}
+                      onChange={() => setArticleAssignMode('link')}
+                      className="mt-0.5 text-blue-600"
+                    />
+                    <div>
+                      <strong className="block text-xs font-bold text-slate-200">
+                        Liên kết bài viết (Khuyên dùng)
+                      </strong>
+                      <span className="text-[11px] text-slate-400 leading-tight block mt-0.5">
+                        Người đọc nhấp vào từ khóa sẽ tự động mở trang bài viết này.
+                      </span>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                      articleAssignMode === 'tooltip'
+                        ? 'bg-blue-950/70 border-blue-500 text-white'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="assignMode"
+                      checked={articleAssignMode === 'tooltip'}
+                      onChange={() => setArticleAssignMode('tooltip')}
+                      className="mt-0.5 text-blue-600"
+                    />
+                    <div>
+                      <strong className="block text-xs font-bold text-slate-200">
+                        Chú thích Tooltip kèm ảnh
+                      </strong>
+                      <span className="text-[11px] text-slate-400 leading-tight block mt-0.5">
+                        Rê chuột vào từ khóa sẽ hiện thẻ tóm tắt + ảnh bài viết.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Preview Syntax */}
+              {selectedArticleForKeyword && (
+                <div className="text-[11px] bg-slate-950 p-2.5 rounded-lg border border-slate-800 text-slate-400 font-mono overflow-x-auto">
+                  <span className="text-slate-500 select-none">Mã sẽ chèn vào văn bản: </span>
+                  <span className="text-emerald-400">
+                    {articleAssignMode === 'link'
+                      ? `[${suggestedKeyword || selectedArticleForKeyword.title}](#article-${selectedArticleForKeyword.id})`
+                      : `*#${suggestedKeyword || selectedArticleForKeyword.title} | ${selectedArticleForKeyword.image} | ${selectedArticleForKeyword.title}: ${selectedArticleForKeyword.summary.slice(0, 60)}...#*`}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3.5 bg-slate-950 border-t border-slate-800 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsArticleSuggestModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-semibold cursor-pointer text-xs"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={!selectedArticleForKeyword}
+                onClick={handleConfirmAssignArticle}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-lg shadow-lg flex items-center gap-2 cursor-pointer text-xs"
+              >
+                <Check className="w-4 h-4" />
+                <span>Xác nhận gán bài viết</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -137,12 +137,47 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
                 if (trimmed.startsWith('##')) {
                   const headingText = trimmed.replace(/^##+\s*/, '');
                   return (
-                    <h3 key={idx} className="text-base sm:text-lg font-bold text-slate-900 mt-6 mb-2 pt-2 border-b border-slate-100 flex items-center gap-2">
+                    <h3 key={idx} className="text-base sm:text-lg font-bold text-[#0048ba] mt-6 mb-2 pt-2 border-b border-blue-100/70 flex items-center gap-2">
                       <span className="w-1.5 h-4 bg-[#0048ba] rounded-full inline-block shrink-0"></span>
-                      <span>{renderTextWithTooltips(headingText)}</span>
+                      <span className="text-[#0048ba]">{renderTextWithTooltips(headingText)}</span>
                     </h3>
                   );
                 }
+
+                // Check for bullet list lines (* or - or •)
+                if (
+                  trimmed.startsWith('* ') ||
+                  trimmed.startsWith('- ') ||
+                  trimmed.startsWith('• ') ||
+                  trimmed.includes('\n* ') ||
+                  trimmed.includes('\n- ') ||
+                  trimmed.includes('\n• ')
+                ) {
+                  const lines = p.split('\n');
+                  return (
+                    <ul key={idx} className="space-y-2 my-3 pl-1 sm:pl-2">
+                      {lines.map((line, lIdx) => {
+                        const lTrimmed = line.trim();
+                        if (/^[-*•]\s+/.test(lTrimmed)) {
+                          const bulletText = lTrimmed.replace(/^[-*•]\s+/, '');
+                          return (
+                            <li key={lIdx} className="flex items-start gap-2.5 text-slate-700 leading-relaxed text-justify">
+                              <span className="text-[#0048ba] font-bold select-none text-base leading-none mt-1 shrink-0">•</span>
+                              <span className="flex-1">{renderTextWithTooltips(bulletText)}</span>
+                            </li>
+                          );
+                        }
+                        if (lTrimmed.length === 0) return null;
+                        return (
+                          <li key={lIdx} className="text-slate-700 leading-relaxed list-none text-justify">
+                            {renderTextWithTooltips(line)}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  );
+                }
+
                 return (
                   <p key={idx} className="leading-relaxed">
                     {renderTextWithTooltips(p)}
@@ -166,7 +201,7 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
                 <div className="p-5 sm:p-6 space-y-6">
                   {article.content.detailsList.map((sec, secIdx) => (
                     <div key={secIdx} className="space-y-2">
-                      <h4 className="text-sm font-bold text-slate-900">
+                      <h4 className="text-sm sm:text-base font-bold text-[#0048ba]">
                         {renderTextWithTooltips(sec.title)}
                       </h4>
                       <div className="space-y-1.5 text-xs sm:text-sm text-slate-600">
@@ -176,7 +211,7 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
                           
                           if (isBullet) {
                             return (
-                              <ul key={ptIdx} className="pl-4 list-disc marker:text-slate-400">
+                              <ul key={ptIdx} className="pl-4 list-disc marker:text-[#0048ba]">
                                 <li className="leading-relaxed">{renderTextWithTooltips(text)}</li>
                               </ul>
                             );

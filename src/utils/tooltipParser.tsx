@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ZoomIn, X, Image as ImageIcon, HelpCircle } from 'lucide-react';
+import { ZoomIn, X, Image as ImageIcon, HelpCircle, BookOpen } from 'lucide-react';
 
 interface TooltipKeywordProps {
   key?: React.Key;
@@ -413,6 +413,36 @@ export function renderTextWithTooltips(text: string) {
         if (textMatch && urlMatch) {
           const linkText = textMatch[1];
           const linkUrl = urlMatch[1];
+
+          // Check if this is an assigned internal article link (e.g. #article-id, article:id, or /news/id)
+          const isArticleLink =
+            linkUrl.startsWith('article:') ||
+            linkUrl.startsWith('#article-') ||
+            linkUrl.startsWith('/news/');
+
+          if (isArticleLink) {
+            const articleId = linkUrl.replace(/^article:|^#article-|^(\/news\/)/, '');
+            return (
+              <button
+                key={`art-link-${index}`}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.location.hash = `#article-${articleId}`;
+                  window.dispatchEvent(
+                    new CustomEvent('open-article', { detail: { articleId } })
+                  );
+                }}
+                className="inline-flex items-center gap-1 font-semibold text-[#0048ba] hover:text-[#002b70] underline decoration-[#0048ba]/40 hover:decoration-[#0048ba] transition-colors cursor-pointer group/artlink py-0.5"
+                title={`Nhấp để chuyển đến bài viết: ${linkText}`}
+              >
+                <BookOpen className="w-3.5 h-3.5 text-[#0048ba] group-hover/artlink:scale-110 transition-transform shrink-0" />
+                <span>{linkText}</span>
+              </button>
+            );
+          }
+
           return (
             <a
               key={`link-${index}`}
