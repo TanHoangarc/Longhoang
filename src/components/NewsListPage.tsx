@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ContentStore } from '../data/contentStore';
+import { Pin, Newspaper, PlusCircle } from 'lucide-react';
+import { ContentStore, sortNewsArticles } from '../data/contentStore';
 import { NewsArticle } from '../types';
 
 interface NewsListPageProps {
@@ -51,11 +52,12 @@ export const NewsListPage: React.FC<NewsListPageProps> = ({
     }
   };
 
-  // Filter articles for main listing
-  const filteredArticles =
+  // Filter articles for main listing, prioritizing pinned articles then newest date to oldest
+  const filteredArticles = (
     categoryType === 'all'
       ? articles
-      : articles.filter((a) => a.type === categoryType || categoryType === 'all');
+      : articles.filter((a) => a.type === categoryType || categoryType === 'all')
+  ).sort(sortNewsArticles);
 
   // Recent posts for the sidebar
   const recentArticles = articles.slice(0, 5);
@@ -126,54 +128,96 @@ export const NewsListPage: React.FC<NewsListPageProps> = ({
           
           {/* LEFT: Articles Grid (8 cols) */}
           <div className="lg:col-span-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-              {filteredArticles.map((article) => (
-                <article
-                  key={article.id}
-                  onClick={() => onSelectArticle(article.id)}
-                  className="bg-white rounded-lg border border-slate-200/90 shadow-sm overflow-hidden hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
+            {filteredArticles.length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200/90 p-12 text-center shadow-sm">
+                <div className="w-16 h-16 rounded-full bg-blue-50 text-[#004b93] flex items-center justify-center mx-auto mb-4 border border-blue-100">
+                  <Newspaper className="w-8 h-8" />
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-800 mb-2">
+                  Chưa có bài viết nào
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed mb-6">
+                  Hiện chưa có bài viết tin tức nào được đăng tải. Bạn có thể truy cập Bàn điều khiển Quản trị (Console) để đăng bài viết mới bất cứ lúc nào.
+                </p>
+                <button
+                  onClick={() => {
+                    window.location.hash = '#console';
+                    window.dispatchEvent(new HashChangeEvent('hashchange'));
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#004b93] hover:bg-[#003870] text-white text-xs font-bold rounded-lg transition-colors shadow-xs"
                 >
-                  {/* Article Thumbnail */}
-                  <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100">
-                    <img
-                      src={article.image}
-                      alt={article.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                    <div className="absolute top-2 left-2 bg-[#004b93]/90 text-white text-[11px] font-bold px-2 py-0.5 rounded shadow-sm">
-                      {article.category}
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Đăng bài viết mới trong Console</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                {filteredArticles.map((article) => (
+                  <article
+                    key={article.id}
+                    onClick={() => onSelectArticle(article.id)}
+                    className={`bg-white rounded-lg border ${
+                      article.isPinned
+                        ? 'border-amber-400/90 shadow-md ring-1 ring-amber-400/30'
+                        : 'border-slate-200/90 shadow-sm'
+                    } overflow-hidden hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between`}
+                  >
+                    {/* Article Thumbnail */}
+                    <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100">
+                      <img
+                        src={article.image}
+                        alt={article.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute top-2 left-2 flex items-center gap-1.5 flex-wrap">
+                        <div className="bg-[#004b93]/90 text-white text-[11px] font-bold px-2 py-0.5 rounded shadow-sm">
+                          {article.category}
+                        </div>
+                        {article.isPinned && (
+                          <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded shadow-sm flex items-center gap-1 uppercase tracking-wider">
+                            <Pin className="w-3 h-3 fill-current" />
+                            <span>Ưu tiên</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Article Content */}
-                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
-                    <div>
-                      {/* Orange Bold Title matching Screenshot 1 */}
-                      <h2 className="text-sm sm:text-[15px] font-bold text-[#e0831a] group-hover:text-[#c46d0e] transition-colors leading-snug line-clamp-2 uppercase mb-2">
-                        {article.title}
-                      </h2>
+                    {/* Article Content */}
+                    <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
+                      <div>
+                        {article.isPinned && (
+                          <div className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 mb-1.5 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                            <Pin className="w-3 h-3 fill-current" />
+                            <span>BÀI VIẾT NỔI BẬT</span>
+                          </div>
+                        )}
+                        {/* Orange Bold Title matching Screenshot 1 */}
+                        <h2 className="text-sm sm:text-[15px] font-bold text-[#e0831a] group-hover:text-[#c46d0e] transition-colors leading-snug line-clamp-2 uppercase mb-2">
+                          {article.title}
+                        </h2>
 
-                      {/* Date */}
-                      <div className="text-xs text-slate-500 font-medium mb-2">
-                        <span>Ngày đăng: </span>
-                        <span className="text-slate-700 font-semibold">{article.date}</span>
+                        {/* Date */}
+                        <div className="text-xs text-slate-500 font-medium mb-2">
+                          <span>Ngày đăng: </span>
+                          <span className="text-slate-700 font-semibold">{article.date}</span>
+                        </div>
+
+                        {/* Summary */}
+                        <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed line-clamp-3 text-justify">
+                          {article.summary}
+                        </p>
                       </div>
 
-                      {/* Summary */}
-                      <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed line-clamp-3 text-justify">
-                        {article.summary}
-                      </p>
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#004b93] group-hover:translate-x-1 transition-transform">
+                        <span>Xem chi tiết bài viết</span>
+                        <span>→</span>
+                      </div>
                     </div>
-
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#004b93] group-hover:translate-x-1 transition-transform">
-                      <span>Xem chi tiết bài viết</span>
-                      <span>→</span>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* RIGHT: Sidebar (4 cols) - "BÀI VIẾT GẦN ĐÂY" matching Screenshot 1 */}
@@ -184,35 +228,41 @@ export const NewsListPage: React.FC<NewsListPageProps> = ({
               </h3>
             </div>
 
-            <div className="divide-y divide-slate-100 space-y-4 pt-1">
-              {recentArticles.map((article) => (
-                <div
-                  key={article.id}
-                  onClick={() => onSelectArticle(article.id)}
-                  className="pt-4 first:pt-0 flex items-start gap-3.5 group cursor-pointer"
-                >
-                  {/* Date Badge: Day in big orange, month below matching screenshot */}
-                  <div className="w-12 h-14 bg-slate-50 border border-slate-200 rounded flex flex-col items-center justify-center shrink-0 shadow-2xs group-hover:border-amber-400 transition-colors">
-                    <span className="text-lg font-black text-[#e0831a] leading-none">
-                      {article.day}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">
-                      {article.month}
-                    </span>
-                  </div>
+            {recentArticles.length === 0 ? (
+              <p className="text-xs text-slate-400 italic py-4 text-center">
+                Chưa có bài viết nào gần đây.
+              </p>
+            ) : (
+              <div className="divide-y divide-slate-100 space-y-4 pt-1">
+                {recentArticles.map((article) => (
+                  <div
+                    key={article.id}
+                    onClick={() => onSelectArticle(article.id)}
+                    className="pt-4 first:pt-0 flex items-start gap-3.5 group cursor-pointer"
+                  >
+                    {/* Date Badge: Day in big orange, month below matching screenshot */}
+                    <div className="w-12 h-14 bg-slate-50 border border-slate-200 rounded flex flex-col items-center justify-center shrink-0 shadow-2xs group-hover:border-amber-400 transition-colors">
+                      <span className="text-lg font-black text-[#e0831a] leading-none">
+                        {article.day}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">
+                        {article.month}
+                      </span>
+                    </div>
 
-                  {/* Article info */}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-xs sm:text-[13px] font-bold text-[#e0831a] group-hover:text-[#c46d0e] transition-colors leading-tight line-clamp-2 uppercase">
-                      {article.title}
-                    </h4>
-                    <p className="text-[11px] text-slate-500 line-clamp-2 mt-1 leading-normal text-justify">
-                      {article.summary}
-                    </p>
+                    {/* Article info */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs sm:text-[13px] font-bold text-[#e0831a] group-hover:text-[#c46d0e] transition-colors leading-tight line-clamp-2 uppercase">
+                        {article.title}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 line-clamp-2 mt-1 leading-normal text-justify">
+                        {article.summary}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </aside>
 
         </div>

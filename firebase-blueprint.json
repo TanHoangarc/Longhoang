@@ -37,6 +37,12 @@
         "image": {
           "type": "string"
         },
+        "isPinned": {
+          "type": "boolean"
+        },
+        "pinnedAt": {
+          "type": "string"
+        },
         "content": {
           "type": "object"
         },
@@ -84,6 +90,10 @@
         },
         "deadline": {
           "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "expired"]
         },
         "image": {
           "type": "string"

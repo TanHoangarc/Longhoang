@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Briefcase, PlusCircle } from 'lucide-react';
 import { ContentStore } from '../data/contentStore';
 import { JobOpening } from '../types';
 
@@ -66,54 +67,101 @@ export const CareersListPage: React.FC<CareersListPageProps> = ({
           
           {/* LEFT: Recruitment Cards Grid (8 cols) */}
           <div className="lg:col-span-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-              {jobs.map((job) => (
-                <article
-                  key={job.id}
-                  onClick={() => onSelectJob(job.id)}
-                  className="bg-white rounded-lg border border-slate-200/90 shadow-sm overflow-hidden hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
+            {jobs.length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200/90 p-12 text-center shadow-sm">
+                <div className="w-16 h-16 rounded-full bg-blue-50 text-[#004b93] flex items-center justify-center mx-auto mb-4 border border-blue-100">
+                  <Briefcase className="w-8 h-8" />
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-800 mb-2">
+                  Chưa có vị trí tuyển dụng nào
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed mb-6">
+                  Hiện tại công ty chưa đăng thông tin tuyển dụng mới. Bạn có thể truy cập Bàn điều khiển Quản trị (Console) để tạo bài đăng tuyển dụng mới.
+                </p>
+                <button
+                  onClick={() => {
+                    window.location.hash = '#console';
+                    window.dispatchEvent(new HashChangeEvent('hashchange'));
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#004b93] hover:bg-[#003870] text-white text-xs font-bold rounded-lg transition-colors shadow-xs"
                 >
-                  {/* Image banner */}
-                  <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100">
-                    <img
-                      src={job.image}
-                      alt={job.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                    <div className="absolute top-2 left-2 bg-[#004b93]/90 text-white text-[11px] font-bold px-2 py-0.5 rounded shadow-sm">
-                      {job.type}
-                    </div>
-                  </div>
-
-                  {/* Body Content */}
-                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
-                    <div>
-                      {/* Orange Bold Title matching Screenshot 1 */}
-                      <h2 className="text-sm sm:text-[15px] font-bold text-[#e0831a] group-hover:text-[#c46d0e] transition-colors leading-snug line-clamp-2 uppercase mb-2">
-                        {job.title}
-                      </h2>
-
-                      {/* Date */}
-                      <div className="text-xs text-slate-500 font-medium mb-2">
-                        <span>Ngày đăng: </span>
-                        <span className="text-slate-700 font-semibold">{job.date}</span>
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Tạo tin tuyển dụng trong Console</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                {jobs.map((job) => (
+                  <article
+                    key={job.id}
+                    onClick={() => onSelectJob(job.id)}
+                    className="bg-white rounded-lg border border-slate-200/90 shadow-sm overflow-hidden hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between"
+                  >
+                    {/* Image banner */}
+                    <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100">
+                      <img
+                        src={job.image}
+                        alt={job.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute top-2 left-2 bg-[#004b93]/90 text-white text-[11px] font-bold px-2 py-0.5 rounded shadow-sm">
+                        {job.type}
                       </div>
 
-                      {/* Summary */}
-                      <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed line-clamp-3 text-justify">
-                        {job.summary}
-                      </p>
+                      {/* Status Tag Badge */}
+                      {(job.status || 'active') === 'active' ? (
+                        <div className="absolute top-2 right-2 bg-emerald-600/95 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                          <span>Còn hiệu lực</span>
+                        </div>
+                      ) : (
+                        <div className="absolute top-2 right-2 bg-slate-700/90 backdrop-blur-xs text-slate-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                          <span>Hết hiệu lực</span>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#004b93] group-hover:translate-x-1 transition-transform">
-                      <span>Xem chi tiết vị trí</span>
-                      <span>→</span>
+                    {/* Body Content */}
+                    <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
+                      <div>
+                        {/* Orange Bold Title matching Screenshot 1 */}
+                        <h2 className="text-sm sm:text-[15px] font-bold text-[#e0831a] group-hover:text-[#c46d0e] transition-colors leading-snug line-clamp-2 uppercase mb-2">
+                          {job.title}
+                        </h2>
+
+                        {/* Date & Status */}
+                        <div className="text-xs text-slate-500 font-medium mb-2.5 flex items-center justify-between">
+                          <div>
+                            <span>Ngày đăng: </span>
+                            <span className="text-slate-700 font-semibold">{job.date}</span>
+                          </div>
+                          {(job.status || 'active') === 'active' ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Đang nhận hồ sơ
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                              Đã đóng tuyển
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Summary */}
+                        <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed line-clamp-3 text-justify">
+                          {job.summary}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#004b93] group-hover:translate-x-1 transition-transform">
+                        <span>Xem chi tiết vị trí</span>
+                        <span>→</span>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* RIGHT: Sidebar (4 cols) - "TUYỂN DỤNG KHÁC" matching Screenshot 1 */}
@@ -124,35 +172,52 @@ export const CareersListPage: React.FC<CareersListPageProps> = ({
               </h3>
             </div>
 
-            <div className="divide-y divide-slate-100 space-y-4 pt-1">
-              {sidebarJobs.map((job) => (
-                <div
-                  key={job.id}
-                  onClick={() => onSelectJob(job.id)}
-                  className="pt-4 first:pt-0 flex items-start gap-3.5 group cursor-pointer"
-                >
-                  {/* Date Badge: Day in big orange, month below matching screenshot */}
-                  <div className="w-12 h-14 bg-slate-50 border border-slate-200 rounded flex flex-col items-center justify-center shrink-0 shadow-2xs group-hover:border-amber-400 transition-colors">
-                    <span className="text-lg font-black text-[#e0831a] leading-none">
-                      {job.day}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">
-                      {job.month}
-                    </span>
-                  </div>
+            {sidebarJobs.length === 0 ? (
+              <p className="text-xs text-slate-400 italic py-4 text-center">
+                Chưa có tin tuyển dụng nào khác.
+              </p>
+            ) : (
+              <div className="divide-y divide-slate-100 space-y-4 pt-1">
+                {sidebarJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    onClick={() => onSelectJob(job.id)}
+                    className="pt-4 first:pt-0 flex items-start gap-3.5 group cursor-pointer"
+                  >
+                    {/* Date Badge: Day in big orange, month below matching screenshot */}
+                    <div className="w-12 h-14 bg-slate-50 border border-slate-200 rounded flex flex-col items-center justify-center shrink-0 shadow-2xs group-hover:border-amber-400 transition-colors">
+                      <span className="text-lg font-black text-[#e0831a] leading-none">
+                        {job.day}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">
+                        {job.month}
+                      </span>
+                    </div>
 
-                  {/* Article info */}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-xs sm:text-[13px] font-bold text-[#e0831a] group-hover:text-[#c46d0e] transition-colors leading-tight line-clamp-2 uppercase">
-                      {job.title}
-                    </h4>
-                    <p className="text-[11px] text-slate-500 line-clamp-2 mt-1 leading-normal text-justify">
-                      {job.summary}
-                    </p>
+                    {/* Article info */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs sm:text-[13px] font-bold text-[#e0831a] group-hover:text-[#c46d0e] transition-colors leading-tight line-clamp-2 uppercase">
+                        {job.title}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        {(job.status || 'active') === 'active' ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Còn hiệu lực
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
+                            Hết hiệu lực
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 line-clamp-2 mt-1 leading-normal text-justify">
+                        {job.summary}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </aside>
 
         </div>

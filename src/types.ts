@@ -62,6 +62,8 @@ export interface NewsArticle {
   month: string;
   summary: string;
   image: string;
+  isPinned?: boolean;
+  pinnedAt?: string;
   content?: {
     lead: string;
     paragraphs: string[];
@@ -84,6 +86,7 @@ export interface JobOpening {
   month: string;
   views?: number;
   deadline: string;
+  status?: 'active' | 'expired';
   image: string;
   summary: string;
   content?: {

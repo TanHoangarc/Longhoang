@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { COMPANY_SOCIAL_LINKS } from '../data/mockData';
 import { ContentStore } from '../data/contentStore';
 import { JobOpening, NewsArticle } from '../types';
-import { Calendar, Eye, MapPin, DollarSign, CheckCircle2, Phone, Mail, Send, Check } from 'lucide-react';
+import { Calendar, Eye, MapPin, DollarSign, CheckCircle2, Phone, Mail, Send, Check, Clock, AlertCircle } from 'lucide-react';
 
 interface CareersDetailPageProps {
   jobId: string;
@@ -118,15 +118,36 @@ export const CareersDetailPage: React.FC<CareersDetailPageProps> = ({
           {/* LEFT: Recruitment Detail Content (8 cols) */}
           <main className="lg:col-span-8 bg-white p-6 sm:p-8 rounded-lg border border-slate-200/90 shadow-sm space-y-6">
             
-            {/* Meta Information matching Screenshot 2: Date & View Count */}
-            <div className="flex items-center gap-4 text-xs text-slate-500 pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-1.5 font-medium">
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                <span>{job.date}</span>
+            {/* Meta Information matching Screenshot 2: Date & View Count & Status */}
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Ngày đăng: {job.date}</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Eye className="w-3.5 h-3.5 text-slate-400" />
+                  <span>{job.views || 34} lượt xem</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium text-slate-600">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Hạn nộp: {job.deadline}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 font-medium">
-                <Eye className="w-3.5 h-3.5 text-slate-400" />
-                <span>{job.views || 34} lượt xem</span>
+
+              {/* Status Badge */}
+              <div>
+                {(job.status || 'active') === 'active' ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Còn hiệu lực (Đang nhận hồ sơ)</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-xs">
+                    <Clock className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Hết hiệu lực (Đã đóng tuyển)</span>
+                  </span>
+                )}
               </div>
             </div>
 
@@ -247,9 +268,32 @@ export const CareersDetailPage: React.FC<CareersDetailPageProps> = ({
 
             {/* Quick Online Application Form */}
             <div className="mt-8 pt-6 border-t border-slate-200">
-              <h3 className="text-sm sm:text-base font-bold text-slate-900 uppercase tracking-wider mb-4">
-                Ứng tuyển trực tuyến nhanh
-              </h3>
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 uppercase tracking-wider">
+                  Ứng tuyển trực tuyến nhanh
+                </h3>
+                {job.status === 'expired' ? (
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-300">
+                    Đã đóng tuyển
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Đang nhận hồ sơ
+                  </span>
+                )}
+              </div>
+
+              {job.status === 'expired' && (
+                <div className="p-4 mb-4 bg-amber-50 border border-amber-300 rounded-lg text-amber-900 text-xs sm:text-sm flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-amber-950 mb-1">Vị trí này đã hết hiệu lực tuyển dụng</h4>
+                    <p className="text-amber-800 leading-relaxed">
+                      Đợt tiếp nhận hồ sơ cho vị trí này đã kết thúc (Hạn nộp: {job.deadline}). Bạn vẫn có thể để lại thông tin để lưu vào kho ứng viên tiềm năng của Long Hoàng Logistics.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {isSubmitted ? (
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs sm:text-sm flex items-center gap-2">
@@ -336,10 +380,18 @@ export const CareersDetailPage: React.FC<CareersDetailPageProps> = ({
 
                   <button
                     type="submit"
-                    className="w-full sm:w-auto px-6 py-2.5 bg-[#0048ba] hover:bg-[#00368a] text-white font-bold rounded text-xs uppercase tracking-wider transition-colors shadow-sm inline-flex items-center justify-center gap-2"
+                    className={`w-full sm:w-auto px-6 py-2.5 text-white font-bold rounded text-xs uppercase tracking-wider transition-colors shadow-sm inline-flex items-center justify-center gap-2 ${
+                      job.status === 'expired'
+                        ? 'bg-slate-700 hover:bg-slate-800'
+                        : 'bg-[#0048ba] hover:bg-[#00368a]'
+                    }`}
                   >
                     <Send className="w-3.5 h-3.5" />
-                    <span>Nộp hồ sơ ứng tuyển ngay</span>
+                    <span>
+                      {job.status === 'expired'
+                        ? 'Gửi hồ sơ dự bị (Vị trí đã đóng)'
+                        : 'Nộp hồ sơ ứng tuyển ngay'}
+                    </span>
                   </button>
                 </form>
               )}
@@ -409,7 +461,18 @@ export const CareersDetailPage: React.FC<CareersDetailPageProps> = ({
                         {oj.title}
                       </h4>
                       <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
-                        <span>Ngày đăng: {oj.date}</span>
+                        <div className="flex items-center gap-2">
+                          <span>Ngày đăng: {oj.date}</span>
+                          {(oj.status || 'active') === 'active' ? (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Còn hiệu lực
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
+                              Hết hiệu lực
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[#0048ba] font-semibold group-hover:underline">Chi tiết →</span>
                       </div>
                     </div>

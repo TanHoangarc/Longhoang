@@ -27,10 +27,14 @@ import {
   FileText,
   Cloud,
   Database,
-  MessageSquare
+  MessageSquare,
+  Pin,
+  PinOff,
+  CheckCircle2,
+  Clock
 } from 'lucide-react';
 import { LongHoangLogo } from './LongHoangLogo';
-import { ContentStore } from '../data/contentStore';
+import { ContentStore, sortNewsArticles } from '../data/contentStore';
 import { NewsArticle, JobOpening } from '../types';
 import { ConsoleQuotesTab } from './ConsoleQuotesTab';
 
@@ -66,7 +70,8 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [newsList, setNewsList] = useState<NewsArticle[]>([]);
   const [jobsList, setJobsList] = useState<JobOpening[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [newsFilter, setNewsFilter] = useState<'all' | 'industry-news' | 'industry-knowledge' | 'company-news'>('all');
+  const [newsFilter, setNewsFilter] = useState<'all' | 'industry-news' | 'industry-knowledge' | 'company-news' | 'pinned'>('all');
+  const [jobFilter, setJobFilter] = useState<'all' | 'active' | 'expired'>('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Edit / Create News Modal State
@@ -257,6 +262,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [newsFormDetailsTitle, setNewsFormDetailsTitle] = useState('');
   const [newsFormDetailsRaw, setNewsFormDetailsRaw] = useState(''); // Multiline helper
   const [newsFormNote, setNewsFormNote] = useState('');
+  const [newsFormIsPinned, setNewsFormIsPinned] = useState(false);
 
   // Edit / Create Job Modal State
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
@@ -285,6 +291,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [jobFormTitle, setJobFormTitle] = useState('');
   const [jobFormLocation, setJobFormLocation] = useState('Hồ Chí Minh');
   const [jobFormType, setJobFormType] = useState('Toàn thời gian');
+  const [jobFormStatus, setJobFormStatus] = useState<'active' | 'expired'>('active');
   const [jobFormDate, setJobFormDate] = useState('');
   const [jobFormDeadline, setJobFormDeadline] = useState('31/12/2026');
   const [jobFormImage, setJobFormImage] = useState('');
@@ -399,6 +406,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     setNewsFormDetailsTitle('');
     setNewsFormDetailsRaw('');
     setNewsFormNote('Long Hoàng Logistics – Đồng hành cùng sự phát triển bền vững của doanh nghiệp bạn.');
+    setNewsFormIsPinned(false);
     setIsNewsModalOpen(true);
   };
 
@@ -424,6 +432,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     }
 
     setNewsFormNote(article.content?.note || '');
+    setNewsFormIsPinned(Boolean(article.isPinned));
     setIsNewsModalOpen(true);
   };
 
@@ -485,6 +494,10 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
       month,
       summary: newsFormSummary.trim() || newsFormTitle,
       image: newsFormImage.trim() || PRESET_NEWS_IMAGES[0].url,
+      isPinned: newsFormIsPinned,
+      pinnedAt: newsFormIsPinned
+        ? (editingNews?.isPinned && editingNews?.pinnedAt ? editingNews.pinnedAt : new Date().toISOString())
+        : undefined,
       content: {
         lead: newsFormLead.trim(),
         paragraphs: newsFormParagraphs.filter((p) => p.trim().length > 0),
@@ -506,12 +519,28 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     }
   };
 
+  const handleTogglePinNews = async (article: NewsArticle, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      const newStatus = await ContentStore.togglePinNews(article.id);
+      showToast(
+        newStatus
+          ? `Đã ghim bài viết "${article.title}" lên vị trí ưu tiên đầu danh sách!`
+          : `Đã bỏ ghim bài viết "${article.title}"!`
+      );
+    } catch (err) {
+      console.error('Lỗi khi ghim bài viết:', err);
+      showToast('Có lỗi xảy ra khi cập nhật trạng thái ghim bài viết.');
+    }
+  };
+
   // ================= JOBS CRUD =================
   const handleOpenCreateJob = () => {
     setEditingJob(null);
     setJobFormTitle('LONG HOÀNG LOGISTICS TUYỂN DỤNG - THÁNG ' + (new Date().getMonth() + 1));
     setJobFormLocation('Hồ Chí Minh & Toàn quốc');
     setJobFormType('Toàn thời gian');
+    setJobFormStatus('active');
     setJobFormDate(getTodayFormatted());
     setJobFormDeadline('30/' + String(new Date().getMonth() + 2).padStart(2, '0') + '/' + new Date().getFullYear());
     setJobFormImage(PRESET_JOB_IMAGES[0].url);
@@ -535,6 +564,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     setJobFormTitle(job.title);
     setJobFormLocation(job.location);
     setJobFormType(job.type);
+    setJobFormStatus(job.status || 'active');
     setJobFormDate(job.date);
     setJobFormDeadline(job.deadline);
     setJobFormImage(job.image);
@@ -622,6 +652,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
       month,
       views: editingJob?.views || Math.floor(Math.random() * 40) + 15,
       deadline: jobFormDeadline.trim(),
+      status: jobFormStatus,
       image: jobFormImage.trim() || PRESET_JOB_IMAGES[0].url,
       summary: jobFormSummary.trim(),
       content: {
@@ -649,21 +680,48 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     }
   };
 
+  const handleToggleJobStatus = async (job: JobOpening, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      const newStatus = await ContentStore.toggleJobStatus(job.id);
+      showToast(
+        newStatus === 'active'
+          ? `Đã chuyển tin "${job.title}" sang trạng thái: Còn hiệu lực!`
+          : `Đã chuyển tin "${job.title}" sang trạng thái: Hết hiệu lực!`
+      );
+    } catch (err) {
+      console.error('Lỗi khi đổi trạng thái tuyển dụng:', err);
+      showToast('Có lỗi xảy ra khi đổi trạng thái tin tuyển dụng.');
+    }
+  };
+
   // Filtered lists
-  const filteredNews = newsList.filter((a) => {
-    const matchesFilter = newsFilter === 'all' || a.type === newsFilter;
-    const matchesSearch =
-      a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.summary.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  const filteredNews = newsList
+    .filter((a) => {
+      const matchesFilter =
+        newsFilter === 'all'
+          ? true
+          : newsFilter === 'pinned'
+          ? Boolean(a.isPinned)
+          : a.type === newsFilter;
+      const matchesSearch =
+        a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        a.summary.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesFilter && matchesSearch;
+    })
+    .sort(sortNewsArticles);
 
   const filteredJobs = jobsList.filter((j) => {
-    return (
+    const status = j.status || 'active';
+    const matchesFilter =
+      jobFilter === 'all'
+        ? true
+        : status === jobFilter;
+    const matchesSearch =
       j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       j.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      j.location.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+      j.location.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
   });
 
   if (!isAuthenticated) {
@@ -948,6 +1006,17 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                   Tất cả ({newsList.length})
                 </button>
                 <button
+                  onClick={() => setNewsFilter('pinned')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    newsFilter === 'pinned'
+                      ? 'bg-amber-500 text-slate-950 font-bold'
+                      : 'bg-slate-900 text-amber-400/90 hover:bg-slate-800 border border-amber-500/20'
+                  }`}
+                >
+                  <Pin className="w-3 h-3 fill-current" />
+                  <span>Đã ghim ({newsList.filter((a) => a.isPinned).length})</span>
+                </button>
+                <button
                   onClick={() => setNewsFilter('industry-news')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                     newsFilter === 'industry-news'
@@ -980,6 +1049,24 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
               </div>
             </div>
 
+            {/* Sort Order Guidance Banner */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-3.5 py-2.5 bg-slate-800/40 rounded-xl border border-slate-700/50 text-xs text-slate-300">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="flex items-center gap-1 font-bold text-amber-400">
+                  <Pin className="w-3.5 h-3.5 fill-current" />
+                  <span>Ưu tiên bài ghim</span>
+                </span>
+                <span className="text-slate-500">→</span>
+                <span className="flex items-center gap-1 font-bold text-blue-300">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Ngày mới nhất đến cũ nhất</span>
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-400">
+                Hiển thị {filteredNews.length} bài viết
+              </span>
+            </div>
+
             {/* Articles Table / Cards */}
             {filteredNews.length === 0 ? (
               <div className="p-12 text-center bg-slate-800/30 rounded-2xl border border-slate-700/40 space-y-3">
@@ -997,7 +1084,11 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 {filteredNews.map((article) => (
                   <div
                     key={article.id}
-                    className="bg-slate-800/60 rounded-xl border border-slate-700/80 overflow-hidden flex flex-col justify-between hover:border-slate-600 transition-all group shadow-md"
+                    className={`bg-slate-800/60 rounded-xl border ${
+                      article.isPinned
+                        ? 'border-amber-500/80 ring-1 ring-amber-500/40 bg-slate-800/85'
+                        : 'border-slate-700/80'
+                    } overflow-hidden flex flex-col justify-between hover:border-slate-500 transition-all group shadow-md relative`}
                   >
                     <div>
                       {/* Image Preview */}
@@ -1007,9 +1098,32 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                           alt={article.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold uppercase shadow">
-                          {article.category}
+                        <div className="absolute top-2 left-2 flex items-center gap-1.5 flex-wrap">
+                          <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold uppercase shadow">
+                            {article.category}
+                          </span>
+                          {article.isPinned && (
+                            <span className="px-2 py-0.5 rounded bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-[10px] font-black uppercase shadow flex items-center gap-1">
+                              <Pin className="w-3 h-3 fill-current" />
+                              Ưu tiên
+                            </span>
+                          )}
                         </div>
+
+                        {/* Quick Pin Toggle overlay button */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleTogglePinNews(article, e)}
+                          className={`absolute top-2 right-2 p-1.5 rounded-lg backdrop-blur-md transition-all shadow-md cursor-pointer ${
+                            article.isPinned
+                              ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 font-bold'
+                              : 'bg-black/60 text-slate-300 hover:text-white hover:bg-black/80'
+                          }`}
+                          title={article.isPinned ? 'Bỏ ghim bài viết này' : 'Ghim bài viết này lên vị trí ưu tiên'}
+                        >
+                          <Pin className={`w-3.5 h-3.5 ${article.isPinned ? 'fill-current' : ''}`} />
+                        </button>
+
                         <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/70 backdrop-blur-sm text-slate-200 text-[10px] font-mono">
                           {article.date}
                         </div>
@@ -1017,6 +1131,12 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
 
                       {/* Content Info */}
                       <div className="p-4 space-y-2">
+                        {article.isPinned && (
+                          <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                            <Pin className="w-3 h-3 fill-current" />
+                            <span>Đang ghim ưu tiên đầu trang</span>
+                          </div>
+                        )}
                         <h4 className="text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-amber-400 transition-colors">
                           {article.title}
                         </h4>
@@ -1038,6 +1158,18 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                       </button>
 
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => handleTogglePinNews(article, e)}
+                          className={`px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold ${
+                            article.isPinned
+                              ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40'
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400'
+                          }`}
+                          title={article.isPinned ? 'Bỏ ghim' : 'Ghim bài viết lên đầu trang'}
+                        >
+                          <Pin className={`w-3.5 h-3.5 ${article.isPinned ? 'fill-current text-amber-400' : ''}`} />
+                          <span>{article.isPinned ? 'Đã ghim' : 'Ghim'}</span>
+                        </button>
                         <button
                           onClick={() => handleOpenEditNews(article)}
                           className="p-1.5 rounded-lg bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white transition-colors cursor-pointer"
@@ -1064,21 +1196,59 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
         {/* ================= SECTION 2: CAREERS / JOBS ================= */}
         {activeTab === 'careers' && (
           <div className="space-y-6">
-            {/* Search Bar */}
-            <div className="flex items-center justify-between gap-4 bg-slate-800/40 p-4 rounded-xl border border-slate-700/60">
-              <div className="relative w-full sm:w-80">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Tìm kiếm tin tuyển dụng..."
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
-                />
+            {/* Search & Filter Bar */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-800/40 p-4 rounded-xl border border-slate-700/60">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto">
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Tìm kiếm tin tuyển dụng..."
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                {/* Status Filter Tabs */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                  <button
+                    onClick={() => setJobFilter('all')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                      jobFilter === 'all'
+                        ? 'bg-amber-500 text-slate-950 font-bold'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    }`}
+                  >
+                    Tất cả ({jobsList.length})
+                  </button>
+                  <button
+                    onClick={() => setJobFilter('active')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
+                      jobFilter === 'active'
+                        ? 'bg-emerald-600 text-white font-bold'
+                        : 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Còn hiệu lực ({jobsList.filter((j) => (j.status || 'active') === 'active').length})</span>
+                  </button>
+                  <button
+                    onClick={() => setJobFilter('expired')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
+                      jobFilter === 'expired'
+                        ? 'bg-rose-600 text-white font-bold'
+                        : 'bg-slate-800 hover:bg-slate-700 text-rose-400 border border-rose-500/30'
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Hết hiệu lực ({jobsList.filter((j) => j.status === 'expired').length})</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="text-xs text-slate-400">
-                Hiển thị <strong>{filteredJobs.length}</strong> bài tuyển dụng
+              <div className="text-xs text-slate-400 flex items-center justify-between sm:justify-end gap-2">
+                <span>Hiển thị <strong>{filteredJobs.length}</strong> bài tuyển dụng</span>
               </div>
             </div>
 
@@ -1086,104 +1256,168 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
             {filteredJobs.length === 0 ? (
               <div className="p-12 text-center bg-slate-800/30 rounded-2xl border border-slate-700/40 space-y-3">
                 <Briefcase className="w-10 h-10 text-slate-500 mx-auto" />
-                <p className="text-slate-400 text-sm">Không tìm thấy bài tuyển dụng nào phù hợp.</p>
-                <button
-                  onClick={handleOpenCreateJob}
-                  className="px-4 py-2 bg-amber-500 text-slate-950 font-bold rounded-lg text-xs"
-                >
-                  Đăng tin tuyển dụng ngay
-                </button>
+                <p className="text-slate-400 text-sm">Không tìm thấy bài tuyển dụng nào phù hợp với bộ lọc hiện tại.</p>
+                <div className="flex items-center justify-center gap-3">
+                  {jobFilter !== 'all' && (
+                    <button
+                      onClick={() => setJobFilter('all')}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-lg text-xs transition-colors"
+                    >
+                      Xem tất cả tin
+                    </button>
+                  )}
+                  <button
+                    onClick={handleOpenCreateJob}
+                    className="px-4 py-2 bg-amber-500 text-slate-950 font-bold rounded-lg text-xs"
+                  >
+                    Đăng tin tuyển dụng ngay
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {filteredJobs.map((job) => (
-                  <div
-                    key={job.id}
-                    className="bg-slate-800/60 rounded-xl border border-slate-700/80 overflow-hidden flex flex-col justify-between hover:border-amber-500/50 transition-all group shadow-md"
-                  >
-                    <div>
-                      {/* Image Header */}
-                      <div className="relative h-40 w-full bg-slate-900 overflow-hidden">
-                        <img
-                          src={job.image}
-                          alt={job.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-amber-500 text-slate-950 text-[10px] font-black uppercase shadow">
-                          {job.type}
-                        </div>
-                        <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/70 backdrop-blur-sm text-slate-200 text-[10px] font-mono">
-                          Hạn nộp: {job.deadline}
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="p-5 space-y-3">
-                        <h4 className="text-base font-bold text-white leading-snug group-hover:text-amber-400 transition-colors">
-                          {job.title}
-                        </h4>
-
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                          <span>📍 {job.location}</span>
-                          <span>📅 Ngày đăng: {job.date}</span>
-                          <span>👁️ {job.views || 0} lượt xem</span>
-                        </div>
-
-                        <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
-                          {job.summary}
-                        </p>
-
-                        {/* List of sub-positions */}
-                        {job.content?.positions && (
-                          <div className="pt-2 border-t border-slate-700/50 space-y-1.5">
-                            <span className="text-[11px] font-bold text-slate-400 uppercase">
-                              Các vị trí đang tuyển ({job.content.positions.length}):
-                            </span>
-                            <div className="flex flex-wrap gap-1.5">
-                              {job.content.positions.map((p, pIdx) => (
-                                <span
-                                  key={pIdx}
-                                  className="px-2 py-0.5 bg-slate-700/60 rounded text-[11px] text-blue-300 border border-slate-600"
-                                >
-                                  {p.title}
-                                </span>
-                              ))}
-                            </div>
+                {filteredJobs.map((job) => {
+                  const isActive = (job.status || 'active') === 'active';
+                  return (
+                    <div
+                      key={job.id}
+                      className="bg-slate-800/60 rounded-xl border border-slate-700/80 overflow-hidden flex flex-col justify-between hover:border-amber-500/50 transition-all group shadow-md"
+                    >
+                      <div>
+                        {/* Image Header */}
+                        <div className="relative h-44 w-full bg-slate-900 overflow-hidden">
+                          <img
+                            src={job.image}
+                            alt={job.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-amber-500 text-slate-950 text-[10px] font-black uppercase shadow">
+                            {job.type}
                           </div>
-                        )}
+
+                          {/* Status Tag badge */}
+                          {isActive ? (
+                            <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-emerald-600/90 backdrop-blur-sm text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md border border-emerald-400/40">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-200" />
+                              <span>Còn hiệu lực</span>
+                            </div>
+                          ) : (
+                            <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-rose-600/90 backdrop-blur-sm text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md border border-rose-400/40">
+                              <Clock className="w-3.5 h-3.5 text-rose-200" />
+                              <span>Hết hiệu lực</span>
+                            </div>
+                          )}
+
+                          <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded bg-black/70 backdrop-blur-sm text-slate-200 text-[10px] font-mono">
+                            Hạn nộp: {job.deadline}
+                          </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-5 space-y-3">
+                          <div className="flex items-center gap-2">
+                            {isActive ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                <CheckCircle2 className="w-3 h-3" /> Đang nhận hồ sơ
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                                <Clock className="w-3 h-3" /> Đã đóng tuyển
+                              </span>
+                            )}
+                          </div>
+
+                          <h4 className="text-base font-bold text-white leading-snug group-hover:text-amber-400 transition-colors">
+                            {job.title}
+                          </h4>
+
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                            <span>📍 {job.location}</span>
+                            <span>📅 Ngày đăng: {job.date}</span>
+                            <span>👁️ {job.views || 0} lượt xem</span>
+                          </div>
+
+                          <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
+                            {job.summary}
+                          </p>
+
+                          {/* List of sub-positions */}
+                          {job.content?.positions && (
+                            <div className="pt-2 border-t border-slate-700/50 space-y-1.5">
+                              <span className="text-[11px] font-bold text-slate-400 uppercase">
+                                Các vị trí đang tuyển ({job.content.positions.length}):
+                              </span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {job.content.positions.map((p, pIdx) => (
+                                  <span
+                                    key={pIdx}
+                                    className="px-2 py-0.5 bg-slate-700/60 rounded text-[11px] text-blue-300 border border-slate-600"
+                                  >
+                                    {p.title}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actions Bar */}
+                      <div className="p-3 bg-slate-900/80 border-t border-slate-700/60 flex items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => onViewJob && onViewJob(job.id)}
+                            className="text-slate-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Xem trên trang tuyển dụng người dùng"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Xem trang</span>
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* Quick Toggle Status */}
+                          <button
+                            onClick={(e) => handleToggleJobStatus(job, e)}
+                            className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold ${
+                              isActive
+                                ? 'bg-emerald-500/15 hover:bg-rose-500/20 text-emerald-300 hover:text-rose-300 border border-emerald-500/40 hover:border-rose-500/40'
+                                : 'bg-rose-500/15 hover:bg-emerald-500/20 text-rose-300 hover:text-emerald-300 border border-rose-500/40 hover:border-emerald-500/40'
+                            }`}
+                            title={isActive ? 'Nhấn để chuyển sang Hết hiệu lực' : 'Nhấn để chuyển sang Còn hiệu lực'}
+                          >
+                            {isActive ? (
+                              <>
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>Còn hiệu lực</span>
+                              </>
+                            ) : (
+                              <>
+                                <Clock className="w-3.5 h-3.5 text-rose-400" />
+                                <span>Hết hiệu lực</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenEditJob(job)}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-colors cursor-pointer"
+                            title="Chỉnh sửa tin tuyển dụng"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteJob(job.id, job.title)}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                            title="Xóa tin tuyển dụng"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-
-                    {/* Actions Bar */}
-                    <div className="p-3 bg-slate-900/80 border-t border-slate-700/60 flex items-center justify-between gap-2 text-xs">
-                      <button
-                        onClick={() => onViewJob(job.id)}
-                        className="text-slate-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
-                        title="Xem trên trang tuyển dụng người dùng"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Xem trang tuyển dụng</span>
-                      </button>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleOpenEditJob(job)}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-300 transition-colors cursor-pointer"
-                          title="Chỉnh sửa tin tuyển dụng"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteJob(job.id, job.title)}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                          title="Xóa tin tuyển dụng"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1307,6 +1541,39 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                     <option value="company-news">Tin tức công ty</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Pin / Priority toggle switch */}
+              <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-3.5 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
+                    newsFormIsPinned ? 'bg-amber-500 text-slate-950 font-bold shadow-md' : 'bg-slate-700 text-slate-400'
+                  }`}>
+                    <Pin className={`w-4 h-4 ${newsFormIsPinned ? 'fill-current' : ''}`} />
+                  </div>
+                  <div>
+                    <div className="text-white font-bold flex items-center gap-2">
+                      <span>Ghim bài viết này lên vị trí ưu tiên</span>
+                      {newsFormIsPinned && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
+                          Đang bật ghim
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-slate-400 text-[11px] mt-0.5">
+                      Bài viết được ghim sẽ luôn xuất hiện ở đầu trang Tin tức & Bảng tin để người xem dễ dàng thấy nhất.
+                    </p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={newsFormIsPinned}
+                    onChange={(e) => setNewsFormIsPinned(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1721,6 +1988,66 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                     <option value="Thực tập sinh">Thực tập sinh</option>
                     <option value="Hợp đồng dự án">Hợp đồng dự án</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Job Status Selector: Còn hiệu lực / Hết hiệu lực */}
+              <div className="bg-slate-950/80 border border-slate-700/80 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="text-white font-bold flex items-center gap-2">
+                    <span>Trạng thái hiệu lực:</span>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1.5 ${
+                        jobFormStatus === 'active'
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                          : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                      }`}
+                    >
+                      {jobFormStatus === 'active' ? (
+                        <>
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span>Còn hiệu lực (Đang nhận hồ sơ)</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3 h-3 text-rose-400" />
+                          <span>Hết hiệu lực (Đã đóng tuyển)</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-[11px]">
+                    {jobFormStatus === 'active'
+                      ? 'Bài tuyển dụng sẽ hiển thị nhãn "Còn hiệu lực" và mở form nộp hồ sơ ứng tuyển.'
+                      : 'Bài tuyển dụng sẽ hiển thị nhãn "Hết hiệu lực" và thông báo tạm ngưng nhận hồ sơ.'}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 bg-slate-900 p-1 rounded-lg border border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setJobFormStatus('active')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      jobFormStatus === 'active'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Còn hiệu lực</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setJobFormStatus('expired')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      jobFormStatus === 'expired'
+                        ? 'bg-rose-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Hết hiệu lực</span>
+                  </button>
                 </div>
               </div>
 
