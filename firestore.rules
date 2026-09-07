@@ -11,6 +11,16 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Customer quotes collection
+    match /quotes/{quoteId} {
+      allow read, write: if true;
+    }
+
+    // Test connection collection
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+
     // Default fallback
     match /{document=**} {
       allow read, write: if true;

@@ -35,10 +35,12 @@ import {
   CheckCircle2,
   Clock,
   BookOpen,
-  Sparkles
+  Sparkles,
+  RefreshCw,
+  CloudUpload
 } from 'lucide-react';
 import { LongHoangLogo } from './LongHoangLogo';
-import { ContentStore, sortNewsArticles } from '../data/contentStore';
+import { ContentStore, sortNewsArticles, CloudSyncStatus } from '../data/contentStore';
 import { NewsArticle, JobOpening } from '../types';
 import { ConsoleQuotesTab } from './ConsoleQuotesTab';
 
@@ -77,6 +79,31 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [newsFilter, setNewsFilter] = useState<'all' | 'industry-news' | 'industry-knowledge' | 'company-news' | 'pinned'>('all');
   const [jobFilter, setJobFilter] = useState<'all' | 'active' | 'expired'>('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [cloudSync, setCloudSync] = useState<CloudSyncStatus>(ContentStore.getSyncStatus());
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+
+  useEffect(() => {
+    const unsub = ContentStore.subscribeSyncState((status) => {
+      setCloudSync(status);
+    });
+    return unsub;
+  }, []);
+
+  const handleSyncAllToFirestore = async () => {
+    setIsSyncingAll(true);
+    try {
+      const res = await ContentStore.syncAllLocalToFirestore();
+      if (res.success) {
+        showToast(`Đã đồng bộ ${res.newsCount} bài viết & ${res.jobsCount} tin tuyển dụng lên Firebase Cloud!`);
+      } else {
+        showToast(`Lỗi đồng bộ: ${res.error || 'Vui lòng kiểm tra mạng'}`);
+      }
+    } catch (e: any) {
+      showToast(`Lỗi: ${e?.message || 'Không thể đồng bộ'}`);
+    } finally {
+      setIsSyncingAll(false);
+    }
+  };
 
   // Edit / Create News Modal State
   const [isNewsModalOpen, setIsNewsModalOpen] = useState(false);
@@ -699,9 +726,13 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
       },
     };
 
-    await ContentStore.saveNews(newArticle);
+    const saveResult = await ContentStore.saveNews(newArticle);
     setIsNewsModalOpen(false);
-    showToast(editingNews ? 'Đã lưu & đồng bộ bài viết lên Firebase Cloud!' : 'Đã đăng bài & đồng bộ Firebase Cloud thành công!');
+    if (saveResult.success) {
+      showToast(editingNews ? 'Đã lưu & đồng bộ bài viết lên Firebase Cloud thành công!' : 'Đã đăng bài & đồng bộ Firebase Cloud thành công!');
+    } else {
+      showToast(`Đã lưu cục bộ. Cảnh báo lỗi Firebase: ${saveResult.error || 'Vui lòng kiểm tra mạng'}`);
+    }
   };
 
   const handleDeleteNews = async (id: string, title: string) => {
@@ -860,9 +891,13 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
       },
     };
 
-    await ContentStore.saveJob(newJob);
+    const saveResult = await ContentStore.saveJob(newJob);
     setIsJobModalOpen(false);
-    showToast(editingJob ? 'Đã cập nhật bài tuyển dụng lên Firebase Cloud!' : 'Đã đăng tin tuyển dụng & đồng bộ Firebase Cloud!');
+    if (saveResult.success) {
+      showToast(editingJob ? 'Đã cập nhật bài tuyển dụng lên Firebase Cloud thành công!' : 'Đã đăng tin tuyển dụng & đồng bộ Firebase Cloud thành công!');
+    } else {
+      showToast(`Đã lưu cục bộ. Cảnh báo lỗi Firebase: ${saveResult.error || 'Vui lòng kiểm tra mạng'}`);
+    }
   };
 
   const handleDeleteJob = async (id: string, title: string) => {
@@ -1085,13 +1120,26 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
 
           <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-400">Cơ sở dữ liệu Đám mây</p>
-              <h3 className="text-base font-bold text-emerald-400 mt-1">Firebase Firestore</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Đồng bộ Cloud tức thì</p>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${cloudSync.state === 'connected' ? 'bg-emerald-400 animate-pulse' : cloudSync.state === 'syncing' ? 'bg-amber-400 animate-spin' : 'bg-rose-400'}`}></span>
+                <p className="text-xs font-medium text-slate-400">Firebase Firestore Cloud</p>
+              </div>
+              <h3 className="text-base font-bold text-emerald-400 mt-1">
+                {cloudSync.state === 'connected' ? 'Đã kết nối trực tuyến' : cloudSync.state === 'syncing' ? 'Đang đồng bộ...' : 'Lưu trữ cục bộ'}
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {cloudSync.lastSyncedAt ? `Lần cuối: ${cloudSync.lastSyncedAt}` : 'Sẵn sàng đồng bộ'} ({cloudSync.remoteNewsCount} tin | {cloudSync.remoteJobsCount} việc)
+              </p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
-              <Cloud className="w-6 h-6" />
-            </div>
+            <button
+              onClick={handleSyncAllToFirestore}
+              disabled={isSyncingAll}
+              title="Đẩy tất cả bài viết và tin tuyển dụng lên Firebase Firestore"
+              className="px-3 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncingAll ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Đồng bộ Cloud</span>
+            </button>
           </div>
         </div>
 
@@ -1147,26 +1195,39 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
             </button>
           </div>
 
-          {/* Quick Action Button for current active tab */}
-          {activeTab === 'news' && (
+          {/* Actions on the right */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleOpenCreateNews}
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold uppercase tracking-wider shadow-lg transition-all active:scale-95 cursor-pointer"
+              onClick={handleSyncAllToFirestore}
+              disabled={isSyncingAll}
+              title="Đẩy tất cả bài viết và tuyển dụng từ bộ nhớ máy lên Firebase Cloud"
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-all shadow cursor-pointer disabled:opacity-50"
             >
-              <Plus className="w-4 h-4" />
-              <span>Đăng bài viết mới</span>
+              <CloudUpload className={`w-4 h-4 ${isSyncingAll ? 'animate-bounce' : ''}`} />
+              <span>Đẩy lên Cloud</span>
             </button>
-          )}
 
-          {activeTab === 'careers' && (
-            <button
-              onClick={handleOpenCreateJob}
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-lg transition-all active:scale-95 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Đăng tin tuyển dụng mới</span>
-            </button>
-          )}
+            {/* Quick Action Button for current active tab */}
+            {activeTab === 'news' && (
+              <button
+                onClick={handleOpenCreateNews}
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold uppercase tracking-wider shadow-lg transition-all active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Đăng bài viết mới</span>
+              </button>
+            )}
+
+            {activeTab === 'careers' && (
+              <button
+                onClick={handleOpenCreateJob}
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-lg transition-all active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Đăng tin tuyển dụng mới</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ================= SECTION 1: NEWS ARTICLES ================= */}
@@ -1621,6 +1682,50 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
         {/* ================= SECTION 3: SETTINGS & BACKUP ================= */}
         {activeTab === 'settings' && (
           <div className="max-w-3xl space-y-6">
+            {/* Firebase Cloud Sync Card */}
+            <div className="bg-slate-800/60 border border-emerald-500/30 rounded-xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <Cloud className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <span>Đồng bộ Đám mây (Firebase Cloud Firestore)</span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        cloudSync.state === 'connected'
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : cloudSync.state === 'syncing'
+                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${cloudSync.state === 'connected' ? 'bg-emerald-400 animate-pulse' : cloudSync.state === 'syncing' ? 'bg-amber-400 animate-spin' : 'bg-rose-400'}`}></span>
+                        {cloudSync.state === 'connected' ? 'Đã kết nối trực tuyến' : cloudSync.state === 'syncing' ? 'Đang đồng bộ...' : 'Chưa kết nối Cloud'}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Dữ liệu trên Cloud: <strong className="text-emerald-400">{cloudSync.remoteNewsCount}</strong> bài viết | <strong className="text-emerald-400">{cloudSync.remoteJobsCount}</strong> tin tuyển dụng. {cloudSync.lastSyncedAt ? `Lần cuối: ${cloudSync.lastSyncedAt}` : ''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Hệ thống tự động lưu hai chiều: khi bạn tạo hoặc chỉnh sửa bài viết/tin tuyển dụng, dữ liệu sẽ được lưu đồng thời vào Firebase Cloud Firestore và bộ nhớ đệm máy bạn. Nhấn nút dưới đây để đẩy toàn bộ dữ liệu từ máy lên Firebase Cloud ngay lập tức.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  onClick={handleSyncAllToFirestore}
+                  disabled={isSyncingAll}
+                  className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg active:scale-95 disabled:opacity-50 transition-all"
+                >
+                  <CloudUpload className={`w-4 h-4 ${isSyncingAll ? 'animate-bounce' : ''}`} />
+                  <span>{isSyncingAll ? 'Đang tải lên Firebase...' : 'Đẩy tất cả dữ liệu lên Firebase Cloud'}</span>
+                </button>
+              </div>
+            </div>
+
             <div className="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Download className="w-5 h-5 text-blue-400" />
