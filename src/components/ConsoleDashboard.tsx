@@ -498,8 +498,36 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     }
   });
 
-  // Built-in presets for Logistics & Industry News
+  // Helper to normalize note suggestions: replaces exact links with (URL) and standardizes source citations
+  const normalizeNoteForSuggestion = (text: string): string => {
+    if (!text) return '';
+    let s = text.trim();
+
+    // 1. Markdown link destinations: [Title](https://...) or [Title](...) -> [Title](URL)
+    s = s.replace(/\[(.*?)\]\([^)]+\)/g, '[$1](URL)');
+
+    // 2. Standardize [Nguồn: X](URL) into [Nguồn X](URL)
+    s = s.replace(/\[Nguồn:\s*(.*?)\]\(URL\)/gi, '[Nguồn $1](URL)');
+
+    // 3. Replace raw URLs in parentheses (http...) with (URL)
+    s = s.replace(/\(https?:\/\/[^\s)]+\)/gi, '(URL)');
+
+    // 4. Replace any standalone URL http/https with (URL)
+    s = s.replace(/https?:\/\/[^\s)]+/gi, '(URL)');
+
+    // 5. Clean up duplicate spaces
+    s = s.replace(/\s+/g, ' ');
+
+    return s.trim();
+  };
+
+  // Built-in presets for Logistics & Industry News with standardized (URL)
   const DEFAULT_INDUSTRY_NOTE_PRESETS = [
+    '[Nguồn Tạp chí Kinh tế](URL)',
+    '[Nguồn Tạp chí Tài chính](URL)',
+    '[Nguồn Báo Đầu Tư](URL)',
+    '[Nguồn Báo Hải Quan](URL)',
+    '[Nguồn Cục Hải quan Việt Nam](URL)',
     'Long Hoàng Logistics – Đồng hành cùng sự phát triển bền vững của doanh nghiệp bạn.',
     'Thông tin mang tính chất tham khảo. Quý doanh nghiệp cần tư vấn chuyên sâu về thuế và thủ tục hải quan, vui lòng liên hệ đội ngũ chuyên gia Long Hoàng Logistics.',
     'Để nhận báo giá cước vận tải biển/hàng không ưu đãi và lịch tàu mới nhất, quý khách vui lòng liên hệ Hotline: 0867 141 877.',
@@ -513,32 +541,45 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     const seen = new Set<string>();
 
     const addSug = (text: string, source: string, isIndustry: boolean, articleTitle?: string) => {
-      const trimmed = text.trim();
-      if (!trimmed) return;
-      const key = trimmed.toLowerCase();
+      const normalized = normalizeNoteForSuggestion(text);
+      if (!normalized) return;
+
+      // Key for strict deduplication: case-insensitive and normalized spaces
+      const key = normalized.toLowerCase().replace(/\s+/g, ' ');
       if (seen.has(key)) return;
       seen.add(key);
-      list.push({ text: trimmed, source, isIndustry, articleTitle });
+
+      list.push({ text: normalized, source, isIndustry, articleTitle });
     };
 
-    // 1. First priority: Notes from existing Industry News / Industry Knowledge articles
+    // 1. Preset recommendations for Long Hoàng Logistics & Industry news (e.g. [Nguồn Tạp chí Kinh tế](URL))
+    DEFAULT_INDUSTRY_NOTE_PRESETS.forEach((preset) => {
+      addSug(preset, 'Mẫu chuyên ngành đề xuất', true);
+    });
+
+    // 2. Extract notes from existing Industry News / Industry Knowledge articles
     newsList.forEach((article) => {
       const note = article.content?.note?.trim();
       if (note) {
         const isInd = article.type === 'industry-news' || article.type === 'industry-knowledge';
         const sourceLabel = isInd ? 'Tin tức chuyên ngành' : 'Tin tức công ty';
+
+        // Extract any source citation tags like [Nguồn ...](...) or [...](...)
+        const linkMatches = note.match(/\[(.*?)\]\([^)]+\)/g);
+        if (linkMatches) {
+          linkMatches.forEach((m) => {
+            addSug(m, `${sourceLabel}`, isInd, article.title);
+          });
+        }
+
+        // Also add the full normalized note (URLs converted to URL placeholder)
         addSug(note, `${sourceLabel}`, isInd, article.title);
       }
     });
 
-    // 2. Custom notes previously saved/entered by the user
+    // 3. Custom notes previously saved/entered by the user
     customNotesHistory.forEach((note) => {
       addSug(note, 'Đã nhập trước đó', true);
-    });
-
-    // 3. Preset recommendations for Long Hoàng Logistics
-    DEFAULT_INDUSTRY_NOTE_PRESETS.forEach((preset) => {
-      addSug(preset, 'Mẫu chuyên ngành đề xuất', true);
     });
 
     // Filter by search query if any
@@ -815,10 +856,12 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     };
 
     if (newsFormNote.trim()) {
-      const trimmedNote = newsFormNote.trim();
+      const normalizedForHistory = normalizeNoteForSuggestion(newsFormNote);
       const updatedHistory = [
-        trimmedNote,
-        ...customNotesHistory.filter((n) => n.toLowerCase() !== trimmedNote.toLowerCase()),
+        normalizedForHistory,
+        ...customNotesHistory.filter(
+          (n) => normalizeNoteForSuggestion(n).toLowerCase() !== normalizedForHistory.toLowerCase()
+        ),
       ].slice(0, 50);
       setCustomNotesHistory(updatedHistory);
       try {
