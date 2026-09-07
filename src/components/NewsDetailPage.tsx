@@ -132,11 +132,23 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
                 </p>
               )}
 
-              {article.content?.paragraphs.map((p, idx) => (
-                <p key={idx} className="leading-relaxed">
-                  {renderTextWithTooltips(p)}
-                </p>
-              ))}
+              {article.content?.paragraphs.map((p, idx) => {
+                const trimmed = p.trim();
+                if (trimmed.startsWith('##')) {
+                  const headingText = trimmed.replace(/^##+\s*/, '');
+                  return (
+                    <h3 key={idx} className="text-base sm:text-lg font-bold text-slate-900 mt-6 mb-2 pt-2 border-b border-slate-100 flex items-center gap-2">
+                      <span className="w-1.5 h-4 bg-[#0048ba] rounded-full inline-block shrink-0"></span>
+                      <span>{renderTextWithTooltips(headingText)}</span>
+                    </h3>
+                  );
+                }
+                return (
+                  <p key={idx} className="leading-relaxed">
+                    {renderTextWithTooltips(p)}
+                  </p>
+                );
+              })}
             </div>
 
             {/* Structured Info Box with Border matching Screenshot 3 */}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Bold,
+  Heading,
   Link as LinkIcon,
   HelpCircle,
   Newspaper,
@@ -1676,41 +1677,55 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 <label className="block text-slate-200 font-bold text-xs uppercase tracking-wider mb-1">
                   Cú pháp định dạng nhanh (Click để gán vào văn bản đang chọn)
                 </label>
-                <div className="text-slate-400 text-[11px] flex flex-wrap gap-2 leading-relaxed">
+                <div className="text-slate-300 text-xs flex flex-wrap gap-2">
                   <button 
                     type="button"
-                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('**', '**', 'Văn bản in đậm'); }}
-                    className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors group cursor-pointer"
+                    title="Chèn tiêu đề (## Tiêu đề)"
+                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('## ', '', 'Tiêu đề mục'); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg transition-colors text-slate-200 hover:text-white font-medium group cursor-pointer active:scale-95"
                   >
-                    <Bold className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
-                    <span>In đậm: <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">**chữ**</code></span>
-                  </button>
-                  
-                  <button 
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('[', '](URL)', 'Tên hiển thị'); }}
-                    className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors group cursor-pointer"
-                  >
-                    <LinkIcon className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
-                    <span>Link: <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[Tên](URL)</code></span>
-                  </button>
-                  
-                  <button 
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('[img|', '|Ghi_chú_ảnh]', 'Đường_dẫn_ảnh'); }}
-                    className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors group cursor-pointer"
-                  >
-                    <ImageIcon className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
-                    <span>Ảnh: <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[img|Link|Ghi_chú]</code></span>
+                    <Heading className="w-3.5 h-3.5 text-amber-400 group-hover:text-amber-300" />
+                    <span>Tiêu đề</span>
                   </button>
 
                   <button 
                     type="button"
-                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('*#', ' | Link_ảnh | Giải thích#*', 'Từ khóa'); }}
-                    className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors group cursor-pointer"
+                    title="In đậm chữ (**Văn bản**)"
+                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('**', '**', 'Văn bản in đậm'); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg transition-colors text-slate-200 hover:text-white font-medium group cursor-pointer active:scale-95"
                   >
-                    <HelpCircle className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
-                    <span>Tooltip: <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">*#Từ khóa | Link ảnh | Giải thích#*</code></span>
+                    <Bold className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
+                    <span>In đậm</span>
+                  </button>
+                  
+                  <button 
+                    type="button"
+                    title="Chèn liên kết web ([Tên hiển thị](URL))"
+                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('[', '](URL)', 'Tên hiển thị'); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg transition-colors text-slate-200 hover:text-white font-medium group cursor-pointer active:scale-95"
+                  >
+                    <LinkIcon className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
+                    <span>Link</span>
+                  </button>
+                  
+                  <button 
+                    type="button"
+                    title="Chèn hình ảnh ([img|Link ảnh|Ghi chú])"
+                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('[img|', '|Ghi chú hình ảnh]', 'Đường_dẫn_ảnh'); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg transition-colors text-slate-200 hover:text-white font-medium group cursor-pointer active:scale-95"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-blue-400 group-hover:text-blue-300" />
+                    <span>Ảnh</span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    title="Chèn chú thích thuật ngữ kèm ảnh (*#Từ khóa | Link ảnh | Giải thích#*)"
+                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('*#', ' | Link_ảnh | Giải thích#*', 'Từ khóa'); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg transition-colors text-slate-200 hover:text-white font-medium group cursor-pointer active:scale-95"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-emerald-400 group-hover:text-emerald-300" />
+                    <span>Tooltip</span>
                   </button>
                 </div>
               </div>
