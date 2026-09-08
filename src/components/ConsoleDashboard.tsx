@@ -101,11 +101,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     try {
       const res = await ContentStore.syncAllLocalToFirestore();
       if (res.success) {
-        if (res.imgbbSavedCount && res.imgbbSavedCount > 0) {
-          showToast(`Đã tải & lưu ${res.imgbbSavedCount} ảnh ImgBB về thư mục public/img, đồng bộ ${res.newsCount} bài viết & ${res.jobsCount} tin tuyển dụng lên Firebase Cloud thành công!`);
-        } else {
-          showToast(`Đã đồng bộ ${res.newsCount} bài viết & ${res.jobsCount} tin tuyển dụng lên Firebase Cloud! (Tất cả ảnh đã an toàn trong hệ thống)`);
-        }
+        showToast(`Đã đồng bộ ${res.newsCount} bài viết & ${res.jobsCount} tin tuyển dụng lên Firebase Cloud thành công!`);
         setNewsList(ContentStore.getNews());
         setJobsList(ContentStore.getJobs());
       } else {
@@ -1379,11 +1375,11 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
             <button
               onClick={handleSyncAllToFirestore}
               disabled={isSyncingAll}
-              title="Đẩy lên Cloud: Tự động lưu tất cả ảnh ImgBB về thư mục public/img để tránh lỗi hiển thị và đồng bộ dữ liệu lên Firebase Firestore"
+              title="Đẩy lên Cloud: Đồng bộ toàn bộ dữ liệu Tin tức và Tuyển dụng lên Firebase Firestore"
               className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-all shadow cursor-pointer disabled:opacity-50"
             >
               <CloudUpload className={`w-4 h-4 ${isSyncingAll ? 'animate-bounce' : ''}`} />
-              <span>{isSyncingAll ? 'Đang lưu ảnh & đẩy Cloud...' : 'Đẩy lên Cloud'}</span>
+              <span>{isSyncingAll ? 'Đang đồng bộ Cloud...' : 'Đẩy lên Cloud'}</span>
             </button>
 
             {/* Quick Action Button for current active tab */}
@@ -1898,7 +1894,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
               </div>
 
               <p className="text-xs text-slate-300 leading-relaxed">
-                Hệ thống tự động lưu hai chiều: khi bạn tạo hoặc chỉnh sửa bài viết/tin tuyển dụng, dữ liệu sẽ được lưu đồng thời vào Firebase Cloud Firestore và bộ nhớ đệm máy bạn. Nhấn nút dưới đây để <strong>tự động tải & lưu tất cả ảnh ImgBB về thư mục <code className="text-emerald-400 font-mono">public/img</code></strong> (giúp tránh lỗi hiển thị/chặn link) và đẩy toàn bộ dữ liệu lên Firebase Cloud ngay lập tức.
+                Hệ thống tự động lưu hai chiều: khi bạn tạo hoặc chỉnh sửa bài viết/tin tuyển dụng, dữ liệu sẽ được lưu đồng thời vào Firebase Cloud Firestore và bộ nhớ đệm máy bạn. Nhấn nút dưới đây để đồng bộ toàn bộ dữ liệu lên Firebase Cloud ngay lập tức.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -1908,7 +1904,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                   className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg active:scale-95 disabled:opacity-50 transition-all"
                 >
                   <CloudUpload className={`w-4 h-4 ${isSyncingAll ? 'animate-bounce' : ''}`} />
-                  <span>{isSyncingAll ? 'Đang lưu ảnh ImgBB & đẩy lên Firebase...' : 'Đẩy tất cả dữ liệu lên Firebase Cloud (Tự động lưu ảnh ImgBB)'}</span>
+                  <span>{isSyncingAll ? 'Đang đồng bộ lên Firebase...' : 'Đẩy tất cả dữ liệu lên Firebase Cloud'}</span>
                 </button>
               </div>
             </div>
@@ -2114,11 +2110,6 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                       </div>
                     )}
                   </div>
-                  {(newsFormImage.includes('ibb.co') || newsFormImage.includes('imgbb.com')) && (
-                    <p className="text-[10px] text-emerald-400 font-medium mt-1 flex items-center gap-1">
-                      <span>✓</span> Link ImgBB sẽ tự động được tải & lưu an toàn về thư mục <code className="font-mono bg-emerald-950/60 px-1 py-0.2 rounded border border-emerald-500/20">public/img</code> khi lưu hoặc bấm 'Đẩy lên Cloud'.
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -3884,7 +3875,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                   {/* Footer HR info */}
                   <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-lg text-xs space-y-1 text-slate-700">
                     <p className="font-bold text-[#0048ba]">Phòng Tuyển dụng – Long Hoàng Logistics:</p>
-                    <p>Email nhận CV: <strong>hr@longhoanglogistics.com</strong> / <strong>tuyendung@longhoang.com</strong></p>
+                    <p>Email nhận CV: <strong>teddy.diem@longhoanglogistics.com</strong> (HCM) &nbsp;|&nbsp; <strong>Vincent@longhoanglogistics.com</strong> (HPH)</p>
                     <p>Hotline nhân sự: <strong>0867 141 877</strong> (Hỗ trợ 24/7)</p>
                   </div>
                 </div>
