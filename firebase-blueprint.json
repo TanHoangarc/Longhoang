@@ -179,11 +179,15 @@
   },
   "firestore": {
     "news": {
-      "entity": "NewsArticle",
+      "schema": {
+        "$ref": "NewsArticle"
+      },
       "description": "Collection of published news and articles"
     },
     "jobs": {
-      "entity": "JobOpening",
+      "schema": {
+        "$ref": "JobOpening"
+      },
       "description": "Collection of active recruitment postings"
     },
     "quotes": {
