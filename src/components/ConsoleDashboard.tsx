@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Bold,
   Heading,
@@ -35,12 +35,21 @@ import {
   CheckCircle2,
   Clock,
   BookOpen,
-  Sparkles
+  Sparkles,
+  RefreshCw,
+  CloudUpload,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb,
+  Monitor,
+  Smartphone,
+  Maximize2
 } from 'lucide-react';
 import { LongHoangLogo } from './LongHoangLogo';
-import { ContentStore, sortNewsArticles } from '../data/contentStore';
+import { ContentStore, sortNewsArticles, CloudSyncStatus } from '../data/contentStore';
 import { NewsArticle, JobOpening } from '../types';
 import { ConsoleQuotesTab } from './ConsoleQuotesTab';
+import { renderTextWithTooltips } from '../utils/tooltipParser';
 
 interface ConsoleDashboardProps {
   onBackToHome: () => void;
@@ -77,6 +86,31 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [newsFilter, setNewsFilter] = useState<'all' | 'industry-news' | 'industry-knowledge' | 'company-news' | 'pinned'>('all');
   const [jobFilter, setJobFilter] = useState<'all' | 'active' | 'expired'>('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [cloudSync, setCloudSync] = useState<CloudSyncStatus>(ContentStore.getSyncStatus());
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+
+  useEffect(() => {
+    const unsub = ContentStore.subscribeSyncState((status) => {
+      setCloudSync(status);
+    });
+    return unsub;
+  }, []);
+
+  const handleSyncAllToFirestore = async () => {
+    setIsSyncingAll(true);
+    try {
+      const res = await ContentStore.syncAllLocalToFirestore();
+      if (res.success) {
+        showToast(`Đã đồng bộ ${res.newsCount} bài viết & ${res.jobsCount} tin tuyển dụng lên Firebase Cloud!`);
+      } else {
+        showToast(`Lỗi đồng bộ: ${res.error || 'Vui lòng kiểm tra mạng'}`);
+      }
+    } catch (e: any) {
+      showToast(`Lỗi: ${e?.message || 'Không thể đồng bộ'}`);
+    } finally {
+      setIsSyncingAll(false);
+    }
+  };
 
   // Edit / Create News Modal State
   const [isNewsModalOpen, setIsNewsModalOpen] = useState(false);
@@ -456,9 +490,161 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [newsFormNote, setNewsFormNote] = useState('');
   const [newsFormIsPinned, setNewsFormIsPinned] = useState(false);
 
+  // Suggestions for Note / Footer of News
+  const [showNoteSuggestions, setShowNoteSuggestions] = useState(false);
+  const [noteSuggestionSearch, setNoteSuggestionSearch] = useState('');
+  const [customNotesHistory, setCustomNotesHistory] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('lh_news_notes_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Helper to normalize note suggestions: replaces exact links with (URL) and standardizes source citations
+  const normalizeNoteForSuggestion = (text: string): string => {
+    if (!text) return '';
+    let s = text.trim();
+
+    // 1. Markdown link destinations: [Title](https://...) or [Title](...) -> [Title](URL)
+    s = s.replace(/\[(.*?)\]\([^)]+\)/g, '[$1](URL)');
+
+    // 2. Standardize [Nguồn: X](URL) into [Nguồn X](URL)
+    s = s.replace(/\[Nguồn:\s*(.*?)\]\(URL\)/gi, '[Nguồn $1](URL)');
+
+    // 3. Replace raw URLs in parentheses (http...) with (URL)
+    s = s.replace(/\(https?:\/\/[^\s)]+\)/gi, '(URL)');
+
+    // 4. Replace any standalone URL http/https with (URL)
+    s = s.replace(/https?:\/\/[^\s)]+/gi, '(URL)');
+
+    // 5. Clean up duplicate spaces
+    s = s.replace(/\s+/g, ' ');
+
+    return s.trim();
+  };
+
+  // Built-in presets for Logistics & Industry News with standardized (URL)
+  const DEFAULT_INDUSTRY_NOTE_PRESETS = [
+    '[Nguồn Tạp chí Kinh tế](URL)',
+    '[Nguồn Tạp chí Tài chính](URL)',
+    '[Nguồn Báo Đầu Tư](URL)',
+    '[Nguồn Báo Hải Quan](URL)',
+    '[Nguồn Cục Hải quan Việt Nam](URL)',
+    'Long Hoàng Logistics – Đồng hành cùng sự phát triển bền vững của doanh nghiệp bạn.',
+    'Thông tin mang tính chất tham khảo. Quý doanh nghiệp cần tư vấn chuyên sâu về thuế và thủ tục hải quan, vui lòng liên hệ đội ngũ chuyên gia Long Hoàng Logistics.',
+    'Để nhận báo giá cước vận tải biển/hàng không ưu đãi và lịch tàu mới nhất, quý khách vui lòng liên hệ Hotline: 0867 141 877.',
+    'Long Hoàng Logistics – Giải pháp vận chuyển toàn diện, an toàn và tối ưu chi phí cho chuỗi cung ứng của bạn.',
+    'Các quy định và biểu thuế có thể thay đổi theo văn bản pháp luật hiện hành. Vui lòng liên hệ trực tiếp để được cập nhật kịp thời.',
+    'Quý doanh nghiệp cần hỗ trợ tư vấn hồ sơ hải quan hoặc thủ tục chuyên ngành, vui lòng liên hệ hotline: 0867 141 877.',
+  ];
+
+  const noteSuggestions = useMemo(() => {
+    const list: { text: string; source: string; isIndustry: boolean; articleTitle?: string }[] = [];
+    const seen = new Set<string>();
+
+    const addSug = (text: string, source: string, isIndustry: boolean, articleTitle?: string) => {
+      const normalized = normalizeNoteForSuggestion(text);
+      if (!normalized) return;
+
+      // Key for strict deduplication: case-insensitive and normalized spaces
+      const key = normalized.toLowerCase().replace(/\s+/g, ' ');
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      list.push({ text: normalized, source, isIndustry, articleTitle });
+    };
+
+    // 1. Preset recommendations for Long Hoàng Logistics & Industry news (e.g. [Nguồn Tạp chí Kinh tế](URL))
+    DEFAULT_INDUSTRY_NOTE_PRESETS.forEach((preset) => {
+      addSug(preset, 'Mẫu chuyên ngành đề xuất', true);
+    });
+
+    // 2. Extract notes from existing Industry News / Industry Knowledge articles
+    newsList.forEach((article) => {
+      const note = article.content?.note?.trim();
+      if (note) {
+        const isInd = article.type === 'industry-news' || article.type === 'industry-knowledge';
+        const sourceLabel = isInd ? 'Tin tức chuyên ngành' : 'Tin tức công ty';
+
+        // Extract any source citation tags like [Nguồn ...](...) or [...](...)
+        const linkMatches = note.match(/\[(.*?)\]\([^)]+\)/g);
+        if (linkMatches) {
+          linkMatches.forEach((m) => {
+            addSug(m, `${sourceLabel}`, isInd, article.title);
+          });
+        }
+
+        // Also add the full normalized note (URLs converted to URL placeholder)
+        addSug(note, `${sourceLabel}`, isInd, article.title);
+      }
+    });
+
+    // 3. Custom notes previously saved/entered by the user
+    customNotesHistory.forEach((note) => {
+      addSug(note, 'Đã nhập trước đó', true);
+    });
+
+    // Filter by search query if any
+    let result = list;
+    if (noteSuggestionSearch.trim()) {
+      const q = noteSuggestionSearch.toLowerCase();
+      result = result.filter(
+        (item) =>
+          item.text.toLowerCase().includes(q) ||
+          item.source.toLowerCase().includes(q) ||
+          (item.articleTitle && item.articleTitle.toLowerCase().includes(q))
+      );
+    }
+
+    // Sort: if current article type is industry-news, keep industry notes first
+    if (newsFormType === 'industry-news' || newsFormType === 'industry-knowledge') {
+      return [...result].sort((a, b) => (b.isIndustry ? 1 : 0) - (a.isIndustry ? 1 : 0));
+    }
+
+    return result;
+  }, [newsList, customNotesHistory, noteSuggestionSearch, newsFormType]);
+
+  const handleSelectNoteSuggestion = (noteText: string, append = false) => {
+    if (append && newsFormNote.trim()) {
+      setNewsFormNote(`${newsFormNote.trim()} ${noteText.trim()}`);
+      showToast('Đã nối thêm lời kết vào cuối!');
+    } else {
+      setNewsFormNote(noteText.trim());
+      showToast('Đã áp dụng lời kết thành công!');
+    }
+  };
+
   // Edit / Create Job Modal State
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<JobOpening | null>(null);
+
+  // Article Preview Modal State (Xem Web)
+  const [previewArticle, setPreviewArticle] = useState<NewsArticle | null>(null);
+  const [isArticlePreviewOpen, setIsArticlePreviewOpen] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+
+  // Job Preview Modal State (Xem Web Tuyển dụng)
+  const [previewJob, setPreviewJob] = useState<JobOpening | null>(null);
+  const [isJobPreviewOpen, setIsJobPreviewOpen] = useState(false);
+  const [previewJobDevice, setPreviewJobDevice] = useState<'desktop' | 'mobile'>('desktop');
+
+  // Preview Scroll Container Refs & Reset
+  const articleScrollRef = useRef<HTMLDivElement>(null);
+  const jobScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isArticlePreviewOpen && articleScrollRef.current) {
+      articleScrollRef.current.scrollTop = 0;
+    }
+  }, [isArticlePreviewOpen, previewDevice]);
+
+  useEffect(() => {
+    if (isJobPreviewOpen && jobScrollRef.current) {
+      jobScrollRef.current.scrollTop = 0;
+    }
+  }, [isJobPreviewOpen, previewJobDevice]);
 
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -699,9 +885,27 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
       },
     };
 
-    await ContentStore.saveNews(newArticle);
+    if (newsFormNote.trim()) {
+      const normalizedForHistory = normalizeNoteForSuggestion(newsFormNote);
+      const updatedHistory = [
+        normalizedForHistory,
+        ...customNotesHistory.filter(
+          (n) => normalizeNoteForSuggestion(n).toLowerCase() !== normalizedForHistory.toLowerCase()
+        ),
+      ].slice(0, 50);
+      setCustomNotesHistory(updatedHistory);
+      try {
+        localStorage.setItem('lh_news_notes_history', JSON.stringify(updatedHistory));
+      } catch {}
+    }
+
+    const saveResult = await ContentStore.saveNews(newArticle);
     setIsNewsModalOpen(false);
-    showToast(editingNews ? 'Đã lưu & đồng bộ bài viết lên Firebase Cloud!' : 'Đã đăng bài & đồng bộ Firebase Cloud thành công!');
+    if (saveResult.success) {
+      showToast(editingNews ? 'Đã lưu & đồng bộ bài viết lên Firebase Cloud thành công!' : 'Đã đăng bài & đồng bộ Firebase Cloud thành công!');
+    } else {
+      showToast(`Đã lưu cục bộ. Cảnh báo lỗi Firebase: ${saveResult.error || 'Vui lòng kiểm tra mạng'}`);
+    }
   };
 
   const handleDeleteNews = async (id: string, title: string) => {
@@ -860,9 +1064,13 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
       },
     };
 
-    await ContentStore.saveJob(newJob);
+    const saveResult = await ContentStore.saveJob(newJob);
     setIsJobModalOpen(false);
-    showToast(editingJob ? 'Đã cập nhật bài tuyển dụng lên Firebase Cloud!' : 'Đã đăng tin tuyển dụng & đồng bộ Firebase Cloud!');
+    if (saveResult.success) {
+      showToast(editingJob ? 'Đã cập nhật bài tuyển dụng lên Firebase Cloud thành công!' : 'Đã đăng tin tuyển dụng & đồng bộ Firebase Cloud thành công!');
+    } else {
+      showToast(`Đã lưu cục bộ. Cảnh báo lỗi Firebase: ${saveResult.error || 'Vui lòng kiểm tra mạng'}`);
+    }
   };
 
   const handleDeleteJob = async (id: string, title: string) => {
@@ -1085,13 +1293,26 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
 
           <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-400">Cơ sở dữ liệu Đám mây</p>
-              <h3 className="text-base font-bold text-emerald-400 mt-1">Firebase Firestore</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Đồng bộ Cloud tức thì</p>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${cloudSync.state === 'connected' ? 'bg-emerald-400 animate-pulse' : cloudSync.state === 'syncing' ? 'bg-amber-400 animate-spin' : 'bg-rose-400'}`}></span>
+                <p className="text-xs font-medium text-slate-400">Firebase Firestore Cloud</p>
+              </div>
+              <h3 className="text-base font-bold text-emerald-400 mt-1">
+                {cloudSync.state === 'connected' ? 'Đã kết nối trực tuyến' : cloudSync.state === 'syncing' ? 'Đang đồng bộ...' : 'Lưu trữ cục bộ'}
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {cloudSync.lastSyncedAt ? `Lần cuối: ${cloudSync.lastSyncedAt}` : 'Sẵn sàng đồng bộ'} ({cloudSync.remoteNewsCount} tin | {cloudSync.remoteJobsCount} việc)
+              </p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
-              <Cloud className="w-6 h-6" />
-            </div>
+            <button
+              onClick={handleSyncAllToFirestore}
+              disabled={isSyncingAll}
+              title="Đẩy tất cả bài viết và tin tuyển dụng lên Firebase Firestore"
+              className="px-3 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncingAll ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Đồng bộ Cloud</span>
+            </button>
           </div>
         </div>
 
@@ -1147,26 +1368,39 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
             </button>
           </div>
 
-          {/* Quick Action Button for current active tab */}
-          {activeTab === 'news' && (
+          {/* Actions on the right */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleOpenCreateNews}
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold uppercase tracking-wider shadow-lg transition-all active:scale-95 cursor-pointer"
+              onClick={handleSyncAllToFirestore}
+              disabled={isSyncingAll}
+              title="Đẩy tất cả bài viết và tuyển dụng từ bộ nhớ máy lên Firebase Cloud"
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-all shadow cursor-pointer disabled:opacity-50"
             >
-              <Plus className="w-4 h-4" />
-              <span>Đăng bài viết mới</span>
+              <CloudUpload className={`w-4 h-4 ${isSyncingAll ? 'animate-bounce' : ''}`} />
+              <span>Đẩy lên Cloud</span>
             </button>
-          )}
 
-          {activeTab === 'careers' && (
-            <button
-              onClick={handleOpenCreateJob}
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-lg transition-all active:scale-95 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Đăng tin tuyển dụng mới</span>
-            </button>
-          )}
+            {/* Quick Action Button for current active tab */}
+            {activeTab === 'news' && (
+              <button
+                onClick={handleOpenCreateNews}
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold uppercase tracking-wider shadow-lg transition-all active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Đăng bài viết mới</span>
+              </button>
+            )}
+
+            {activeTab === 'careers' && (
+              <button
+                onClick={handleOpenCreateJob}
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs font-black uppercase tracking-wider shadow-lg transition-all active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Đăng tin tuyển dụng mới</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ================= SECTION 1: NEWS ARTICLES ================= */}
@@ -1341,11 +1575,15 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                     {/* Actions Bar */}
                     <div className="p-3 bg-slate-900/80 border-t border-slate-700/60 flex items-center justify-between gap-2 text-xs">
                       <button
-                        onClick={() => onViewArticle(article.id)}
-                        className="text-slate-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
-                        title="Xem trên trang người dùng"
+                        type="button"
+                        onClick={() => {
+                          setPreviewArticle(article);
+                          setIsArticlePreviewOpen(true);
+                        }}
+                        className="text-slate-300 hover:text-white flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-[#0048ba] transition-all cursor-pointer border border-slate-700 hover:border-blue-500 font-medium text-xs shadow-xs"
+                        title="Mở cửa sổ chế độ xem trước (Preview)"
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye className="w-3.5 h-3.5 text-blue-400" />
                         <span>Xem Web</span>
                       </button>
 
@@ -1558,12 +1796,16 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                       <div className="p-3 bg-slate-900/80 border-t border-slate-700/60 flex items-center justify-between gap-2 text-xs">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => onViewJob && onViewJob(job.id)}
-                            className="text-slate-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Xem trên trang tuyển dụng người dùng"
+                            type="button"
+                            onClick={() => {
+                              setPreviewJob(job);
+                              setIsJobPreviewOpen(true);
+                            }}
+                            className="text-slate-300 hover:text-white flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-[#0048ba] transition-all cursor-pointer border border-slate-700 hover:border-blue-500 font-medium text-xs shadow-xs"
+                            title="Mở cửa sổ chế độ xem trước tin tuyển dụng (Preview)"
                           >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Xem trang</span>
+                            <Eye className="w-3.5 h-3.5 text-blue-400" />
+                            <span>Xem Web</span>
                           </button>
                         </div>
 
@@ -1621,6 +1863,50 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
         {/* ================= SECTION 3: SETTINGS & BACKUP ================= */}
         {activeTab === 'settings' && (
           <div className="max-w-3xl space-y-6">
+            {/* Firebase Cloud Sync Card */}
+            <div className="bg-slate-800/60 border border-emerald-500/30 rounded-xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <Cloud className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <span>Đồng bộ Đám mây (Firebase Cloud Firestore)</span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        cloudSync.state === 'connected'
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : cloudSync.state === 'syncing'
+                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${cloudSync.state === 'connected' ? 'bg-emerald-400 animate-pulse' : cloudSync.state === 'syncing' ? 'bg-amber-400 animate-spin' : 'bg-rose-400'}`}></span>
+                        {cloudSync.state === 'connected' ? 'Đã kết nối trực tuyến' : cloudSync.state === 'syncing' ? 'Đang đồng bộ...' : 'Chưa kết nối Cloud'}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Dữ liệu trên Cloud: <strong className="text-emerald-400">{cloudSync.remoteNewsCount}</strong> bài viết | <strong className="text-emerald-400">{cloudSync.remoteJobsCount}</strong> tin tuyển dụng. {cloudSync.lastSyncedAt ? `Lần cuối: ${cloudSync.lastSyncedAt}` : ''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Hệ thống tự động lưu hai chiều: khi bạn tạo hoặc chỉnh sửa bài viết/tin tuyển dụng, dữ liệu sẽ được lưu đồng thời vào Firebase Cloud Firestore và bộ nhớ đệm máy bạn. Nhấn nút dưới đây để đẩy toàn bộ dữ liệu từ máy lên Firebase Cloud ngay lập tức.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  onClick={handleSyncAllToFirestore}
+                  disabled={isSyncingAll}
+                  className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg active:scale-95 disabled:opacity-50 transition-all"
+                >
+                  <CloudUpload className={`w-4 h-4 ${isSyncingAll ? 'animate-bounce' : ''}`} />
+                  <span>{isSyncingAll ? 'Đang tải lên Firebase...' : 'Đẩy tất cả dữ liệu lên Firebase Cloud'}</span>
+                </button>
+              </div>
+            </div>
+
             <div className="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Download className="w-5 h-5 text-blue-400" />
@@ -2127,18 +2413,201 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 </p>
               </div>
 
-              {/* Note / Footer */}
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Ghi chú hoặc lời kết cuối bài (Note)
-                </label>
-                <input
-                  type="text"
-                  value={newsFormNote}
-                  onChange={(e) => setNewsFormNote(e.target.value)}
-                  placeholder="Ghi chú in nghiêng cuối bài..."
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
+              {/* Note / Footer with Previous Suggestions */}
+              <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-slate-300 font-semibold text-xs flex items-center gap-1.5">
+                      <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Ghi chú hoặc lời kết cuối bài (Note)</span>
+                    </label>
+                    {newsFormType === 'industry-news' ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        Tin tức chuyên ngành
+                      </span>
+                    ) : newsFormType === 'industry-knowledge' ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        Kiến thức chuyên ngành
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowNoteSuggestions(!showNoteSuggestions)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] font-bold transition-all cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Gợi ý lời kết đã nhập ({noteSuggestions.length})</span>
+                    {showNoteSuggestions ? (
+                      <ChevronUp className="w-3 h-3 text-amber-400" />
+                    ) : (
+                      <ChevronDown className="w-3 h-3 text-amber-400" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <textarea
+                    rows={2}
+                    value={newsFormNote}
+                    onChange={(e) => setNewsFormNote(e.target.value)}
+                    placeholder="Ghi chú in nghiêng cuối bài (VD: Long Hoàng Logistics – Đồng hành cùng sự phát triển bền vững của doanh nghiệp bạn)..."
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y"
+                  />
+                  {newsFormNote && (
+                    <button
+                      type="button"
+                      onClick={() => setNewsFormNote('')}
+                      className="absolute top-2 right-2 p-1 text-slate-500 hover:text-slate-300 hover:bg-slate-800 rounded transition-colors"
+                      title="Xóa nội dung ghi chú"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Suggestion Chips (Top most relevant previous notes) */}
+                {noteSuggestions.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] font-medium text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-amber-400" />
+                        <span>Gợi ý nhanh từ các bài đã nhập:</span>
+                      </span>
+                      {!showNoteSuggestions && (
+                        <button
+                          type="button"
+                          onClick={() => setShowNoteSuggestions(true)}
+                          className="text-blue-400 hover:text-blue-300 hover:underline text-[10px] cursor-pointer"
+                        >
+                          Xem tất cả ({noteSuggestions.length}) &rarr;
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                      {noteSuggestions.slice(0, 4).map((sug, idx) => {
+                        const isCurrent = newsFormNote.trim() === sug.text.trim();
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleSelectNoteSuggestion(sug.text, false)}
+                            title={`Nhấn để áp dụng: "${sug.text}"`}
+                            className={`group text-left px-2.5 py-1 rounded-md text-[11px] transition-all flex items-center gap-1.5 border cursor-pointer ${
+                              isCurrent
+                                ? 'bg-blue-600/30 border-blue-500 text-blue-200 font-semibold'
+                                : 'bg-slate-900/90 hover:bg-slate-800 border-slate-700/80 text-slate-300 hover:text-white'
+                            }`}
+                          >
+                            <span className="truncate max-w-[260px] sm:max-w-[340px]">{sug.text}</span>
+                            {isCurrent && <Check className="w-3 h-3 text-blue-400 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Expanded Suggestions Drawer / Panel */}
+                {showNoteSuggestions && (
+                  <div className="bg-slate-900 border border-amber-500/30 rounded-xl p-3.5 space-y-3 shadow-xl">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-400" />
+                        <h4 className="text-xs font-bold text-white">
+                          Danh sách lời kết & ghi chú đã dùng trước đó ({noteSuggestions.length})
+                        </h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowNoteSuggestions(false)}
+                        className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 cursor-pointer"
+                        title="Đóng bảng gợi ý"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Search filter within suggestions */}
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
+                      <input
+                        type="text"
+                        value={noteSuggestionSearch}
+                        onChange={(e) => setNoteSuggestionSearch(e.target.value)}
+                        placeholder="Tìm kiếm lời kết đã nhập theo từ khóa..."
+                        className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
+                      />
+                    </div>
+
+                    {/* Suggestions scroll list */}
+                    <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                      {noteSuggestions.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic text-center py-4">
+                          Không tìm thấy lời kết phù hợp với từ khóa tìm kiếm.
+                        </p>
+                      ) : (
+                        noteSuggestions.map((sug, idx) => {
+                          const isCurrent = newsFormNote.trim() === sug.text.trim();
+                          return (
+                            <div
+                              key={idx}
+                              className={`p-2.5 rounded-lg border transition-all text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                                isCurrent
+                                  ? 'bg-blue-950/40 border-blue-500/50 text-slate-200'
+                                  : 'bg-slate-950/60 hover:bg-slate-950 border-slate-800 text-slate-300'
+                              }`}
+                            >
+                              <div className="space-y-1 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${
+                                      sug.isIndustry
+                                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                        : 'bg-slate-800 text-slate-400'
+                                    }`}
+                                  >
+                                    {sug.source}
+                                  </span>
+                                  {isCurrent && (
+                                    <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-0.5">
+                                      <Check className="w-3 h-3" /> Đang dùng
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-slate-200 leading-relaxed font-normal">
+                                  {sug.text}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectNoteSuggestion(sug.text, false)}
+                                  className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold transition-all shadow cursor-pointer"
+                                  title="Thay thế nội dung ghi chú bằng mẫu này"
+                                >
+                                  Áp dụng
+                                </button>
+                                {newsFormNote.trim() && !isCurrent && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSelectNoteSuggestion(sug.text, true)}
+                                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium transition-all cursor-pointer"
+                                    title="Nối thêm mẫu này vào sau ghi chú hiện tại"
+                                  >
+                                    + Nối thêm
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Submit Buttons */}
@@ -2823,6 +3292,611 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: ARTICLE PREVIEW (XEM WEB TRƯỚC) ================= */}
+      {isArticlePreviewOpen && previewArticle && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/85 backdrop-blur-sm overflow-hidden animate-fadeIn"
+          onClick={() => setIsArticlePreviewOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-5xl h-[92vh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Control Top Header Bar */}
+            <div className="px-4 sm:px-6 py-3 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 text-xs font-bold tracking-wide shrink-0">
+                  <Eye className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+                  <span>Cửa sổ xem trước Web</span>
+                </span>
+                <span className="text-sm font-bold text-white truncate max-w-xs sm:max-w-md hidden sm:inline" title={previewArticle.title}>
+                  {previewArticle.title}
+                </span>
+                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-300 shrink-0 hidden md:inline">
+                  {previewArticle.category}
+                </span>
+              </div>
+
+              {/* Center: Device View Switcher */}
+              <div className="flex items-center bg-slate-900 border border-slate-700/80 rounded-lg p-0.5 text-xs font-semibold text-slate-400">
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('desktop')}
+                  className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
+                    previewDevice === 'desktop'
+                      ? 'bg-blue-600 text-white shadow-xs font-bold'
+                      : 'hover:text-slate-200'
+                  }`}
+                  title="Xem giao diện máy tính"
+                >
+                  <Monitor className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Máy tính</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('mobile')}
+                  className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
+                    previewDevice === 'mobile'
+                      ? 'bg-blue-600 text-white shadow-xs font-bold'
+                      : 'hover:text-slate-200'
+                  }`}
+                  title="Xem giao diện điện thoại"
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Điện thoại</span>
+                </button>
+              </div>
+
+              {/* Right: Quick actions & Close */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const art = previewArticle;
+                    setIsArticlePreviewOpen(false);
+                    handleOpenEditNews(art);
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Mở trình chỉnh sửa bài viết này"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Sửa bài</span>
+                </button>
+
+                {onViewArticle && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const id = previewArticle.id;
+                      setIsArticlePreviewOpen(false);
+                      onViewArticle(id);
+                    }}
+                    className="px-3 py-1.5 bg-[#0048ba] hover:bg-[#00368a] text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="Chuyển sang trang web xem thực tế"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span className="hidden md:inline">Mở trang thật</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsArticlePreviewOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                  title="Đóng xem trước"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Stage */}
+            <div
+              ref={articleScrollRef}
+              tabIndex={0}
+              className="flex-1 min-h-0 w-full bg-slate-950/70 p-3 sm:p-6 overflow-y-auto overscroll-contain flex justify-center items-start focus:outline-none scroll-smooth"
+            >
+              <div
+                className={`transition-all duration-300 w-full shrink-0 ${
+                  previewDevice === 'desktop'
+                    ? 'max-w-4xl bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 overflow-hidden my-0'
+                    : 'max-w-[390px] bg-white text-slate-800 rounded-[38px] shadow-2xl border-[8px] border-slate-800 overflow-hidden my-4'
+                }`}
+              >
+                {/* Desktop browser mockup top bar */}
+                {previewDevice === 'desktop' && (
+                  <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center justify-between gap-3 text-xs text-slate-600 select-none">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                    </div>
+                    <div className="flex-1 max-w-md mx-auto bg-white border border-slate-300 rounded px-3 py-1 font-mono text-[11px] text-slate-500 flex items-center gap-2">
+                      <span className="text-emerald-600 font-bold text-xs">🔒</span>
+                      <span className="truncate">https://longhoanglogistics.com/tin-tuc/{previewArticle.id}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                      <button
+                        type="button"
+                        onClick={() => articleScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="hover:text-blue-600 font-semibold cursor-pointer"
+                        title="Cuộn lên đầu trang"
+                      >
+                        ↑ Lên đầu
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mobile mock speaker bar if mobile device */}
+                {previewDevice === 'mobile' && (
+                  <div className="w-full bg-slate-800 py-1.5 flex justify-center items-center">
+                    <div className="w-20 h-3.5 bg-slate-900 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-slate-800 mr-2" />
+                      <div className="w-8 h-1 bg-slate-700 rounded-full" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Top Banner with Light Washed-Out Cargo Ship Background */}
+                <div className="relative w-full h-28 sm:h-36 md:h-44 bg-slate-100 overflow-hidden flex items-center justify-center border-b border-slate-200/60">
+                  <img
+                    src="https://plus.unsplash.com/premium_photo-1661880224695-47dc8805c4ea?q=80&w=1146&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                    alt="Banner Ocean Logistics"
+                    className="absolute inset-0 w-full h-full object-cover object-center opacity-65"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-white/85 sm:bg-white/80" />
+
+                  <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+                    <h1 className="text-base sm:text-xl md:text-2xl font-extrabold text-[#0048ba] tracking-wide uppercase leading-snug">
+                      {previewArticle.title}
+                    </h1>
+                  </div>
+                </div>
+
+                {/* Breadcrumbs Navigation Bar */}
+                <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 flex items-center text-xs text-slate-500 font-medium">
+                  <span className="text-[#0284c7] font-semibold">Trang chủ</span>
+                  <span className="mx-1.5 text-slate-400">»</span>
+                  <span className="text-[#0284c7] font-semibold">{previewArticle.category}</span>
+                  <span className="mx-1.5 text-slate-400">»</span>
+                  <span className="text-slate-700 font-semibold truncate max-w-xs sm:max-w-md">
+                    {previewArticle.title}
+                  </span>
+                </div>
+
+                {/* Article Core Content */}
+                <div className="p-4 sm:p-8 space-y-6">
+                  {/* Featured Image */}
+                  {previewArticle.image && (
+                    <div className="w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-xs">
+                      <img
+                        src={previewArticle.image}
+                        alt={previewArticle.title}
+                        className="w-full h-auto max-h-[420px] object-cover"
+                      />
+                    </div>
+                  )}
+
+                  {/* Meta Bar */}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 text-xs text-slate-500">
+                    <span className="px-2.5 py-1 bg-blue-50 text-[#004b93] font-bold rounded">
+                      {previewArticle.category}
+                    </span>
+                    <span>
+                      Ngày đăng: <strong className="text-slate-700">{previewArticle.date}</strong>
+                    </span>
+                  </div>
+
+                  {/* Lead Text */}
+                  {previewArticle.content?.lead && (
+                    <p className="font-bold text-slate-900 leading-relaxed text-sm sm:text-base text-justify">
+                      {renderTextWithTooltips(previewArticle.content.lead)}
+                    </p>
+                  )}
+
+                  {/* Paragraphs */}
+                  <div className="space-y-4 text-slate-700 leading-relaxed text-justify text-sm sm:text-[15px]">
+                    {previewArticle.content?.paragraphs.map((p, idx) => {
+                      const trimmed = p.trim();
+                      if (trimmed.startsWith('##')) {
+                        const headingText = trimmed.replace(/^##+\s*/, '');
+                        return (
+                          <h3 key={idx} className="text-base sm:text-lg font-bold text-[#0048ba] mt-6 mb-2 pt-2 border-b border-blue-100/70 flex items-center gap-2">
+                            <span className="w-1.5 h-4 bg-[#0048ba] rounded-full inline-block shrink-0"></span>
+                            <span className="text-[#0048ba]">{renderTextWithTooltips(headingText)}</span>
+                          </h3>
+                        );
+                      }
+
+                      // Bullet list
+                      if (
+                        trimmed.startsWith('* ') ||
+                        trimmed.startsWith('- ') ||
+                        trimmed.startsWith('• ') ||
+                        trimmed.includes('\n* ') ||
+                        trimmed.includes('\n- ') ||
+                        trimmed.includes('\n• ')
+                      ) {
+                        const lines = p.split('\n');
+                        return (
+                          <ul key={idx} className="space-y-2 my-3 pl-1 sm:pl-2">
+                            {lines.map((line, lIdx) => {
+                              const lTrimmed = line.trim();
+                              if (/^[-*•]\s+/.test(lTrimmed)) {
+                                const bulletText = lTrimmed.replace(/^[-*•]\s+/, '');
+                                return (
+                                  <li key={lIdx} className="flex items-start gap-2.5 text-slate-700 leading-relaxed text-justify">
+                                    <span className="text-[#0048ba] font-bold select-none text-base leading-none mt-1 shrink-0">•</span>
+                                    <span className="flex-1">{renderTextWithTooltips(bulletText)}</span>
+                                  </li>
+                                );
+                              }
+                              if (lTrimmed.length === 0) return null;
+                              return (
+                                <li key={lIdx} className="text-slate-700 leading-relaxed list-none text-justify">
+                                  {renderTextWithTooltips(line)}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        );
+                      }
+
+                      return (
+                        <p key={idx} className="leading-relaxed">
+                          {renderTextWithTooltips(p)}
+                        </p>
+                      );
+                    })}
+                  </div>
+
+                  {/* Details Card Box */}
+                  {previewArticle.content?.detailsList && previewArticle.content.detailsList.length > 0 && (
+                    <div className="mt-8 border border-slate-300/80 rounded-lg bg-[#fafcff] overflow-hidden">
+                      <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+                        <span className="text-emerald-600 font-black text-base">—</span>
+                        <h3 className="font-bold text-emerald-700 text-sm sm:text-base">
+                          {previewArticle.content.detailsCardTitle || 'Chi tiết nội dung'}
+                        </h3>
+                      </div>
+                      <div className="p-5 sm:p-6 space-y-5">
+                        {previewArticle.content.detailsList.map((sec, secIdx) => (
+                          <div key={secIdx} className="space-y-2">
+                            <h4 className="text-sm sm:text-base font-bold text-[#0048ba]">
+                              {renderTextWithTooltips(sec.title)}
+                            </h4>
+                            <div className="space-y-1.5 text-xs sm:text-sm text-slate-600">
+                              {sec.points.map((pt, ptIdx) => {
+                                const isBullet = /^[-*•]\s+/.test(pt);
+                                const text = pt.replace(/^[-*•]\s+/, '');
+                                if (isBullet) {
+                                  return (
+                                    <ul key={ptIdx} className="list-disc pl-5 my-1">
+                                      <li className="leading-relaxed">{renderTextWithTooltips(text)}</li>
+                                    </ul>
+                                  );
+                                }
+                                return (
+                                  <p key={ptIdx} className="leading-relaxed">
+                                    {renderTextWithTooltips(text)}
+                                  </p>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Note / Footer Section */}
+                  {previewArticle.content?.note && (
+                    <div className="p-4 bg-amber-50/80 border-l-4 border-amber-500 rounded-r-md text-xs sm:text-sm text-amber-900 italic shadow-xs">
+                      {renderTextWithTooltips(previewArticle.content.note)}
+                    </div>
+                  )}
+
+                  {/* Consultation / Support Bar */}
+                  <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <span className="font-bold text-slate-800">Tư vấn chuyên môn:</span>
+                      <span className="text-[#0048ba] font-bold">Hotline: 0867 141 877</span>
+                      <span>•</span>
+                      <span>Email: info@longhoanglogistics.com</span>
+                    </div>
+                    <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded font-semibold text-[11px]">
+                      Bản xem trước giao diện người dùng
+                    </span>
+                  </div>
+                </div>
+
+                {/* Mobile bottom indicator */}
+                {previewDevice === 'mobile' && (
+                  <div className="w-full py-2 bg-slate-100 flex justify-center">
+                    <div className="w-32 h-1 bg-slate-400 rounded-full" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Floating scroll to top button */}
+            <button
+              type="button"
+              onClick={() => articleScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="absolute bottom-5 right-6 p-2.5 bg-[#0048ba] hover:bg-[#00368a] text-white rounded-full shadow-2xl transition-all cursor-pointer border border-blue-400/40 hover:scale-105 z-20 flex items-center gap-1.5 text-xs font-semibold px-3.5"
+              title="Cuộn nhanh lên đầu trang"
+            >
+              <ChevronUp className="w-4 h-4" />
+              <span className="hidden sm:inline">Lên đầu trang</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: JOB PREVIEW (XEM WEB TUYỂN DỤNG) ================= */}
+      {isJobPreviewOpen && previewJob && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/85 backdrop-blur-sm overflow-hidden animate-fadeIn"
+          onClick={() => setIsJobPreviewOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-5xl h-[92vh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Control Bar */}
+            <div className="px-4 sm:px-6 py-3 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold tracking-wide shrink-0">
+                  <Eye className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                  <span>Cửa sổ xem trước Tuyển dụng</span>
+                </span>
+                <span className="text-sm font-bold text-white truncate max-w-xs sm:max-w-md hidden sm:inline" title={previewJob.title}>
+                  {previewJob.title}
+                </span>
+              </div>
+
+              {/* Device switcher */}
+              <div className="flex items-center bg-slate-900 border border-slate-700/80 rounded-lg p-0.5 text-xs font-semibold text-slate-400">
+                <button
+                  type="button"
+                  onClick={() => setPreviewJobDevice('desktop')}
+                  className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
+                    previewJobDevice === 'desktop'
+                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                      : 'hover:text-slate-200'
+                  }`}
+                  title="Xem giao diện máy tính"
+                >
+                  <Monitor className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Máy tính</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewJobDevice('mobile')}
+                  className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
+                    previewJobDevice === 'mobile'
+                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                      : 'hover:text-slate-200'
+                  }`}
+                  title="Xem giao diện điện thoại"
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Điện thoại</span>
+                </button>
+              </div>
+
+              {/* Right actions */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const j = previewJob;
+                    setIsJobPreviewOpen(false);
+                    handleOpenEditJob(j);
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Chỉnh sửa tin tuyển dụng này"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Sửa tin</span>
+                </button>
+
+                {onViewJob && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const id = previewJob.id;
+                      setIsJobPreviewOpen(false);
+                      onViewJob(id);
+                    }}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="Chuyển sang trang web xem thực tế"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span className="hidden md:inline">Mở trang thật</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsJobPreviewOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                  title="Đóng xem trước"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Stage */}
+            <div
+              ref={jobScrollRef}
+              tabIndex={0}
+              className="flex-1 min-h-0 w-full bg-slate-950/70 p-3 sm:p-6 overflow-y-auto overscroll-contain flex justify-center items-start focus:outline-none scroll-smooth"
+            >
+              <div
+                className={`transition-all duration-300 w-full shrink-0 ${
+                  previewJobDevice === 'desktop'
+                    ? 'max-w-4xl bg-white text-slate-800 rounded-xl shadow-2xl border border-slate-200 overflow-hidden my-0'
+                    : 'max-w-[390px] bg-white text-slate-800 rounded-[38px] shadow-2xl border-[8px] border-slate-800 overflow-hidden my-4'
+                }`}
+              >
+                {/* Desktop browser mockup top bar */}
+                {previewJobDevice === 'desktop' && (
+                  <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center justify-between gap-3 text-xs text-slate-600 select-none">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                    </div>
+                    <div className="flex-1 max-w-md mx-auto bg-white border border-slate-300 rounded px-3 py-1 font-mono text-[11px] text-slate-500 flex items-center gap-2">
+                      <span className="text-emerald-600 font-bold text-xs">🔒</span>
+                      <span className="truncate">https://longhoanglogistics.com/tuyen-dung/{previewJob.id}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                      <button
+                        type="button"
+                        onClick={() => jobScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="hover:text-emerald-600 font-semibold cursor-pointer"
+                        title="Cuộn lên đầu trang"
+                      >
+                        ↑ Lên đầu
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mobile mock notch */}
+                {previewJobDevice === 'mobile' && (
+                  <div className="w-full bg-slate-800 py-1.5 flex justify-center items-center">
+                    <div className="w-20 h-3.5 bg-slate-900 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-slate-800 mr-2" />
+                      <div className="w-8 h-1 bg-slate-700 rounded-full" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Job Hero Banner */}
+                <div className="relative w-full h-28 sm:h-36 md:h-44 bg-slate-100 overflow-hidden flex items-center justify-center border-b border-slate-200/60">
+                  <img
+                    src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=80&w=1200&auto=format&fit=crop"
+                    alt="Banner Careers"
+                    className="absolute inset-0 w-full h-full object-cover opacity-60"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-white/85 sm:bg-white/80" />
+
+                  <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+                    <h1 className="text-base sm:text-xl md:text-2xl font-extrabold text-[#0048ba] tracking-wide uppercase leading-snug">
+                      {previewJob.title}
+                    </h1>
+                  </div>
+                </div>
+
+                {/* Job Info Core */}
+                <div className="p-4 sm:p-8 space-y-6">
+                  {/* Meta Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                    <div className="flex flex-wrap items-center gap-3 text-slate-600 font-medium">
+                      <span>📍 {previewJob.location}</span>
+                      <span>💼 {previewJob.type}</span>
+                      <span>📅 Đăng ngày: {previewJob.date}</span>
+                      <span>⏳ Hạn nộp: {previewJob.deadline}</span>
+                    </div>
+                    <span className="px-2.5 py-1 rounded font-bold text-emerald-700 bg-emerald-100">
+                      Đang nhận hồ sơ
+                    </span>
+                  </div>
+
+                  {/* Summary & Lead */}
+                  {previewJob.summary && (
+                    <p className="text-slate-700 font-semibold leading-relaxed text-sm sm:text-base">
+                      {previewJob.summary}
+                    </p>
+                  )}
+                  {previewJob.content?.lead && (
+                    <p className="text-slate-600 leading-relaxed text-sm">
+                      {previewJob.content.lead}
+                    </p>
+                  )}
+
+                  {/* Positions */}
+                  {previewJob.content?.positions && previewJob.content.positions.length > 0 && (
+                    <div className="space-y-4 pt-2">
+                      <h3 className="text-base font-bold text-[#0048ba] border-b pb-2">
+                        Các vị trí đang tuyển ({previewJob.content.positions.length})
+                      </h3>
+                      <div className="space-y-4">
+                        {previewJob.content.positions.map((pos, pIdx) => (
+                          <div key={pIdx} className="p-4 rounded-lg border border-slate-200 bg-[#f8fafc] space-y-2.5">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <h4 className="font-bold text-slate-900 text-sm sm:text-base">
+                                {pos.title}
+                              </h4>
+                              <span className="px-2.5 py-1 bg-amber-50 border border-amber-300 text-amber-900 font-bold rounded text-xs">
+                                💰 {pos.salary}
+                              </span>
+                            </div>
+
+                            {pos.description && (
+                              <div className="text-xs sm:text-sm text-slate-600 whitespace-pre-line">
+                                <strong>Mô tả công việc:</strong>
+                                <p className="mt-1 pl-2 border-l-2 border-slate-300">{pos.description}</p>
+                              </div>
+                            )}
+
+                            {pos.requirements && (
+                              <div className="text-xs sm:text-sm text-slate-600 whitespace-pre-line">
+                                <strong>Yêu cầu ứng viên:</strong>
+                                <p className="mt-1 pl-2 border-l-2 border-slate-300">{pos.requirements}</p>
+                              </div>
+                            )}
+
+                            {pos.benefits && (
+                              <div className="text-xs sm:text-sm text-slate-600 whitespace-pre-line">
+                                <strong>Quyền lợi:</strong>
+                                <p className="mt-1 pl-2 border-l-2 border-emerald-400">{pos.benefits}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer HR info */}
+                  <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-lg text-xs space-y-1 text-slate-700">
+                    <p className="font-bold text-[#0048ba]">Phòng Tuyển dụng – Long Hoàng Logistics:</p>
+                    <p>Email nhận CV: <strong>hr@longhoanglogistics.com</strong> / <strong>tuyendung@longhoang.com</strong></p>
+                    <p>Hotline nhân sự: <strong>0867 141 877</strong> (Hỗ trợ 24/7)</p>
+                  </div>
+                </div>
+
+                {/* Mobile home bar */}
+                {previewJobDevice === 'mobile' && (
+                  <div className="w-full py-2 bg-slate-100 flex justify-center">
+                    <div className="w-32 h-1 bg-slate-400 rounded-full" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Floating scroll to top button */}
+            <button
+              type="button"
+              onClick={() => jobScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="absolute bottom-5 right-6 p-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full shadow-2xl transition-all cursor-pointer border border-emerald-400/40 hover:scale-105 z-20 flex items-center gap-1.5 text-xs font-semibold px-3.5"
+              title="Cuộn nhanh lên đầu trang"
+            >
+              <ChevronUp className="w-4 h-4" />
+              <span className="hidden sm:inline">Lên đầu trang</span>
+            </button>
           </div>
         </div>
       )}
