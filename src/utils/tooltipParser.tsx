@@ -724,7 +724,11 @@ function InlineImageBlock({ url, caption }: InlineImageBlockProps) {
  * [album|url1,url2,url3|Tiêu đề] OR [album|url1|caption1; url2|caption2]
  */
 function parseAlbumContent(rawContent: string): { images: AlbumImageItem[]; title?: string } {
-  const parts = rawContent.split('|').map((s) => s.trim());
+  // Auto-clean: in case user mistakenly nested [img|URL|] tags inside [album|...|Title]
+  let normalized = rawContent;
+  normalized = normalized.replace(/\[img\|([^|\]]+)(?:\|[^\]]*)?\]/g, '$1');
+
+  const parts = normalized.split('|').map((s) => s.trim());
   const images: AlbumImageItem[] = [];
   let title = '';
 
@@ -732,19 +736,25 @@ function parseAlbumContent(rawContent: string): { images: AlbumImageItem[]; titl
     // Format: [album|url1,url2,url3|Tiêu đề album]
     const rawUrls = parts[0]
       .split(',')
-      .map((u) => u.trim())
+      .map((u) => u.trim().replace(/^\[img\|/, '').replace(/\|\]$/, ''))
       .filter((u) => Boolean(u) && u !== '...' && u !== '…');
     title = parts.slice(1).join(' | ');
     rawUrls.forEach((u) => {
-      images.push({ url: u, caption: title });
+      const cleanUrl = u.replace(/[\[\]]/g, '').trim();
+      if (cleanUrl) {
+        images.push({ url: cleanUrl, caption: title });
+      }
     });
   } else {
     // Format: [album|url1|caption1; url2|caption2]
-    const entries = rawContent.split(';').map((e) => e.trim()).filter(Boolean);
+    const entries = normalized.split(';').map((e) => e.trim()).filter(Boolean);
     entries.forEach((entry) => {
       const segs = entry.split('|').map((s) => s.trim());
       if (segs[0]) {
-        images.push({ url: segs[0], caption: segs[1] || '' });
+        const cleanUrl = segs[0].replace(/[\[\]]/g, '').trim();
+        if (cleanUrl) {
+          images.push({ url: cleanUrl, caption: segs[1] || '' });
+        }
       }
     });
   }
@@ -764,8 +774,8 @@ function parseAlbumContent(rawContent: string): { images: AlbumImageItem[]; titl
 export function renderTextWithTooltips(text: string) {
   if (!text) return text;
 
-  // Regex pattern matching all formatting tags
-  const combinedPattern = /(\*\#.*?\#\*|\*\*.*?\*\*|\[album\|.*?\]|\[youtube\|.*?\]|\[video\|.*?\]|\[img\|.*?\]|\[.*?\]\(.*?\))/g;
+  // Regex pattern matching all formatting tags (supports nested [img|...] in [album|...])
+  const combinedPattern = /(\*\#.*?\#\*|\*\*.*?\*\*|\[album\|(?:\[img\|[^\]]*\]|[^\]])*\]|\[youtube\|.*?\]|\[video\|.*?\]|\[img\|.*?\]|\[.*?\]\(.*?\))/g;
   const parts = text.split(combinedPattern);
 
   return parts.map((part, index) => {

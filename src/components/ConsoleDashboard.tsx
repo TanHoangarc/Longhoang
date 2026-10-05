@@ -516,9 +516,10 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
         const uploadedUrls: string[] = [];
         for (let i = 0; i < files.length; i++) {
           const f = files[i];
-          const pct = Math.round(((i + 0.3) / files.length) * 100);
-          setHelperUploadProgress(pct);
-          const res = await uploadImageToFirebase(f);
+          const res = await uploadImageToFirebase(f, (fileProgress) => {
+            const overall = Math.round(((i + (fileProgress / 100)) / files.length) * 100);
+            setHelperUploadProgress(Math.min(99, overall));
+          });
           uploadedUrls.push(res.url);
         }
 
