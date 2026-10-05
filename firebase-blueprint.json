@@ -175,19 +175,45 @@
         "status",
         "createdAt"
       ]
+    },
+    "UploadedImage": {
+      "title": "UploadedImage",
+      "description": "Image assets uploaded for articles and website content",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "dataUrl": {
+          "type": "string"
+        },
+        "size": {
+          "type": "number"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "dataUrl",
+        "createdAt"
+      ]
     }
   },
   "firestore": {
     "news": {
-      "schema": {
-        "$ref": "NewsArticle"
-      },
+      "entity": "NewsArticle",
       "description": "Collection of published news and articles"
     },
     "jobs": {
-      "schema": {
-        "$ref": "JobOpening"
-      },
+      "entity": "JobOpening",
       "description": "Collection of active recruitment postings"
     },
     "quotes": {
@@ -195,6 +221,12 @@
         "$ref": "QuoteRequest"
       },
       "description": "Collection of quote requests submitted by customers"
+    },
+    "images": {
+      "schema": {
+        "$ref": "UploadedImage"
+      },
+      "description": "Collection of uploaded image assets for news and content"
     }
   }
 }
