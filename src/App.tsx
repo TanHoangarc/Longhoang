@@ -29,7 +29,20 @@ import { Language, ServiceItem } from './types';
 import { SERVICES_LIST } from './data/mockData';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'home' | 'service-detail' | 'news-list' | 'news-detail' | 'careers-list' | 'careers-detail' | 'about-us' | 'company-profile' | 'console'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'service-detail' | 'news-list' | 'news-detail' | 'careers-list' | 'careers-detail' | 'about-us' | 'company-profile' | 'console'>(() => {
+    if (typeof window !== 'undefined') {
+      const path = (window.location.pathname || '').toLowerCase();
+      const hash = (window.location.hash || '').toLowerCase();
+      const search = (window.location.search || '').toLowerCase();
+      if (path.includes('console') || hash.includes('console') || search.includes('console')) {
+        return 'console';
+      }
+      if (hash.startsWith('#article-')) {
+        return 'news-detail';
+      }
+    }
+    return 'home';
+  });
   const [activeServiceId, setActiveServiceId] = useState<string>('sea-freight');
   const [activeNewsCategory, setActiveNewsCategory] = useState<'industry-news' | 'industry-knowledge' | 'company-news' | 'all'>('industry-news');
   const [activeArticleId, setActiveArticleId] = useState<string>('lh-race-2026');
@@ -82,22 +95,39 @@ export default function App() {
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
   const [prefilledQuoteService, setPrefilledQuoteService] = useState<string>('');
 
-  // Check URL pathname or hash for /console routing
+  // Check URL pathname or hash for /console routing and article links
   useEffect(() => {
     const checkRoute = () => {
-      const path = window.location.pathname.toLowerCase();
-      const hash = window.location.hash.toLowerCase();
-      if (path.includes('/console') || hash.includes('/console') || hash.includes('console')) {
+      const path = (window.location.pathname || '').toLowerCase();
+      const hash = (window.location.hash || '').toLowerCase();
+      const search = (window.location.search || '').toLowerCase();
+      if (path.includes('console') || hash.includes('console') || search.includes('console')) {
         setCurrentView('console');
+      } else if (window.location.hash.startsWith('#article-')) {
+        const artId = window.location.hash.replace('#article-', '');
+        if (artId) {
+          setActiveArticleId(artId);
+          setCurrentView('news-detail');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    };
+
+    const handleCustomOpenArticle = (e: Event) => {
+      const customEvent = e as CustomEvent<{ articleId: string }>;
+      if (customEvent.detail?.articleId) {
+        handleOpenArticle(customEvent.detail.articleId);
       }
     };
 
     checkRoute();
     window.addEventListener('popstate', checkRoute);
     window.addEventListener('hashchange', checkRoute);
+    window.addEventListener('open-article', handleCustomOpenArticle);
     return () => {
       window.removeEventListener('popstate', checkRoute);
       window.removeEventListener('hashchange', checkRoute);
+      window.removeEventListener('open-article', handleCustomOpenArticle);
     };
   }, []);
 
@@ -207,7 +237,7 @@ export default function App() {
     setCurrentView('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     try {
-      if (window.location.pathname.includes('/console')) {
+      if (window.location.pathname.includes('console') || window.location.hash.includes('console') || window.location.search.includes('console')) {
         window.history.pushState(null, '', '/');
       }
     } catch {
@@ -248,7 +278,11 @@ export default function App() {
       {/* Main Content Area */}
       {currentView === 'console' && (
         <main className="flex-1">
-          <ConsoleDashboard onBackToHome={handleBackToHome} />
+          <ConsoleDashboard
+            onBackToHome={handleBackToHome}
+            onViewArticle={handleOpenArticle}
+            onViewJob={handleOpenJobDetail}
+          />
         </main>
       )}
 

@@ -141,7 +141,7 @@ export const NewsModal: React.FC<NewsModalProps> = ({
                             <Calendar className="w-3.5 h-3.5" />
                             <span>{item.date}</span>
                           </div>
-                          <h4 className="text-sm font-bold text-slate-900 group-hover:text-[#1544a0] leading-snug line-clamp-2 mb-2">
+                          <h4 className="text-sm font-bold text-[#0048ba] group-hover:text-[#00366b] leading-snug line-clamp-2 mb-2">
                             {item.title}
                           </h4>
                           <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">

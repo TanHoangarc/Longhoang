@@ -11,13 +11,13 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // Uploaded images collection
-    match /images/{imageId} {
+    // Customer quotes collection
+    match /quotes/{quoteId} {
       allow read, write: if true;
     }
 
-    // Customer quotes collection
-    match /quotes/{quoteId} {
+    // Test connection collection
+    match /test/{docId} {
       allow read, write: if true;
     }
 
