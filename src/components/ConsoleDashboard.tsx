@@ -54,7 +54,7 @@ import { ContentStore, sortNewsArticles, CloudSyncStatus } from '../data/content
 import { NewsArticle, JobOpening } from '../types';
 import { ConsoleQuotesTab } from './ConsoleQuotesTab';
 import { renderTextWithTooltips, renderArticleParagraphs, extractYouTubeId, YouTubeEmbedBlock } from '../utils/tooltipParser';
-import { uploadImageToFirebase, getUploadedImagesHistory, UploadedImageItem } from '../utils/firebaseStorage';
+import { uploadImageToFirebase, getUploadedImagesHistory, UploadedImageItem, resolveImageFromFirestore } from '../utils/firebaseStorage';
 
 interface ConsoleDashboardProps {
   onBackToHome: () => void;
@@ -131,6 +131,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [helperImageUrl, setHelperImageUrl] = useState('');
+  const [helperPreviewDataUrl, setHelperPreviewDataUrl] = useState('');
   const [isUploadingHelper, setIsUploadingHelper] = useState(false);
   const [helperUploadProgress, setHelperUploadProgress] = useState(0);
   const [recentUploadedImages, setRecentUploadedImages] = useState<UploadedImageItem[]>(() => getUploadedImagesHistory());
@@ -139,6 +140,14 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [youtubeTitle, setYoutubeTitle] = useState('');
   const [selectedImagesForAlbum, setSelectedImagesForAlbum] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (helperImageUrl && !helperPreviewDataUrl) {
+      resolveImageFromFirestore(helperImageUrl).then((dataUrl) => {
+        if (dataUrl) setHelperPreviewDataUrl(dataUrl);
+      });
+    }
+  }, [helperImageUrl, helperPreviewDataUrl]);
 
 
   const applyTextChange = (
@@ -503,6 +512,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
         });
 
         setHelperImageUrl(res.url);
+        setHelperPreviewDataUrl(res.dataUrl || res.url);
         setRecentUploadedImages(getUploadedImagesHistory());
 
         try {
@@ -514,18 +524,23 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
       } else {
         // Multiple files uploaded together -> assemble Album Carousel!
         const uploadedUrls: string[] = [];
+        let firstDataUrl = '';
         for (let i = 0; i < files.length; i++) {
           const f = files[i];
           const res = await uploadImageToFirebase(f, (fileProgress) => {
             const overall = Math.round(((i + (fileProgress / 100)) / files.length) * 100);
             setHelperUploadProgress(Math.min(99, overall));
           });
+          if (i === 0 && res.dataUrl) {
+            firstDataUrl = res.dataUrl;
+          }
           uploadedUrls.push(res.url);
         }
 
         setHelperUploadProgress(100);
         setRecentUploadedImages(getUploadedImagesHistory());
         setHelperImageUrl(uploadedUrls[0]);
+        setHelperPreviewDataUrl(firstDataUrl || uploadedUrls[0]);
 
         const albumTag = `\n[album|${uploadedUrls.join(',')}|Album hình ảnh (${uploadedUrls.length} ảnh)]\n`;
         const activeEl = targetInputRef.current?.element;
@@ -2576,8 +2591,14 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                   <div className="p-3 bg-slate-950/80 rounded-lg border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center gap-3">
                     <div className="w-20 h-14 rounded-lg border border-slate-700 bg-slate-900 p-0.5 overflow-hidden shrink-0 flex items-center justify-center">
                       <img 
-                        src={helperImageUrl} 
+                        src={helperPreviewDataUrl || helperImageUrl} 
                         alt="Preview" 
+                        onError={async (e) => {
+                          const fallback = await resolveImageFromFirestore(helperImageUrl);
+                          if (fallback) {
+                            (e.target as HTMLImageElement).src = fallback;
+                          }
+                        }}
                         className="max-w-full max-h-full object-contain" 
                       />
                     </div>
@@ -2647,8 +2668,14 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                                 ? 'border-blue-500 bg-blue-950/40 ring-2 ring-blue-500/40'
                                 : 'border-slate-800 hover:border-blue-500/80 bg-slate-900'
                             }`}
-                            onClick={() => {
+                            onClick={async () => {
                               setHelperImageUrl(imgItem.url);
+                              const cached = await resolveImageFromFirestore(imgItem.url);
+                              if (cached) {
+                                setHelperPreviewDataUrl(cached);
+                              } else {
+                                setHelperPreviewDataUrl(imgItem.url);
+                              }
                               navigator.clipboard.writeText(imgItem.url);
                               setToastMessage(`Đã chọn ảnh "${imgItem.name}" và copy link thật!`);
                             }}
@@ -2676,6 +2703,12 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                               <img
                                 src={imgItem.url}
                                 alt={imgItem.name}
+                                onError={async (e) => {
+                                  const fallback = await resolveImageFromFirestore(imgItem.url);
+                                  if (fallback) {
+                                    (e.target as HTMLImageElement).src = fallback;
+                                  }
+                                }}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                               />
                             </div>

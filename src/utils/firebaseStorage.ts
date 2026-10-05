@@ -1,5 +1,5 @@
 import { db } from '../firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export interface UploadedImageItem {
   id: string;
@@ -8,6 +8,40 @@ export interface UploadedImageItem {
   size: number;
   contentType: string;
   createdAt: string;
+}
+
+export const clientImageCache = new Map<string, string>();
+
+/**
+ * Resolves an image URL or ID directly from Firebase Firestore in the browser.
+ * This guarantees that even if a host (like Vercel static SPA) rewrites image URLs to index.html,
+ * the image will seamlessly load from Firestore via the client SDK without ever showing a broken icon!
+ */
+export async function resolveImageFromFirestore(urlOrId: string): Promise<string | null> {
+  if (!urlOrId) return null;
+  const match = urlOrId.match(/(img_\d+_[a-zA-Z0-9]+)/);
+  if (!match) return null;
+  const docId = match[1];
+
+  if (clientImageCache.has(docId)) {
+    return clientImageCache.get(docId)!;
+  }
+
+  try {
+    const snap = await getDoc(doc(db, 'images', docId));
+    if (snap.exists()) {
+      const d = snap.data();
+      const base64 = d.base64 || '';
+      const type = d.contentType || 'image/jpeg';
+      const cleanBase64 = base64.includes(',') ? base64.split(',')[1] : base64;
+      const dataUrl = `data:${type};base64,${cleanBase64}`;
+      clientImageCache.set(docId, dataUrl);
+      return dataUrl;
+    }
+  } catch (e) {
+    console.warn('[resolveImageFromFirestore] Direct lookup note:', e);
+  }
+  return null;
 }
 
 const LOCAL_UPLOAD_HISTORY_KEY = 'lh_uploaded_images_history_v1';
@@ -184,7 +218,7 @@ export function getUploadedImagesHistory(): UploadedImageItem[] {
 export async function uploadImageToFirebase(
   file: File,
   onProgress?: (progressPercent: number) => void
-): Promise<{ success: boolean; url: string; id: string; name: string }> {
+): Promise<{ success: boolean; url: string; id: string; name: string; dataUrl?: string }> {
   // Phase 1: Reading file & compression (0% -> 50%)
   if (onProgress) onProgress(15);
 
@@ -292,6 +326,12 @@ export async function uploadImageToFirebase(
     realImageUrl = expectedPublicUrl;
   }
 
+  const dataUrl = `data:${contentType};base64,${base64}`;
+  clientImageCache.set(imageId, dataUrl);
+  if (realImageUrl) {
+    clientImageCache.set(realImageUrl, dataUrl);
+  }
+
   // Phase 5: Complete!
   if (onProgress) onProgress(100);
 
@@ -311,5 +351,6 @@ export async function uploadImageToFirebase(
     url: realImageUrl,
     id: imageId,
     name: cleanName,
+    dataUrl,
   };
 }

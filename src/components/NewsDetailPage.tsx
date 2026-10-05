@@ -4,6 +4,7 @@ import { ContentStore } from '../data/contentStore';
 import { NewsArticle } from '../types';
 import { FileText, ChevronRight, Phone, MessageSquare } from 'lucide-react';
 import { renderTextWithTooltips, renderArticleParagraphs } from '../utils/tooltipParser';
+import { resolveImageFromFirestore } from '../utils/firebaseStorage';
 
 interface NewsDetailPageProps {
   articleId: string;
@@ -110,6 +111,12 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
               <img
                 src={article.image}
                 alt={article.title}
+                onError={async (e) => {
+                  const fallback = await resolveImageFromFirestore(article.image);
+                  if (fallback) {
+                    (e.target as HTMLImageElement).src = fallback;
+                  }
+                }}
                 className="w-full h-auto max-h-[480px] object-cover"
               />
             </div>

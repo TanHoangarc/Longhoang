@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Play
 } from 'lucide-react';
+import { resolveImageFromFirestore } from './firebaseStorage';
 
 interface TooltipKeywordProps {
   key?: React.Key;
@@ -253,6 +254,12 @@ export function ArticleImageAlbum({ images, title }: ArticleImageAlbumProps) {
             alt={currentImage.caption || `Ảnh ${currentIndex + 1}`}
             onClick={() => setIsLightboxOpen(true)}
             referrerPolicy="no-referrer"
+            onError={async (e) => {
+              const fallback = await resolveImageFromFirestore(currentImage.url);
+              if (fallback) {
+                (e.target as HTMLImageElement).src = fallback;
+              }
+            }}
             className="relative z-1 max-w-full max-h-full object-contain cursor-zoom-in transition-all duration-300"
           />
 
@@ -312,6 +319,12 @@ export function ArticleImageAlbum({ images, title }: ArticleImageAlbumProps) {
                   src={img.url}
                   alt={`Thumbnail ${idx + 1}`}
                   referrerPolicy="no-referrer"
+                  onError={async (e) => {
+                    const fallback = await resolveImageFromFirestore(img.url);
+                    if (fallback) {
+                      (e.target as HTMLImageElement).src = fallback;
+                    }
+                  }}
                   className="w-full h-full object-cover"
                 />
                 {isActive && (
@@ -375,6 +388,12 @@ export function ArticleImageAlbum({ images, title }: ArticleImageAlbumProps) {
                 src={currentImage.url}
                 alt={currentImage.caption || `Ảnh ${currentIndex + 1}`}
                 referrerPolicy="no-referrer"
+                onError={async (e) => {
+                  const fallback = await resolveImageFromFirestore(currentImage.url);
+                  if (fallback) {
+                    (e.target as HTMLImageElement).src = fallback;
+                  }
+                }}
                 className="max-h-[75vh] max-w-[88vw] w-auto h-auto object-contain rounded-xl shadow-2xl border border-white/10"
               />
 
@@ -576,7 +595,14 @@ function TooltipKeyword({ term, image, description }: TooltipKeywordProps) {
                 <img
                   src={image}
                   alt={term}
-                  onError={() => setImageError(true)}
+                  onError={async (e) => {
+                    const fallback = await resolveImageFromFirestore(image);
+                    if (fallback) {
+                      (e.target as HTMLImageElement).src = fallback;
+                    } else {
+                      setImageError(true);
+                    }
+                  }}
                   referrerPolicy="no-referrer"
                   className="max-h-full max-w-full object-contain transition-transform group-hover/img:scale-105"
                 />
@@ -651,17 +677,31 @@ function TooltipKeyword({ term, image, description }: TooltipKeywordProps) {
  * Inline Image Component with bounding and lightbox zoom
  */
 function InlineImageBlock({ url, caption }: InlineImageBlockProps) {
+  const [currentSrc, setCurrentSrc] = useState(url);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  useEffect(() => {
+    setCurrentSrc(url);
+  }, [url]);
+
+  const handleImgError = async (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const fallback = await resolveImageFromFirestore(url);
+    if (fallback) {
+      setCurrentSrc(fallback);
+      (e.target as HTMLImageElement).src = fallback;
+    }
+  };
 
   return (
     <>
       <span className="block my-6">
         <span className="block relative max-w-3xl mx-auto group">
           <img
-            src={url}
+            src={currentSrc}
             alt={caption || 'Hình ảnh minh họa'}
             loading="lazy"
             referrerPolicy="no-referrer"
+            onError={handleImgError}
             onClick={() => setIsLightboxOpen(true)}
             className="max-h-[520px] w-auto max-w-full mx-auto object-contain rounded-xl shadow-md border border-slate-200 bg-slate-50/50 block cursor-zoom-in hover:shadow-lg transition-all"
           />
@@ -706,9 +746,10 @@ function InlineImageBlock({ url, caption }: InlineImageBlockProps) {
               </div>
 
               <img
-                src={url}
+                src={currentSrc}
                 alt={caption || 'Hình ảnh chi tiết'}
                 referrerPolicy="no-referrer"
+                onError={handleImgError}
                 className="max-h-[82vh] max-w-[92vw] w-auto h-auto object-contain rounded-xl shadow-2xl border border-white/10"
               />
             </div>
