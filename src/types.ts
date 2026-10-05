@@ -56,6 +56,7 @@ export interface NewsArticle {
   id: string;
   title: string;
   category: 'Tin tức chuyên ngành' | 'Kiến thức chuyên ngành' | 'Tin tức công ty' | string;
+  categoryTitle?: string;
   type: 'industry-news' | 'industry-knowledge' | 'company-news';
   date: string;
   day: string;

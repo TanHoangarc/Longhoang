@@ -175,6 +175,39 @@
         "status",
         "createdAt"
       ]
+    },
+    "UploadedImage": {
+      "title": "UploadedImage",
+      "description": "Image uploaded by users stored in Firebase with real link",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "base64": {
+          "type": "string"
+        },
+        "size": {
+          "type": "number"
+        },
+        "url": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "contentType",
+        "createdAt"
+      ]
     }
   },
   "firestore": {
@@ -195,6 +228,12 @@
         "$ref": "QuoteRequest"
       },
       "description": "Collection of quote requests submitted by customers"
+    },
+    "images": {
+      "schema": {
+        "$ref": "UploadedImage"
+      },
+      "description": "Collection of uploaded images for articles and posts"
     }
   }
 }

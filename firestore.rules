@@ -16,6 +16,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Images collection for uploaded media
+    match /images/{imageId} {
+      allow read, write: if true;
+    }
+
     // Test connection collection
     match /test/{docId} {
       allow read, write: if true;

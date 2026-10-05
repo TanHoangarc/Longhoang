@@ -3,7 +3,7 @@ import { SERVICES_LIST, COMPANY_SOCIAL_LINKS } from '../data/mockData';
 import { ContentStore } from '../data/contentStore';
 import { NewsArticle } from '../types';
 import { FileText, ChevronRight, Phone, MessageSquare } from 'lucide-react';
-import { renderTextWithTooltips } from '../utils/tooltipParser';
+import { renderTextWithTooltips, renderArticleParagraphs } from '../utils/tooltipParser';
 
 interface NewsDetailPageProps {
   articleId: string;
@@ -132,58 +132,7 @@ export const NewsDetailPage: React.FC<NewsDetailPageProps> = ({
                 </p>
               )}
 
-              {article.content?.paragraphs.map((p, idx) => {
-                const trimmed = p.trim();
-                if (trimmed.startsWith('##')) {
-                  const headingText = trimmed.replace(/^##+\s*/, '');
-                  return (
-                    <h3 key={idx} className="text-base sm:text-lg font-bold text-[#0048ba] mt-6 mb-2 pt-2 border-b border-blue-100/70 flex items-center gap-2">
-                      <span className="w-1.5 h-4 bg-[#0048ba] rounded-full inline-block shrink-0"></span>
-                      <span className="text-[#0048ba]">{renderTextWithTooltips(headingText)}</span>
-                    </h3>
-                  );
-                }
-
-                // Check for bullet list lines (* or - or •)
-                if (
-                  trimmed.startsWith('* ') ||
-                  trimmed.startsWith('- ') ||
-                  trimmed.startsWith('• ') ||
-                  trimmed.includes('\n* ') ||
-                  trimmed.includes('\n- ') ||
-                  trimmed.includes('\n• ')
-                ) {
-                  const lines = p.split('\n');
-                  return (
-                    <ul key={idx} className="space-y-2 my-3 pl-1 sm:pl-2">
-                      {lines.map((line, lIdx) => {
-                        const lTrimmed = line.trim();
-                        if (/^[-*•]\s+/.test(lTrimmed)) {
-                          const bulletText = lTrimmed.replace(/^[-*•]\s+/, '');
-                          return (
-                            <li key={lIdx} className="flex items-start gap-2.5 text-slate-700 leading-relaxed text-justify">
-                              <span className="text-[#0048ba] font-bold select-none text-base leading-none mt-1 shrink-0">•</span>
-                              <span className="flex-1">{renderTextWithTooltips(bulletText)}</span>
-                            </li>
-                          );
-                        }
-                        if (lTrimmed.length === 0) return null;
-                        return (
-                          <li key={lIdx} className="text-slate-700 leading-relaxed list-none text-justify">
-                            {renderTextWithTooltips(line)}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  );
-                }
-
-                return (
-                  <p key={idx} className="leading-relaxed">
-                    {renderTextWithTooltips(p)}
-                  </p>
-                );
-              })}
+              {renderArticleParagraphs(article.content?.paragraphs || [])}
             </div>
 
             {/* Structured Info Box with Border matching Screenshot 3 */}

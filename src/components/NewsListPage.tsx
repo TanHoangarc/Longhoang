@@ -56,7 +56,7 @@ export const NewsListPage: React.FC<NewsListPageProps> = ({
   const filteredArticles = (
     categoryType === 'all'
       ? articles
-      : articles.filter((a) => a.type === categoryType || categoryType === 'all')
+      : articles.filter((a) => a.type === categoryType)
   ).sort(sortNewsArticles);
 
   // Recent posts for the sidebar

@@ -19,6 +19,7 @@ interface AboutUsPageProps {
   onBackToHome: () => void;
   onNavigateToCompanyProfile?: () => void;
   onSelectService?: (serviceId: string) => void;
+  onNavigateToSection?: (sectionId: string) => void;
   focusSection?: 'all' | 'vision-mission' | 'core-values' | 'connect';
 }
 

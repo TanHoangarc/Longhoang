@@ -43,13 +43,18 @@ import {
   Lightbulb,
   Monitor,
   Smartphone,
-  Maximize2
+  Maximize2,
+  Play,
+  Film,
+  Video,
+  ChevronLeft
 } from 'lucide-react';
 import { LongHoangLogo } from './LongHoangLogo';
 import { ContentStore, sortNewsArticles, CloudSyncStatus } from '../data/contentStore';
 import { NewsArticle, JobOpening } from '../types';
 import { ConsoleQuotesTab } from './ConsoleQuotesTab';
-import { renderTextWithTooltips } from '../utils/tooltipParser';
+import { renderTextWithTooltips, renderArticleParagraphs, extractYouTubeId, YouTubeEmbedBlock } from '../utils/tooltipParser';
+import { uploadImageToFirebase, getUploadedImagesHistory, UploadedImageItem } from '../utils/firebaseStorage';
 
 interface ConsoleDashboardProps {
   onBackToHome: () => void;
@@ -128,6 +133,12 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
   const [helperImageUrl, setHelperImageUrl] = useState('');
   const [isUploadingHelper, setIsUploadingHelper] = useState(false);
   const [helperUploadProgress, setHelperUploadProgress] = useState(0);
+  const [recentUploadedImages, setRecentUploadedImages] = useState<UploadedImageItem[]>(() => getUploadedImagesHistory());
+  const [showRecentImages, setShowRecentImages] = useState(false);
+  const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [youtubeTitle, setYoutubeTitle] = useState('');
+  const [selectedImagesForAlbum, setSelectedImagesForAlbum] = useState<string[]>([]);
 
 
   const applyTextChange = (
@@ -413,38 +424,128 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     });
   };
 
+  const handleOpenYouTubeModal = () => {
+    const activeEl = document.activeElement as HTMLTextAreaElement | HTMLInputElement;
+    if (activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT')) {
+      targetInputRef.current = {
+        element: activeEl,
+        start: activeEl.selectionStart || 0,
+        end: activeEl.selectionEnd || 0,
+        value: activeEl.value || '',
+      };
+    }
+    setYoutubeUrl('');
+    setYoutubeTitle('');
+    setIsYouTubeModalOpen(true);
+  };
+
+  const handleConfirmInsertYouTube = () => {
+    const videoId = extractYouTubeId(youtubeUrl);
+    if (!videoId) {
+      alert('Vui lòng nhập đường link video YouTube hợp lệ (VD: https://www.youtube.com/watch?v=... hoặc https://youtu.be/...)');
+      return;
+    }
+
+    const cleanTitle = youtubeTitle.trim();
+    const embedTag = `\n[youtube|https://www.youtube.com/watch?v=${videoId}|${cleanTitle}]\n`;
+
+    const target = targetInputRef.current;
+    if (target && target.element) {
+      const { element, start, end } = target;
+      const currentVal = element.value || '';
+      const newText = currentVal.substring(0, start) + embedTag + currentVal.substring(end);
+      applyTextChange(element, newText, start + embedTag.length, start + embedTag.length);
+    } else {
+      handleFormatText(embedTag, '', '');
+    }
+
+    setToastMessage('✓ Đã chèn Video YouTube trực tiếp vào bài viết!');
+    setIsYouTubeModalOpen(false);
+  };
+
+  const handleInsertSelectedAlbum = () => {
+    if (selectedImagesForAlbum.length === 0) {
+      alert('Vui lòng tích chọn ít nhất 2 ảnh để tạo Album!');
+      return;
+    }
+
+    const albumTag = `\n[album|${selectedImagesForAlbum.join(',')}|Album hình ảnh (${selectedImagesForAlbum.length} ảnh)]\n`;
+    const target = targetInputRef.current;
+    if (target && target.element) {
+      const { element, start, end } = target;
+      const currentVal = element.value || '';
+      const newText = currentVal.substring(0, start) + albumTag + currentVal.substring(end);
+      applyTextChange(element, newText, start + albumTag.length, start + albumTag.length);
+    } else {
+      handleFormatText(albumTag, '', '');
+    }
+
+    setToastMessage(`✓ Đã chèn Album (${selectedImagesForAlbum.length} ảnh) với mũi tên chuyển ảnh qua lại vào bài!`);
+    setSelectedImagesForAlbum([]);
+  };
+
   const handleHelperImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 15 * 1024 * 1024) {
-      alert('Vui lòng chọn ảnh có dung lượng dưới 15MB.');
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (files.some((f) => f.size > 25 * 1024 * 1024)) {
+      alert('Vui lòng chọn các ảnh có dung lượng dưới 25MB.');
       if (e.target) e.target.value = '';
       return;
     }
 
     setIsUploadingHelper(true);
-    setHelperUploadProgress(20);
+    setHelperUploadProgress(15);
     try {
-      const progressTimer = setInterval(() => {
-        setHelperUploadProgress((prev) => (prev < 90 ? prev + 30 : prev));
-      }, 40);
+      if (files.length === 1) {
+        const res = await uploadImageToFirebase(files[0], (p) => {
+          setHelperUploadProgress(p);
+        });
 
-      const compressedDataUrl = await compressAndLoadImage(file);
-      clearInterval(progressTimer);
-      
-      setHelperUploadProgress(100);
-      setHelperImageUrl(compressedDataUrl);
+        setHelperImageUrl(res.url);
+        setRecentUploadedImages(getUploadedImagesHistory());
 
-      // Auto copy to clipboard
-      try {
-        await navigator.clipboard.writeText(compressedDataUrl);
-        setToastMessage('Đã tải ảnh lên & tự động copy link ảnh vào bộ nhớ tạm!');
-      } catch {
-        setToastMessage('Đã tải và xử lý ảnh thành công!');
+        try {
+          await navigator.clipboard.writeText(res.url);
+          setToastMessage('✓ Đã lưu ảnh vào Firebase và sao chép link ảnh thật vào Clipboard!');
+        } catch {
+          setToastMessage('✓ Đã lưu ảnh vào Firebase thành công! Link ảnh thật đã sẵn sàng.');
+        }
+      } else {
+        // Multiple files uploaded together -> assemble Album Carousel!
+        const uploadedUrls: string[] = [];
+        for (let i = 0; i < files.length; i++) {
+          const f = files[i];
+          const pct = Math.round(((i + 0.3) / files.length) * 100);
+          setHelperUploadProgress(pct);
+          const res = await uploadImageToFirebase(f);
+          uploadedUrls.push(res.url);
+        }
+
+        setHelperUploadProgress(100);
+        setRecentUploadedImages(getUploadedImagesHistory());
+        setHelperImageUrl(uploadedUrls[0]);
+
+        const albumTag = `\n[album|${uploadedUrls.join(',')}|Album hình ảnh (${uploadedUrls.length} ảnh)]\n`;
+        const activeEl = targetInputRef.current?.element;
+        if (activeEl) {
+          const { element, start, end } = targetInputRef.current!;
+          const currentVal = element.value || '';
+          const newText = currentVal.substring(0, start) + albumTag + currentVal.substring(end);
+          applyTextChange(element, newText, start + albumTag.length, start + albumTag.length);
+          setToastMessage(`✓ Đã lưu ${files.length} ảnh lên Firebase và tự động chèn Album lướt ảnh vào bài!`);
+        } else {
+          try {
+            await navigator.clipboard.writeText(albumTag);
+            setToastMessage(`✓ Đã lưu ${files.length} ảnh lên Firebase! Mã Album đã được sao chép vào Clipboard.`);
+          } catch {
+            setToastMessage(`✓ Đã lưu ${files.length} ảnh lên Firebase thành công!`);
+          }
+        }
       }
     } catch (err: any) {
       console.error('Lỗi tải ảnh:', err);
-      alert(err?.message || 'Có lỗi xảy ra khi xử lý ảnh. Vui lòng thử lại!');
+      alert(err?.message || 'Có lỗi xảy ra khi lưu ảnh lên Firebase. Vui lòng thử lại!');
     } finally {
       setIsUploadingHelper(false);
       setHelperUploadProgress(0);
@@ -456,28 +557,25 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 15 * 1024 * 1024) {
-      alert('Vui lòng chọn ảnh có dung lượng dưới 15MB.');
+    if (file.size > 25 * 1024 * 1024) {
+      alert('Vui lòng chọn ảnh có dung lượng dưới 25MB.');
       if (e.target) e.target.value = '';
       return;
     }
 
     setIsUploadingImage(true);
-    setUploadProgress(20);
+    setUploadProgress(15);
     try {
-      const progressTimer = setInterval(() => {
-        setUploadProgress((prev) => (prev < 90 ? prev + 30 : prev));
-      }, 40);
+      const res = await uploadImageToFirebase(file, (p) => {
+        setUploadProgress(p);
+      });
 
-      const compressedDataUrl = await compressAndLoadImage(file);
-      clearInterval(progressTimer);
-
-      setUploadProgress(100);
-      setNewsFormImage(compressedDataUrl);
-      setToastMessage('Đã tải và cập nhật ảnh đại diện bài viết thành công!');
+      setNewsFormImage(res.url);
+      setRecentUploadedImages(getUploadedImagesHistory());
+      setToastMessage('✓ Đã lưu ảnh đại diện lên Firebase Cloud thành công!');
     } catch (err: any) {
       console.error('Lỗi tải ảnh đại diện:', err);
-      alert(err?.message || 'Có lỗi khi xử lý ảnh đại diện. Vui lòng thử lại.');
+      alert(err?.message || 'Có lỗi khi lưu ảnh đại diện lên Firebase. Vui lòng thử lại.');
     } finally {
       setIsUploadingImage(false);
       setUploadProgress(0);
@@ -682,28 +780,25 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 15 * 1024 * 1024) {
-      alert('Vui lòng chọn ảnh có dung lượng dưới 15MB.');
+    if (file.size > 25 * 1024 * 1024) {
+      alert('Vui lòng chọn ảnh có dung lượng dưới 25MB.');
       if (e.target) e.target.value = '';
       return;
     }
 
     setIsUploadingJobImage(true);
-    setJobImageUploadProgress(20);
+    setJobImageUploadProgress(15);
     try {
-      const progressTimer = setInterval(() => {
-        setJobImageUploadProgress((prev) => (prev < 90 ? prev + 30 : prev));
-      }, 40);
+      const res = await uploadImageToFirebase(file, (p) => {
+        setJobImageUploadProgress(p);
+      });
 
-      const compressedDataUrl = await compressAndLoadImage(file);
-      clearInterval(progressTimer);
-
-      setJobImageUploadProgress(100);
-      setJobFormImage(compressedDataUrl);
-      setToastMessage('Đã tải và cập nhật ảnh bìa tuyển dụng thành công!');
+      setJobFormImage(res.url);
+      setRecentUploadedImages(getUploadedImagesHistory());
+      setToastMessage('✓ Đã lưu ảnh bìa tuyển dụng lên Firebase Cloud thành công!');
     } catch (err: any) {
       console.error('Lỗi tải ảnh tuyển dụng:', err);
-      alert(err?.message || 'Có lỗi khi xử lý ảnh tuyển dụng. Vui lòng thử lại.');
+      alert(err?.message || 'Có lỗi khi lưu ảnh tuyển dụng lên Firebase. Vui lòng thử lại.');
     } finally {
       setIsUploadingJobImage(false);
       setJobImageUploadProgress(0);
@@ -2221,6 +2316,26 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
 
                   <button 
                     type="button"
+                    title="Chèn Album ảnh có mũi tên lướt qua lại ([album|Link1,Link2...|Tiêu đề])"
+                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('[album|', '|Tiêu đề Album ảnh]', 'Link_anh_1,Link_anh_2'); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-950/80 hover:bg-blue-900 border border-blue-800 hover:border-blue-600 rounded-lg transition-colors text-blue-200 hover:text-white font-medium group cursor-pointer active:scale-95 shadow-xs"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition-transform" />
+                    <span>Album ảnh</span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    title="Chèn Video YouTube xem trực tiếp ([youtube|Link_YouTube|Tiêu đề])"
+                    onMouseDown={(e) => { e.preventDefault(); handleOpenYouTubeModal(); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-950/80 hover:bg-red-900 border border-red-800/80 hover:border-red-600 rounded-lg transition-colors text-red-200 hover:text-white font-medium group cursor-pointer active:scale-95 shadow-xs"
+                  >
+                    <Play className="w-3.5 h-3.5 text-red-400 fill-current group-hover:scale-110 transition-transform" />
+                    <span>Video YouTube</span>
+                  </button>
+
+                  <button 
+                    type="button"
                     title="Chèn chú thích thuật ngữ kèm ảnh (*#Từ khóa | Link ảnh | Giải thích#*)"
                     onMouseDown={(e) => { e.preventDefault(); handleFormatText('*#', ' | Link_ảnh | Giải thích#*', 'Từ khóa'); }}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg transition-colors text-slate-200 hover:text-white font-medium group cursor-pointer active:scale-95"
@@ -2316,53 +2431,83 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
               </div>
 
               {/* Image Link Generator Tool */}
-              <div className="p-4 bg-slate-900/70 border border-slate-800 rounded-xl space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-3.5 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <label className="text-blue-400 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <ImageIcon className="w-4 h-4" />
+                    <ImageIcon className="w-4 h-4 text-blue-400" />
                     <span>Công cụ tải ảnh & lấy link chèn vào bài viết</span>
-                  </label>
-                  {helperImageUrl && (
-                    <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Đã sẵn sàng chèn
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-medium border border-blue-500/30 flex items-center gap-1">
+                      <Cloud className="w-3 h-3" /> Lưu Firebase
                     </span>
-                  )}
+                  </label>
+
+                  <div className="flex items-center gap-2">
+                    {recentUploadedImages.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowRecentImages(!showRecentImages)}
+                        className="text-[11px] text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md border border-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Layers className="w-3 h-3 text-amber-400" />
+                        <span>Kho ảnh đã tải ({recentUploadedImages.length})</span>
+                        {showRecentImages ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </button>
+                    )}
+
+                    {helperImageUrl && (
+                      <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        <Check className="w-3.5 h-3.5 text-emerald-400" /> Link ảnh thật Firebase
+                      </span>
+                    )}
+                  </div>
                 </div>
 
+                {/* Upload bar */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                  <label className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 shadow-xs shrink-0 active:scale-95">
+                  <label className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 shadow-sm shrink-0 active:scale-95 disabled:opacity-50">
                     {isUploadingHelper ? (
                       <span className="flex items-center gap-1.5">
                         <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                        Đang xử lý {helperUploadProgress}%
+                        Đang lưu lên Firebase {helperUploadProgress}%
                       </span>
                     ) : (
                       <>
                         <Upload className="w-4 h-4" />
-                        <span>Chọn ảnh từ máy</span>
+                        <span>Chọn ảnh từ máy (Có thể chọn nhiều ảnh)</span>
                       </>
                     )}
                     <input 
                       type="file" 
                       accept="image/*" 
+                      multiple
                       className="hidden" 
                       onChange={handleHelperImageUpload}
                       disabled={isUploadingHelper}
                     />
                   </label>
 
+                  <button
+                    type="button"
+                    onClick={handleOpenYouTubeModal}
+                    className="cursor-pointer bg-red-700 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 shadow-sm shrink-0 active:scale-95"
+                    title="Chèn link YouTube để phát trực tiếp trong bài"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>Chèn Video YouTube</span>
+                  </button>
+
                   <div className="flex-1 relative flex items-center">
                     <input
                       type="text"
                       readOnly
                       value={helperImageUrl}
-                      placeholder="Link ảnh sẽ xuất hiện tại đây ngay khi chọn ảnh..."
+                      placeholder="Link ảnh thật sẽ xuất hiện tại đây ngay khi chọn ảnh..."
                       className="w-full pl-3 pr-16 py-2 bg-slate-950 border border-slate-700 rounded-lg text-emerald-400 font-mono text-[11px] focus:ring-1 focus:ring-emerald-500 focus:outline-none cursor-pointer"
                       onClick={(e) => {
                         if (helperImageUrl) {
                           (e.target as HTMLInputElement).select();
                           navigator.clipboard.writeText(helperImageUrl);
-                          setToastMessage('Đã sao chép link ảnh vào Clipboard!');
+                          setToastMessage('✓ Đã sao chép link ảnh thật vào Clipboard!');
                         }
                       }}
                     />
@@ -2371,9 +2516,9 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                         type="button"
                         onClick={() => {
                           navigator.clipboard.writeText(helperImageUrl);
-                          setToastMessage('Đã sao chép link ảnh!');
+                          setToastMessage('✓ Đã sao chép link ảnh thật vào Clipboard!');
                         }}
-                        className="absolute right-1.5 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded text-[10px] font-medium transition-colors border border-slate-700"
+                        className="absolute right-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded text-[10px] font-semibold transition-colors border border-slate-700 cursor-pointer"
                       >
                         Copy
                       </button>
@@ -2381,37 +2526,169 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                   </div>
 
                   {helperImageUrl && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleFormatText('[img|', '|Ghi chú hình ảnh]', helperImageUrl);
-                        setToastMessage('Đã chèn ảnh vào vị trí con trỏ!');
-                      }}
-                      className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Chèn nhanh vào bài</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleFormatText('[img|', '|Ghi chú hình ảnh]', helperImageUrl);
+                          setToastMessage('✓ Đã chèn ảnh [img|link|ghi chú] vào bài!');
+                        }}
+                        className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                        title="Chèn ảnh đơn [img|url|chú thích]"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Chèn ảnh</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleFormatText('[album|', '|Album hình ảnh]', helperImageUrl);
+                          setToastMessage('✓ Đã chèn Album ảnh vào bài!');
+                        }}
+                        className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                        title="Chèn ảnh theo định dạng Album [album|url1,url2...|tiêu đề]"
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                        <span>Chèn Album</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleFormatText('*#Từ khóa|', '|Giải thích chi tiết...#*', helperImageUrl);
+                          setToastMessage('✓ Đã chèn dạng Tooltip rê chuột có ảnh!');
+                        }}
+                        className="px-2.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-medium transition-all border border-slate-700 flex items-center justify-center gap-1 cursor-pointer"
+                        title="Chèn dạng Tooltip rê chuột có ảnh *#Từ khóa|Link ảnh|Mô tả#*"
+                      >
+                        <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Tooltip</span>
+                      </button>
+                    </div>
                   )}
                 </div>
 
+                {/* Helper Image Preview */}
                 {helperImageUrl && (
-                  <div className="flex items-center gap-3 pt-1">
-                    <div className="w-16 h-12 rounded-lg border border-slate-700 bg-slate-950 p-0.5 overflow-hidden shrink-0 flex items-center justify-center">
+                  <div className="p-3 bg-slate-950/80 rounded-lg border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="w-20 h-14 rounded-lg border border-slate-700 bg-slate-900 p-0.5 overflow-hidden shrink-0 flex items-center justify-center">
                       <img 
                         src={helperImageUrl} 
                         alt="Preview" 
                         className="max-w-full max-h-full object-contain" 
                       />
                     </div>
-                    <div className="text-[11px] text-slate-400 leading-relaxed">
-                      <span className="text-emerald-400 font-medium">✓ Đã tự động nén & copy link.</span> Bạn có thể click <strong className="text-white">"Chèn nhanh vào bài"</strong> hoặc dán theo cú pháp ảnh <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[img|Link|Ghi chú]</code> hoặc tooltip <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">*#Từ khóa|Link ảnh|Giải thích#*</code> vào ô nội dung.
+                    <div className="flex-1 text-[11px] text-slate-300 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Ảnh thật đã lưu vào Firebase
+                        </span>
+                        <span className="text-slate-500">•</span>
+                        <span className="text-slate-400 font-mono text-[10px] break-all">{helperImageUrl}</span>
+                      </div>
+                      <p className="text-slate-400 leading-relaxed text-[10px]">
+                        Link trên là URL ảnh thật (không phải chuỗi text base64 ảo). Có thể dán trực tiếp vào bất kỳ bài viết nào với cú pháp <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[img|Link|Ghi chú]</code> hoặc tạo album <code className="text-blue-400 font-mono bg-blue-400/10 px-1 py-0.5 rounded">[album|Link1,Link2|Tiêu đề]</code>.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Images Drawer with Multi-select for Album */}
+                {showRecentImages && recentUploadedImages.length > 0 && (
+                  <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300 font-semibold">
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-blue-400" />
+                          <span>Kho ảnh Firebase ({recentUploadedImages.length} ảnh):</span>
+                        </span>
+                        {selectedImagesForAlbum.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-blue-600/30 text-blue-300 text-[11px] border border-blue-500/40">
+                            Đã chọn {selectedImagesForAlbum.length} ảnh
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {selectedImagesForAlbum.length > 0 && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={handleInsertSelectedAlbum}
+                              className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[11px] font-bold transition-all shadow flex items-center gap-1 cursor-pointer active:scale-95"
+                            >
+                              <Layers className="w-3 h-3" />
+                              <span>Chèn {selectedImagesForAlbum.length} ảnh thành Album lướt ngang</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setSelectedImagesForAlbum([])}
+                              className="text-[11px] text-slate-400 hover:text-slate-200 underline cursor-pointer"
+                            >
+                              Bỏ chọn
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-52 overflow-y-auto pr-1">
+                      {recentUploadedImages.map((imgItem) => {
+                        const isSelected = selectedImagesForAlbum.includes(imgItem.url);
+                        return (
+                          <div
+                            key={imgItem.id}
+                            className={`group relative rounded-lg border p-1 transition-all cursor-pointer overflow-hidden ${
+                              isSelected
+                                ? 'border-blue-500 bg-blue-950/40 ring-2 ring-blue-500/40'
+                                : 'border-slate-800 hover:border-blue-500/80 bg-slate-900'
+                            }`}
+                            onClick={() => {
+                              setHelperImageUrl(imgItem.url);
+                              navigator.clipboard.writeText(imgItem.url);
+                              setToastMessage(`Đã chọn ảnh "${imgItem.name}" và copy link thật!`);
+                            }}
+                            title={`Click để chọn & copy link: ${imgItem.name}`}
+                          >
+                            {/* Checkbox for Album grouping */}
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isSelected) {
+                                  setSelectedImagesForAlbum(selectedImagesForAlbum.filter((u) => u !== imgItem.url));
+                                } else {
+                                  setSelectedImagesForAlbum([...selectedImagesForAlbum, imgItem.url]);
+                                }
+                              }}
+                              className="absolute top-1.5 left-1.5 z-10 w-5 h-5 rounded bg-slate-900/90 border border-slate-600 flex items-center justify-center cursor-pointer hover:border-blue-400 shadow"
+                              title="Tích chọn để gom vào Album ảnh"
+                            >
+                              {isSelected ? (
+                                <Check className="w-3.5 h-3.5 text-blue-400" />
+                              ) : null}
+                            </div>
+
+                            <div className="w-full h-16 rounded bg-slate-950 overflow-hidden flex items-center justify-center">
+                              <img
+                                src={imgItem.url}
+                                alt={imgItem.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                            </div>
+                            <p className="text-[10px] text-slate-400 truncate mt-1 text-center font-mono">
+                              {imgItem.name}
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
 
                 <p className="text-[10px] text-slate-500 italic">
-                  * Hỗ trợ mọi định dạng ảnh từ máy tính (JPG, PNG, WebP,...). Ảnh được tự động tối ưu hóa hiển thị sắc nét với tốc độ tải siêu tốc.
+                  * Hỗ trợ mọi định dạng ảnh từ máy tính (JPG, PNG, WebP, SVG...). Bạn có thể chọn nhiều ảnh để tự động tạo Album lướt ngang có mũi tên chuyển ảnh thay vì hiển thị từ trên xuống.
                 </p>
               </div>
 
@@ -3504,58 +3781,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
 
                   {/* Paragraphs */}
                   <div className="space-y-4 text-slate-700 leading-relaxed text-justify text-sm sm:text-[15px]">
-                    {previewArticle.content?.paragraphs.map((p, idx) => {
-                      const trimmed = p.trim();
-                      if (trimmed.startsWith('##')) {
-                        const headingText = trimmed.replace(/^##+\s*/, '');
-                        return (
-                          <h3 key={idx} className="text-base sm:text-lg font-bold text-[#0048ba] mt-6 mb-2 pt-2 border-b border-blue-100/70 flex items-center gap-2">
-                            <span className="w-1.5 h-4 bg-[#0048ba] rounded-full inline-block shrink-0"></span>
-                            <span className="text-[#0048ba]">{renderTextWithTooltips(headingText)}</span>
-                          </h3>
-                        );
-                      }
-
-                      // Bullet list
-                      if (
-                        trimmed.startsWith('* ') ||
-                        trimmed.startsWith('- ') ||
-                        trimmed.startsWith('• ') ||
-                        trimmed.includes('\n* ') ||
-                        trimmed.includes('\n- ') ||
-                        trimmed.includes('\n• ')
-                      ) {
-                        const lines = p.split('\n');
-                        return (
-                          <ul key={idx} className="space-y-2 my-3 pl-1 sm:pl-2">
-                            {lines.map((line, lIdx) => {
-                              const lTrimmed = line.trim();
-                              if (/^[-*•]\s+/.test(lTrimmed)) {
-                                const bulletText = lTrimmed.replace(/^[-*•]\s+/, '');
-                                return (
-                                  <li key={lIdx} className="flex items-start gap-2.5 text-slate-700 leading-relaxed text-justify">
-                                    <span className="text-[#0048ba] font-bold select-none text-base leading-none mt-1 shrink-0">•</span>
-                                    <span className="flex-1">{renderTextWithTooltips(bulletText)}</span>
-                                  </li>
-                                );
-                              }
-                              if (lTrimmed.length === 0) return null;
-                              return (
-                                <li key={lIdx} className="text-slate-700 leading-relaxed list-none text-justify">
-                                  {renderTextWithTooltips(line)}
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        );
-                      }
-
-                      return (
-                        <p key={idx} className="leading-relaxed">
-                          {renderTextWithTooltips(p)}
-                        </p>
-                      );
-                    })}
+                    {renderArticleParagraphs(previewArticle.content?.paragraphs || [])}
                   </div>
 
                   {/* Details Card Box */}
@@ -3899,6 +4125,107 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
               <ChevronUp className="w-4 h-4" />
               <span className="hidden sm:inline">Lên đầu trang</span>
             </button>
+          </div>
+        </div>
+      )}
+      {/* ================= MODAL: CHÈN VIDEO YOUTUBE ================= */}
+      {isYouTubeModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="px-5 py-3.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-red-600/30 border border-red-500/50 flex items-center justify-center text-red-400">
+                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <span>Chèn Video YouTube vào bài viết</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Dán link YouTube để phát video trực tiếp ngay trong nội dung bài viết
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsYouTubeModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-200 font-semibold mb-1">
+                  Đường dẫn Video YouTube <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/..."
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
+                  autoFocus
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Hỗ trợ link xem video thường (watch?v=), link rút gọn (youtu.be/), Shorts hoặc mã video 11 ký tự.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-slate-200 font-semibold mb-1">
+                  Tiêu đề hoặc chú thích Video (Tùy chọn)
+                </label>
+                <input
+                  type="text"
+                  value={youtubeTitle}
+                  onChange={(e) => setYoutubeTitle(e.target.value)}
+                  placeholder="VD: Video giới thiệu quy trình vận tải hàng không Long Hoàng..."
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Live Preview if valid YouTube ID */}
+              {extractYouTubeId(youtubeUrl) && (
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Xem trước Video:
+                  </span>
+                  <div className="rounded-xl overflow-hidden border border-slate-700 shadow-md aspect-video bg-black">
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${extractYouTubeId(youtubeUrl)}`}
+                      title="Preview"
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 bg-slate-950 border-t border-slate-800 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsYouTubeModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-semibold text-xs cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmInsertYouTube}
+                disabled={!extractYouTubeId(youtubeUrl)}
+                className="px-5 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-95"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Chèn Video vào bài</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
