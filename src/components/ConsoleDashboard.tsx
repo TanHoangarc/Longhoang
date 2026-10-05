@@ -2316,8 +2316,8 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
 
                   <button 
                     type="button"
-                    title="Chèn Album ảnh có mũi tên lướt qua lại ([album|Link1,Link2...|Tiêu đề])"
-                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('[album|', '|Tiêu đề Album ảnh]', 'Link_anh_1,Link_anh_2'); }}
+                    title="Chèn Album ảnh có mũi tên lướt qua lại ([album|Link_1,Link_2,...|Tiêu đề])"
+                    onMouseDown={(e) => { e.preventDefault(); handleFormatText('[album|', '|Tiêu đề Album]', 'Link_1,Link_2,...'); }}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-950/80 hover:bg-blue-900 border border-blue-800 hover:border-blue-600 rounded-lg transition-colors text-blue-200 hover:text-white font-medium group cursor-pointer active:scale-95 shadow-xs"
                   >
                     <Layers className="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition-transform" />
@@ -2543,11 +2543,12 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          handleFormatText('[album|', '|Album hình ảnh]', helperImageUrl);
-                          setToastMessage('✓ Đã chèn Album ảnh vào bài!');
+                          const albumLinks = helperImageUrl ? `${helperImageUrl},Link_2,...` : 'Link_1,Link_2,...';
+                          handleFormatText('[album|', '|Tiêu đề Album]', albumLinks);
+                          setToastMessage('✓ Đã chèn Album ([album|Link_1,Link_2,...|Tiêu đề]) vào bài!');
                         }}
                         className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                        title="Chèn ảnh theo định dạng Album [album|url1,url2...|tiêu đề]"
+                        title="Chèn Album ([album|Link_1,Link_2,...|Tiêu đề])"
                       >
                         <Layers className="w-3.5 h-3.5" />
                         <span>Chèn Album</span>
@@ -2588,7 +2589,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                         <span className="text-slate-400 font-mono text-[10px] break-all">{helperImageUrl}</span>
                       </div>
                       <p className="text-slate-400 leading-relaxed text-[10px]">
-                        Link trên là URL ảnh thật (không phải chuỗi text base64 ảo). Có thể dán trực tiếp vào bất kỳ bài viết nào với cú pháp <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[img|Link|Ghi chú]</code> hoặc tạo album <code className="text-blue-400 font-mono bg-blue-400/10 px-1 py-0.5 rounded">[album|Link1,Link2|Tiêu đề]</code>.
+                        Link trên là URL ảnh thật (không phải chuỗi text base64 ảo). Có thể dán trực tiếp vào bất kỳ bài viết nào với cú pháp <code className="text-emerald-400 font-mono bg-emerald-400/10 px-1 py-0.5 rounded">[img|Link|Ghi chú]</code> hoặc tạo album <code className="text-blue-400 font-mono bg-blue-400/10 px-1 py-0.5 rounded">[album|Link_1,Link_2,...|Tiêu đề]</code>.
                       </p>
                     </div>
                   </div>
@@ -2688,7 +2689,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 )}
 
                 <p className="text-[10px] text-slate-500 italic">
-                  * Hỗ trợ mọi định dạng ảnh từ máy tính (JPG, PNG, WebP, SVG...). Bạn có thể chọn nhiều ảnh để tự động tạo Album lướt ngang có mũi tên chuyển ảnh thay vì hiển thị từ trên xuống.
+                  * Hỗ trợ mọi định dạng ảnh từ máy tính (JPG, PNG, WebP, SVG...). Cú pháp tạo Album ảnh lướt ngang: <code className="text-blue-400 font-mono">[album|Link_1,Link_2,...|Tiêu đề]</code> (có mũi tên chuyển ảnh qua lại thay vì hiển thị ảnh xếp chồng từ trên xuống).
                 </p>
               </div>
 

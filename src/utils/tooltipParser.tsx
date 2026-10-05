@@ -730,7 +730,10 @@ function parseAlbumContent(rawContent: string): { images: AlbumImageItem[]; titl
 
   if (parts.length >= 2 && !parts[0].includes(';')) {
     // Format: [album|url1,url2,url3|Tiêu đề album]
-    const rawUrls = parts[0].split(',').map((u) => u.trim()).filter(Boolean);
+    const rawUrls = parts[0]
+      .split(',')
+      .map((u) => u.trim())
+      .filter((u) => Boolean(u) && u !== '...' && u !== '…');
     title = parts.slice(1).join(' | ');
     rawUrls.forEach((u) => {
       images.push({ url: u, caption: title });
