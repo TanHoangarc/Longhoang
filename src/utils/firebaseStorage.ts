@@ -19,13 +19,22 @@ export const clientImageCache = new Map<string, string>();
  */
 export async function resolveImageFromFirestore(urlOrId: string): Promise<string | null> {
   if (!urlOrId) return null;
-  const match = urlOrId.match(/(img_\d+_[a-zA-Z0-9]+)/);
-  if (!match) return null;
-  const docId = match[1];
+  if (urlOrId.startsWith('data:') || urlOrId.startsWith('blob:')) return urlOrId;
 
-  if (clientImageCache.has(docId)) {
-    return clientImageCache.get(docId)!;
+  if (clientImageCache.has(urlOrId)) {
+    return clientImageCache.get(urlOrId)!;
   }
+
+  const match = urlOrId.match(/(img_\d+_[a-zA-Z0-9_-]+)/);
+  const docId = match ? match[1] : (urlOrId.startsWith('img_') ? urlOrId : null);
+
+  if (docId && clientImageCache.has(docId)) {
+    const cached = clientImageCache.get(docId)!;
+    clientImageCache.set(urlOrId, cached);
+    return cached;
+  }
+
+  if (!docId) return null;
 
   try {
     const snap = await getDoc(doc(db, 'images', docId));
@@ -36,6 +45,7 @@ export async function resolveImageFromFirestore(urlOrId: string): Promise<string
       const cleanBase64 = base64.includes(',') ? base64.split(',')[1] : base64;
       const dataUrl = `data:${type};base64,${cleanBase64}`;
       clientImageCache.set(docId, dataUrl);
+      clientImageCache.set(urlOrId, dataUrl);
       return dataUrl;
     }
   } catch (e) {

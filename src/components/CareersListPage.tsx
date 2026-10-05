@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Briefcase, PlusCircle } from 'lucide-react';
 import { ContentStore } from '../data/contentStore';
 import { JobOpening } from '../types';
+import { AppImage } from './AppImage';
 
 interface CareersListPageProps {
   onSelectJob: (jobId: string) => void;
@@ -99,7 +100,7 @@ export const CareersListPage: React.FC<CareersListPageProps> = ({
                   >
                     {/* Image banner */}
                     <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100">
-                      <img
+                      <AppImage
                         src={job.image}
                         alt={job.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"

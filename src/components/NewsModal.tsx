@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, ArrowRight, Briefcase, MapPin, Clock, Building2, Pin, Newspaper } from 'lucide-react';
 import { ContentStore } from '../data/contentStore';
 import { NewsArticle, JobOpening } from '../types';
+import { AppImage } from './AppImage';
 
 interface NewsModalProps {
   isOpen: boolean;
@@ -110,11 +111,10 @@ export const NewsModal: React.FC<NewsModalProps> = ({
                       } hover:shadow-md transition-all flex flex-col bg-white group cursor-pointer`}
                     >
                       <div className="h-44 overflow-hidden relative">
-                        <img
+                        <AppImage
                           src={item.image}
                           alt={item.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          referrerPolicy="no-referrer"
                         />
                         <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
                           <span className="px-2.5 py-1 rounded bg-[#1544a0] text-white text-[10px] font-bold uppercase tracking-wider shadow">

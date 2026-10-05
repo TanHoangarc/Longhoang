@@ -255,9 +255,12 @@ export function ArticleImageAlbum({ images, title }: ArticleImageAlbumProps) {
             onClick={() => setIsLightboxOpen(true)}
             referrerPolicy="no-referrer"
             onError={async (e) => {
+              const target = e.currentTarget;
+              if (target.dataset.triedFallback === 'true') return;
+              target.dataset.triedFallback = 'true';
               const fallback = await resolveImageFromFirestore(currentImage.url);
-              if (fallback) {
-                (e.target as HTMLImageElement).src = fallback;
+              if (fallback && target) {
+                target.src = fallback;
               }
             }}
             className="relative z-1 max-w-full max-h-full object-contain cursor-zoom-in transition-all duration-300"
@@ -320,9 +323,12 @@ export function ArticleImageAlbum({ images, title }: ArticleImageAlbumProps) {
                   alt={`Thumbnail ${idx + 1}`}
                   referrerPolicy="no-referrer"
                   onError={async (e) => {
+                    const target = e.currentTarget;
+                    if (target.dataset.triedFallback === 'true') return;
+                    target.dataset.triedFallback = 'true';
                     const fallback = await resolveImageFromFirestore(img.url);
-                    if (fallback) {
-                      (e.target as HTMLImageElement).src = fallback;
+                    if (fallback && target) {
+                      target.src = fallback;
                     }
                   }}
                   className="w-full h-full object-cover"
@@ -389,9 +395,12 @@ export function ArticleImageAlbum({ images, title }: ArticleImageAlbumProps) {
                 alt={currentImage.caption || `Ảnh ${currentIndex + 1}`}
                 referrerPolicy="no-referrer"
                 onError={async (e) => {
+                  const target = e.currentTarget;
+                  if (target.dataset.triedFallback === 'true') return;
+                  target.dataset.triedFallback = 'true';
                   const fallback = await resolveImageFromFirestore(currentImage.url);
-                  if (fallback) {
-                    (e.target as HTMLImageElement).src = fallback;
+                  if (fallback && target) {
+                    target.src = fallback;
                   }
                 }}
                 className="max-h-[75vh] max-w-[88vw] w-auto h-auto object-contain rounded-xl shadow-2xl border border-white/10"
@@ -596,9 +605,15 @@ function TooltipKeyword({ term, image, description }: TooltipKeywordProps) {
                   src={image}
                   alt={term}
                   onError={async (e) => {
+                    const target = e.currentTarget;
+                    if (target.dataset.triedFallback === 'true') {
+                      setImageError(true);
+                      return;
+                    }
+                    target.dataset.triedFallback = 'true';
                     const fallback = await resolveImageFromFirestore(image);
-                    if (fallback) {
-                      (e.target as HTMLImageElement).src = fallback;
+                    if (fallback && target) {
+                      target.src = fallback;
                     } else {
                       setImageError(true);
                     }
@@ -682,13 +697,21 @@ function InlineImageBlock({ url, caption }: InlineImageBlockProps) {
 
   useEffect(() => {
     setCurrentSrc(url);
+    if (url && (url.includes('img_') || url.includes('/api/images/')) && !url.startsWith('data:')) {
+      resolveImageFromFirestore(url).then((resolved) => {
+        if (resolved) setCurrentSrc(resolved);
+      });
+    }
   }, [url]);
 
   const handleImgError = async (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = e.currentTarget;
+    if (target.dataset.triedFallback === 'true') return;
+    target.dataset.triedFallback = 'true';
     const fallback = await resolveImageFromFirestore(url);
     if (fallback) {
       setCurrentSrc(fallback);
-      (e.target as HTMLImageElement).src = fallback;
+      if (target) target.src = fallback;
     }
   };
 

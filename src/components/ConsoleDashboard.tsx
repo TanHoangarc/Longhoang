@@ -55,6 +55,7 @@ import { NewsArticle, JobOpening } from '../types';
 import { ConsoleQuotesTab } from './ConsoleQuotesTab';
 import { renderTextWithTooltips, renderArticleParagraphs, extractYouTubeId, YouTubeEmbedBlock } from '../utils/tooltipParser';
 import { uploadImageToFirebase, getUploadedImagesHistory, UploadedImageItem, resolveImageFromFirestore } from '../utils/firebaseStorage';
+import { AppImage } from './AppImage';
 
 interface ConsoleDashboardProps {
   onBackToHome: () => void;
@@ -1632,7 +1633,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                     <div>
                       {/* Image Preview */}
                       <div className="relative h-44 w-full bg-slate-900 overflow-hidden">
-                        <img
+                        <AppImage
                           src={article.image}
                           alt={article.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -1829,7 +1830,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                       <div>
                         {/* Image Header */}
                         <div className="relative h-44 w-full bg-slate-900 overflow-hidden">
-                          <img
+                          <AppImage
                             src={job.image}
                             alt={job.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -2216,8 +2217,8 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                       className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
                     {newsFormImage && (
-                      <div className="w-10 h-8 rounded border border-slate-700 bg-slate-900 overflow-hidden shrink-0">
-                        <img src={newsFormImage} alt="Avatar" className="w-full h-full object-cover" />
+                      <div className="w-10 h-8 rounded border border-slate-700 bg-slate-900 overflow-hidden shrink-0 flex items-center justify-center">
+                        <AppImage src={newsFormImage} alt="Avatar" className="w-full h-full object-cover" />
                       </div>
                     )}
                   </div>
@@ -2582,6 +2583,24 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                         <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
                         <span>Tooltip</span>
                       </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (activeTab === 'careers') {
+                            setJobFormImage(helperImageUrl);
+                            setToastMessage('✓ Đã áp dụng làm ảnh đại diện tuyển dụng!');
+                          } else {
+                            setNewsFormImage(helperImageUrl);
+                            setToastMessage('✓ Đã áp dụng làm ảnh đại diện bài viết!');
+                          }
+                        }}
+                        className="px-2.5 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-lg text-xs font-semibold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 border border-blue-500/40"
+                        title="Đặt link ảnh này làm Ảnh đại diện bài viết"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        <span>Làm ảnh đại diện</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -2590,15 +2609,9 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                 {helperImageUrl && (
                   <div className="p-3 bg-slate-950/80 rounded-lg border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center gap-3">
                     <div className="w-20 h-14 rounded-lg border border-slate-700 bg-slate-900 p-0.5 overflow-hidden shrink-0 flex items-center justify-center">
-                      <img 
+                      <AppImage 
                         src={helperPreviewDataUrl || helperImageUrl} 
                         alt="Preview" 
-                        onError={async (e) => {
-                          const fallback = await resolveImageFromFirestore(helperImageUrl);
-                          if (fallback) {
-                            (e.target as HTMLImageElement).src = fallback;
-                          }
-                        }}
                         className="max-w-full max-h-full object-contain" 
                       />
                     </div>
@@ -2700,15 +2713,9 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                             </div>
 
                             <div className="w-full h-16 rounded bg-slate-950 overflow-hidden flex items-center justify-center">
-                              <img
+                              <AppImage
                                 src={imgItem.url}
                                 alt={imgItem.name}
-                                onError={async (e) => {
-                                  const fallback = await resolveImageFromFirestore(imgItem.url);
-                                  if (fallback) {
-                                    (e.target as HTMLImageElement).src = fallback;
-                                  }
-                                }}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                               />
                             </div>
@@ -3055,7 +3062,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                         }`}
                       >
                         {/* Thumbnail */}
-                        <img
+                        <AppImage
                           src={art.image}
                           alt={art.title}
                           className="w-16 h-14 object-cover rounded-lg bg-slate-800 shrink-0 border border-slate-700"
@@ -3384,8 +3391,8 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                     className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
                   />
                   {jobFormImage && (
-                    <div className="w-10 h-8 rounded border border-slate-700 bg-slate-900 overflow-hidden shrink-0">
-                      <img src={jobFormImage} alt="Banner" className="w-full h-full object-cover" />
+                    <div className="w-10 h-8 rounded border border-slate-700 bg-slate-900 overflow-hidden shrink-0 flex items-center justify-center">
+                      <AppImage src={jobFormImage} alt="Banner" className="w-full h-full object-cover" />
                     </div>
                   )}
                 </div>
@@ -3789,7 +3796,7 @@ export const ConsoleDashboard: React.FC<ConsoleDashboardProps> = ({
                   {/* Featured Image */}
                   {previewArticle.image && (
                     <div className="w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-100 shadow-xs">
-                      <img
+                      <AppImage
                         src={previewArticle.image}
                         alt={previewArticle.title}
                         className="w-full h-auto max-h-[420px] object-cover"

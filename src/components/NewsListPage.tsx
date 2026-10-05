@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Pin, Newspaper, PlusCircle } from 'lucide-react';
 import { ContentStore, sortNewsArticles } from '../data/contentStore';
 import { NewsArticle } from '../types';
-import { resolveImageFromFirestore } from '../utils/firebaseStorage';
+import { AppImage } from './AppImage';
 
 interface NewsListPageProps {
   categoryType: 'industry-news' | 'industry-knowledge' | 'company-news' | 'all';
@@ -165,15 +165,9 @@ export const NewsListPage: React.FC<NewsListPageProps> = ({
                   >
                     {/* Article Thumbnail */}
                     <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-100">
-                      <img
+                      <AppImage
                         src={article.image}
                         alt={article.title}
-                        onError={async (e) => {
-                          const fallback = await resolveImageFromFirestore(article.image);
-                          if (fallback) {
-                            (e.target as HTMLImageElement).src = fallback;
-                          }
-                        }}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy"
                       />
